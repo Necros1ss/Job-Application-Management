@@ -1,20 +1,14 @@
 import { useState, useEffect } from "react";
-import { Doughnut, Pie } from "react-chartjs-2";
-import { LuUserCircle2, LuSearch } from "react-icons/lu";
-import { FaLongArrowAltRight, FaRegLightbulb } from "react-icons/fa";
-import { BsBriefcase } from "react-icons/bs";
-import { CiMenuKebab } from "react-icons/ci";
-import DashboardCard from "../../Components/DashboardCard";
+import { Link } from "react-router-dom"; 
 import { applicationsApi, usersApi } from "../../lib/api";
-import "chart.js/auto";
-import { jobPostsApi } from "../../lib/api";
+import TopBarDashboard from "../../Components/TopBarDashboard";
+import { LuUserCircle2, LuSearch, LuBookOpen } from "react-icons/lu";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 const Dashboard = () => {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [jobs, setJobs] = useState([]);
-  const [chartType, setChartType] = useState("pie");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -37,45 +31,15 @@ const Dashboard = () => {
     loadDashboardData();
   }, []);
 
+
   const jobStatusCount = jobs.reduce((acc, job) => {
     acc[job.status] = (acc[job.status] || 0) + 1;
     return acc;
   }, {});
 
-  const orderedStatuses = ["applied", "interview", "offered", "rejected"];
-  const statusLabels = {
-    applied: "Applied",
-    interview: "Interview",
-    offered: "Offer",
-    rejected: "Rejected",
-  };
-
-  const data = {
-    labels: orderedStatuses.map((status) => statusLabels[status]),
-    datasets: [
-      {
-        label: "Applications",
-        data: orderedStatuses.map((status) => jobStatusCount[status] || 0),
-        backgroundColor: ["#36A2EB", "#FFCE56", "#00842B", "#FF6384"],
-        hoverOffset: 4,
-      },
-    ],
-  };
-
-  const options = {
-    scales: {
-      y: {
-        beginAtZero: true,
-      },
-    },
-    animation: {
-      duration: 1000,
-      easing: "easeInOutQuad",
-    },
-  };
-
-  const resources = [
-  ];
+  const totalApplications = jobs.length;
+  const totalInterviews = jobStatusCount.interview || 0;
+  const totalOffers = jobStatusCount.offered || 0;
 
   const getGreeting = () => {
     const currentHour = new Date().getHours();
@@ -84,200 +48,172 @@ const Dashboard = () => {
     return "Good Evening";
   };
 
-  const totalApplications = jobs.length;
-  const totalRejected = jobStatusCount.rejected || 0;
-  const totalInterviews = jobStatusCount.interview || 0;
-  const totalOffers = jobStatusCount.offered || 0;
+  // Hàm Helper để format ngày tháng cho danh sách
+  const formatDate = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+  };
+
+  const renderStatusBadge = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'interview':
+      case 'interviewing':
+        return <span className="px-3 py-1 bg-[#e6f4ea] text-[#188155] text-[11px] font-bold tracking-wider uppercase rounded-full">Interviewing</span>;
+      case 'applied':
+      case 'screening':
+        return <span className="px-3 py-1 bg-[#e8f0fe] text-[#1967d2] text-[11px] font-bold tracking-wider uppercase rounded-full">Screening</span>;
+      case 'rejected':
+      case 'closed':
+        return <span className="px-3 py-1 bg-[#fce8e6] text-[#c5221f] text-[11px] font-bold tracking-wider uppercase rounded-full">Closed</span>;
+      default:
+        return <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[11px] font-bold tracking-wider uppercase rounded-full">{status || 'Applied'}</span>;
+    }
+  };
 
   return (
-    <div>
-      <div className="mb-5 flex flex-wrap justify-between items-center">
-        <h1 className="font-bold text-[#2A2A2A] text-xl lg:text-2xl">
-          {getGreeting()} {userName || "User"},
+    <div className="bg-[#fbfcfa] min-h-screen px-8 pt-4 pb-8 lg:px-10 lg:pt-5 lg:pb-10">      
+      <TopBarDashboard userName={userName} userEmail={userEmail} />
+      {/* --- HEADER --- */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {getGreeting()}, {userName.split(' ')[0] || "User"}
         </h1>
-        <div className="gap-2 items-center border-l-2 border-[#5D6661] pl-4 hidden lg:flex">
-          <div>
-            <p className="text-[12px]">{userName || "User"}</p>
-            <p className="text-[12px]">{userEmail || "you@beautiful.com"}</p>
-          </div>
-        </div>
+        <p className="text-gray-500">Here is what's happening with your job search today.</p>
+        
+        {errorMessage && (
+          <p className="text-red-500 text-sm mt-3 bg-red-50 p-3 rounded-lg border border-red-100" role="alert">
+            {errorMessage}
+          </p>
+        )}
       </div>
-      {errorMessage && (
-        <p className="text-[#c93434] text-sm mb-3" role="alert">
-          {errorMessage}
-        </p>
-      )}
-      <div className="rounded-lg mb-4">
-        <div>
-          <h2 className="text-xl text-gray-dark">Getting Started</h2>
-          <div className="w-44 bg-light-gray rounded-full h-1.5 mt-1.5">
-            <div className="bg-dark-gray h-1.5 rounded-full w-20"></div>
-          </div>
-          <p className="mt-1 text-[12px]">45% done</p>
-          <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 mb-12">
-            <DashboardCard
-              to="/dashboard/profile"
-              icon={LuUserCircle2}
-              title="Complete your profile"
-              description="Add more details"
-            />
 
-            <DashboardCard
-              to="/dashboard/job"
-              icon={LuSearch}
-              title="Search for Jobs"
-              description="Find jobs that match your skills"
-            />
-
-            <DashboardCard
-              to="/dashboard/applications"
-              icon={BsBriefcase}
-              title="Update application status"
-              description="Keep your job applications up to date"
-            />
-
-            <div
-              className = "card-container"
-              onClick = {() => window.open('https://www.themuse.com/advice/interviewing')}
-              style = {{ cursor: 'pointer' }}
-            >
-              <DashboardCard
-                to="/dashboard"
-                icon={FaRegLightbulb}
-                title="Prepare for Interview"
-                description="Browse our interview resources to help you prepare"
-              />
-            </div>
-            
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 p-4 relative">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg">Applications Tracking</h3>
-                <span
-                  onClick={() => setMenuOpen(!menuOpen)}
-                  className="hover:bg-[#E8E8E8] p-1.5 rounded-md relative"
-                >
-                  <CiMenuKebab className="rotate-90" />
-                  {menuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E8E8E8] rounded shadow-sm z-10 p-2">
-                      <ul>
-                        <li
-                          className="p-2 hover:bg-[#E0E1E0] cursor-pointer text-sm rounded-md"
-                          onClick={() => setChartType("doughnut")}
-                        >
-                          Doughnut Chart
-                        </li>
-                        <li
-                          className="p-2 hover:bg-[#E0E1E0] cursor-pointer text-sm rounded-md"
-                          onClick={() => setChartType("pie")}
-                        >
-                          Pie Chart
-                        </li>
-                      </ul>
-                    </div>
-                  )}
-                </span>
-              </div>
-              <div className="w-full">
-                {chartType === "doughnut" ? (
-                  <div className="max-h-[400px] flex gap-20 items-center">
-                    <Doughnut data={data} options={options} />
-                    <div className="space-y-2 hidden md:block lg:hidden">
-                      <div className="flex items-center">
-                        <p className="text-sm text-gray mr-1">
-                          Total Applications:
-                        </p>
-                        <p className="font-bold text-primary-text">
-                          {totalApplications}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        <p className="text-sm text-gray mr-1">Total Rejected</p>
-                        <p className="font-bold text-primary-text">
-                          {totalRejected}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        <p className="text-sm text-gray mr-1">
-                          Total Interviews
-                        </p>
-                        <p className="font-bold text-primary-text">
-                          {totalInterviews}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        <p className="text-sm text-gray mr-1">Total Offers</p>
-                        <p className="font-bold text-primary-text">
-                          {totalOffers}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="max-h-[400px] flex gap-20 items-center">
-                    <Pie data={data} options={options} />
-                    <div className="space-y-2 hidden md:block lg:hidden">
-                      <div className="flex items-center">
-                        <p className="text-sm text-gray mr-1">
-                          Total Applications:
-                        </p>
-                        <p className="font-bold text-primary-text">
-                          {totalApplications}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        <p className="text-sm text-gray mr-1">Total Rejected</p>
-                        <p className="font-bold text-primary-text">
-                          {totalRejected}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        <p className="text-sm text-gray mr-1">
-                          Total Interviews
-                        </p>
-                        <p className="font-bold text-primary-text">
-                          {totalInterviews}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        <p className="text-sm text-gray mr-1">Total Offers</p>
-                        <p className="font-bold text-primary-text">
-                          {totalOffers}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 md:hidden lg:grid">
-                <div className="flex items-center">
-                  <p className="text-sm text-gray mr-1">Total Applications:</p>
-                  <p className="font-bold text-primary-text">
-                    {totalApplications}
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <p className="text-sm text-gray mr-1">Total Rejected</p>
-                  <p className="font-bold text-primary-text">{totalRejected}</p>
-                </div>
-                <div className="flex items-center">
-                  <p className="text-sm text-gray mr-1">Total Interviews</p>
-                  <p className="font-bold text-primary-text">
-                    {totalInterviews}
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <p className="text-sm text-gray mr-1">Total Offers</p>
-                  <p className="font-bold text-primary-text">{totalOffers}</p>
-                </div>
-              </div>
-            </div>
-            <div>
-            </div>
+      {/* --- STATS CARDS --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        
+        {/* Card 1: Applied */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Applied</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-5xl font-bold text-[#116843]">{totalApplications || 12}</span>
+            <span className="text-sm font-semibold text-[#188155]">+2 this week</span>
           </div>
         </div>
+
+        {/* Card 2: Interviews */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Interviews</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-5xl font-bold text-gray-900">{totalInterviews || 4}</span>
+            <span className="text-sm font-medium text-gray-500">Scheduled</span>
+          </div>
+        </div>
+
+        {/* Card 3: Offers (Dark Green) */}
+        <div className="bg-[#116843] p-6 rounded-2xl shadow-sm flex flex-col justify-between text-white">
+          <p className="text-xs font-bold text-emerald-100 uppercase tracking-wider mb-2">Offers</p>
+          <div className="flex items-baseline gap-3">
+            <span className="text-5xl font-bold">{totalOffers || 1}</span>
+            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded tracking-wider">NEW</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* --- MAIN LAYOUT (2 COLUMNS) --- */}
+      <div className="flex flex-col lg:flex-row gap-8">
+        
+        {/* CỘT TRÁI: Recent Applications */}
+        <div className="w-full lg:w-2/3">
+          <div className="flex justify-between items-end mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Recent Applications</h2>
+            <Link to="/candidate/applications" className="text-sm font-bold text-[#188155] hover:underline">View All</Link>
+          </div>
+
+          <div className="space-y-4">
+            {/* Nếu mảng jobs có dữ liệu, map ra tối đa 3 job mới nhất. Nếu chưa có API, render UI cứng để test layout */}
+            {(jobs.length > 0 ? jobs.slice(0, 3) : [
+              { id: 1, title: "Senior UX Designer", companyName: "DesignFlow Studio", createdAt: "2023-10-12", status: "interviewing", logo: "https://api.dicebear.com/8.x/initials/svg?seed=DS&backgroundColor=116843" },
+              { id: 2, title: "Product Manager", companyName: "Terraform Corp", createdAt: "2023-10-10", status: "screening", logo: "https://api.dicebear.com/8.x/initials/svg?seed=TC&backgroundColor=e0f2fe&textColor=0369a1" },
+              { id: 3, title: "Visual Designer", companyName: "Arcturus AI", createdAt: "2023-10-05", status: "closed", logo: "https://api.dicebear.com/8.x/initials/svg?seed=AA&backgroundColor=f3f4f6&textColor=4b5563" }
+            ]).map((job) => (
+              <div key={job.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+                
+                <div className="flex items-center gap-4">
+                  {/* Logo công ty */}
+                  <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 p-1 flex items-center justify-center overflow-hidden shrink-0">
+                    <img src={job.logo || `https://api.dicebear.com/8.x/initials/svg?seed=${job.companyName}&backgroundColor=f3f4f6`} alt="logo" className="w-full h-full object-contain" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">{job.title || job.jobTitle}</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">{job.companyName}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-8 lg:gap-12">
+                  <div className="hidden sm:block text-right">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Applied On</p>
+                    <p className="text-sm font-semibold text-gray-800">{formatDate(job.applicationDate)}</p>
+                  </div>
+                  <div className="w-28 flex justify-end">
+                    {renderStatusBadge(job.status)}
+                  </div>
+                  <button className="text-gray-400 hover:text-gray-700 p-2">
+                    <BsThreeDotsVertical />
+                  </button>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CỘT PHẢI: Getting Started (Các Action Cards) */}
+        <div className="w-full lg:w-1/3">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Getting Started</h2>
+          
+          <div className="space-y-4">
+            
+            {/* Card 1: Complete Profile */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-[#188155]">
+              <div className="w-8 h-8 text-[#188155] mb-3">
+                <LuUserCircle2 className="w-full h-full" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">Complete your profile</h3>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">Your profile is 85% complete. Add your latest project to stand out.</p>
+              <Link to="/candidate/profile" className="text-xs font-bold text-[#188155] uppercase tracking-wider hover:underline flex items-center gap-1">
+                UPDATE NOW <span>→</span>
+              </Link>
+            </div>
+
+            {/* Card 2: Find Jobs */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-[#188155]">
+              <div className="w-8 h-8 text-[#188155] mb-3">
+                <LuSearch className="w-full h-full" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">Find new jobs</h3>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">New roles matching your skillset were posted 2 hours ago.</p>
+              <Link to="/candidate/job" className="text-xs font-bold text-[#188155] uppercase tracking-wider hover:underline flex items-center gap-1">
+                EXPLORE <span>→</span>
+              </Link>
+            </div>
+
+            {/* Card 3: Interview Resources */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-gray-700">
+              <div className="w-8 h-8 text-gray-700 mb-3">
+                <LuBookOpen className="w-full h-full" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">Interview resources</h3>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">Master the technical interview with our curated guide.</p>
+              <a href="https://www.themuse.com/advice/interviewing" target="_blank" rel="noreferrer" className="text-xs font-bold text-gray-700 uppercase tracking-wider hover:underline flex items-center gap-1">
+                READ GUIDE <span>→</span>
+              </a>
+            </div>
+
+          </div>
+        </div>
+
       </div>
     </div>
   );

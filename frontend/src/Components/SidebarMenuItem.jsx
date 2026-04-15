@@ -1,4 +1,4 @@
-import { BsBriefcaseFill, BsFillPersonFill } from "react-icons/bs";
+import { BsBriefcaseFill, BsFillPersonFill, BsPeople } from "react-icons/bs";
 import { AiFillFolderOpen } from "react-icons/ai";
 import { RiLayoutMasonryFill } from "react-icons/ri";
 
@@ -44,9 +44,15 @@ const recruiterMenu = [
   },
   {
     id: 2,
-    label: "Job posts",
+    label: "Job Posts",
     icon: <BsBriefcaseFill />,
     path: "job",
+  },
+  {
+    id: 3,
+    label: "Application",
+    icon: <BsPeople />,
+    path: "application",
   }
 ];
 

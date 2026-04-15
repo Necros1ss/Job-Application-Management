@@ -12,6 +12,7 @@ import Profile from "./Pages/Profile";
 import Settings from "./Pages/Settings";
 import RecruiterDashboard from "./Pages/Recruiters/RecruiterDashboard";
 import JobPost from "./Pages/Recruiters/JobPost";
+import Application from "./Pages/Recruiters/Application";
 import ForgotPass from "./Pages/Auth/ForgotPass";
 import JobDetail from "./Pages/Jobs/JobDetail";
 
@@ -19,15 +20,17 @@ function App() {
   return (
     <Router>
       <Routes>
+        <Route index element={<Login />} />
+        <Route path="login" element={<Login />} />
+        <Route path="signup" element={<SelectRole />} />
+        <Route path="signup/create" element={<Signup />} />
+        <Route path="forgot-password" element={<ForgotPass />} />
+
         <Route path="/" element={<Layout />}>
-          <Route index element={<Login />} />
-          <Route path="signup" element={<SelectRole />} />
-          <Route path="signup/create" element={<Signup />} />
-          <Route path="login" element={<Login />} />
-          <Route path="forgot-password" element={<ForgotPass />} />
-          <Route path="/jobs/:id" element={<JobDetail />} />
+          <Route path="jobs/:id" element={<JobDetail />} />
         </Route>
-        <Route path="/dashboard" element={<DashboardLayout allowedRole="candidate" />}>
+        
+        <Route path="/candidate" element={<DashboardLayout allowedRole="candidate" />}>
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="applications" element={<Applications />} />
@@ -41,6 +44,7 @@ function App() {
           <Route path="profile" element={<Profile />} />
           <Route path="settings" element={<Settings />} />
           <Route path="job" element={<JobPost />} />
+          <Route path="application" element={<Application/>} />
         </Route>
       </Routes>
     </Router>

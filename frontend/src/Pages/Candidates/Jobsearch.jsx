@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { jobPostsApi, savedJobsApi } from "../../lib/api";
+import { jobPostsApi, savedJobsApi, usersApi, applicationsApi} from "../../lib/api";
 import { useNavigate } from "react-router-dom";
+import TopBarDashboard from "../../Components/TopBarDashboard";
+
 
 const Jobsearch = () => {
   const navigate = useNavigate();
@@ -8,6 +10,9 @@ const Jobsearch = () => {
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
 
   const [savingJobIds, setSavingJobIds] = useState([]);
   const [savedJobIds, setSavedJobIds] = useState([]);
@@ -28,11 +33,26 @@ const Jobsearch = () => {
       setSavingJobIds((prev) => prev.filter(id => id !== jobId));
     }
   };
+    
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await usersApi.me();
+        setUserName(profile.name || "");
+        setUserEmail(profile.email || "");
+      } catch (error) {
+        setErrorMessage(error.message || "Failed to load profile");
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   useEffect(() => {
+    setIsLoading(true);
+
     const timer = setTimeout(async () => {
       try {
-        setIsLoading(true);
         const data = await jobPostsApi.list(searchTerm);
         setJobs(data);
         setErrorMessage("");
@@ -47,42 +67,21 @@ const Jobsearch = () => {
   }, [searchTerm]);
 
   return (
-    <div className="h-screen">
-      <h2 className="text-3xl font-semibold mb-6">Job Search</h2>
+    <div className="min-h-screen bg-[#fbfcfa] px-8 pt-4 pb-12 lg:px-10 lg:pt-5 lg:pb-12">
+      <TopBarDashboard
+        userName={userName}
+        userEmail={userEmail}
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Tìm theo tiêu đề, công ty, địa điểm..."
+      />
 
-      <form
-        className="max-w-md"
-        onSubmit={(event) => {
-          event.preventDefault();
-        }}
-      >
-        <div className="relative">
-          <div className="absolute inset-y-0 start-0 flex items-center pl-3">
-            <svg
-              className="w-4 h-4 text-gray"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 20 20"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
-              />
-            </svg>
-          </div>
-          <input
-            type="search"
-            className="block w-full p-4 pl-10 text-sm text-[#888] border border-gray-light rounded-md bg-white outline-none"
-            placeholder="Search by title, company, or status"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-          />
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Job Posting</h1>
+          <p className="text-gray-500">Track your journey across {jobs.length} open roles.</p>
         </div>
-      </form>
+      </div>
 
       {errorMessage && <p className="text-[#c93434] text-sm mt-4">{errorMessage}</p>}
       {isLoading && <p className="text-sm text-gray mt-4">Loading jobs...</p>}
@@ -97,10 +96,10 @@ const Jobsearch = () => {
                 
                 <div className="flex-grow"
                 onClick = {() => navigate(`/jobs/${job.id}`)}>
-                  <h3 className="text-lg font-semibold">{job.title || "Untitled job"}</h3>
-                  <p className="text-sm text-gray mt-1">{job.companyName || "Unknown company"}</p>
-                  <p className="text-xs text-gray mt-2">{job.location || "Remote or not specified"}</p>
-                  <p className="text-xs text-gray mt-1">{job.salary || "Salary not disclosed"}</p>
+                  <h3 className="text-lg font-semibold">{job.title}</h3>
+                  <p className="text-sm text-gray mt-1">{job.companyName}</p>
+                  <p className="text-xs text-gray mt-2">{job.location}</p>
+                  <p className="text-xs text-gray mt-1">{job.salary}</p>
                 </div>
 
                 <div className = "mt-4 flex justify-end">

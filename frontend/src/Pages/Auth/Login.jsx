@@ -30,7 +30,7 @@ const Login = () => {
       tokenStorage.setToken(payload.token);
       tokenStorage.setRole(payload.user?.role || "candidate");
       setFormError("");
-      navigate(payload.user?.role === "recruiter" ? "/recruiter" : "/dashboard");
+      navigate(payload.user?.role === "recruiter" ? "/recruiter" : "/candidate");
     } catch (error) {
       setFormError(error.message || "Invalid email or password.");
     } finally {
