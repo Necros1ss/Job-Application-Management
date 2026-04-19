@@ -19,9 +19,23 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const port = process.env.PORT || 5000;
 
+const configuredOrigins = (process.env.CLIENT_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = new Set(configuredOrigins);
+const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin) || localhostPattern.test(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
   })
 );
 app.use(express.json());
@@ -38,6 +52,22 @@ app.use("/api/job-posts", jobPostRoutes);
 app.use("/api/saved-jobs", savedJobsRoutes);
 
 app.use((err, _req, res, _next) => {
+  if (err?.name === "MulterError") {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ message: "CV file is too large", detail: "Maximum allowed size is 20MB" });
+    }
+
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return res.status(400).json({ message: "Invalid CV upload field", detail: "Expected field name is cvFile" });
+    }
+
+    return res.status(400).json({ message: "Invalid CV upload", detail: err.message });
+  }
+
+  if (typeof err?.message === "string" && err.message.includes("Only PDF, DOC and DOCX")) {
+    return res.status(400).json({ message: err.message });
+  }
+
   return res.status(500).json({ message: "Internal server error", detail: err.message });
 });
 

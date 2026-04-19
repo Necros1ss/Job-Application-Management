@@ -1,9 +1,51 @@
 import express from "express";
 import bcrypt from "bcryptjs";
+import multer from "multer";
+import path from "path";
 import { pool } from "../config/db.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
+
+const normalizeUploadedFilename = (originalName) => {
+  if (typeof originalName !== "string" || originalName.length === 0) {
+    return "cv-upload";
+  }
+
+  // Multipart filename headers are often latin1-decoded by default; repair common mojibake.
+  const hasMojibakeSignals = /[ÃÂÌ]/.test(originalName) || /[\u0080-\u009f]/.test(originalName);
+  const candidate = hasMojibakeSignals
+    ? Buffer.from(originalName, "latin1").toString("utf8")
+    : originalName;
+
+  // Remove control characters that can break display/query tools.
+  return candidate.replace(/[\u0000-\u001f\u007f-\u009f]/g, "").normalize("NFC").trim() || "cv-upload";
+};
+
+const uploadCv = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedMime = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/octet-stream",
+      "",
+    ];
+
+    const allowedExtensions = new Set([".pdf", ".doc", ".docx"]);
+    const extension = path.extname(file.originalname || "").toLowerCase();
+    const isAllowedExtension = allowedExtensions.has(extension);
+
+    if (isAllowedExtension || allowedMime.includes(file.mimetype)) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new Error("Only PDF, DOC and DOCX files are allowed"));
+  },
+});
 
 const toDbStatus = (status) => {
   switch (status) {
@@ -267,39 +309,74 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/apply", requireAuth, async (req, res) => {
+router.post("/apply", requireAuth, uploadCv.single("cvFile"), async (req, res) => {
   if (req.user.role !== "candidate") {
     return res.status(403).json({message: "Access Denied"});
   }
 
   const jobId = Number(req.body?.jobId);
+  const coverLetter = typeof req.body?.coverLetter === "string" ? req.body.coverLetter.trim() : "";
 
   if (!jobId || isNaN(jobId)) {
     return res.status(400).json({ message: "Invalid Job ID provided." });
   }
 
+  if (!req.file) {
+    return res.status(400).json({ message: "CV file is required." });
+  }
+
+  const client = await pool.connect();
+
   try {
-    const checkExist = await pool.query(
+    await client.query("BEGIN");
+
+    const checkExist = await client.query(
       'SELECT 1 FROM applications WHERE candidate_id = $1 AND job_post_id = $2',
       [req.user.id, jobId]
-    )
+    );
 
     if (checkExist.rows.length > 0 )
     {
+      await client.query("ROLLBACK");
       return res.status(409).json({ message: "You have already applied for this job." });
     }
 
-    const application = await pool.query(
+    const application = await client.query(
     `INSERT INTO applications (candidate_id, job_post_id, applied_at, status)
           VALUES ($1, $2, NOW(), 'applied')
           RETURNING *`,
           [req.user.id, jobId]
     );
 
+    const normalizedFileName = normalizeUploadedFilename(req.file.originalname);
+
+    await client.query(
+      `INSERT INTO application_files (
+          application_id,
+          file_type,
+          file_name,
+          mime_type,
+          file_size_bytes,
+          file_data
+       ) VALUES ($1, 'cv', $2, $3, $4, $5)`,
+      [
+        application.rows[0].id,
+        normalizedFileName,
+        req.file.mimetype,
+        req.file.size,
+        req.file.buffer,
+      ]
+    );
+
+    await client.query("COMMIT");
+
     return res.status(201).json([application.rows[0]]);
   } 
   catch (error) {
+    await client.query("ROLLBACK");
     return res.status(500).json({ message: "Failed to submit applications", detail: error.message });
+  } finally {
+    client.release();
   }
 });
 

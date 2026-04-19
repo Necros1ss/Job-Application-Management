@@ -4,6 +4,7 @@ import { applicationsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { LuUserCircle2, LuSearch, LuBookOpen } from "react-icons/lu";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { formatMessageTime  } from '../../utils/format';
 
 const Dashboard = () => {
   const [userName, setUserName] = useState("");
@@ -48,27 +49,17 @@ const Dashboard = () => {
     return "Good Evening";
   };
 
-  // Hàm Helper để format ngày tháng cho danh sách
-  const formatDate = (date) => {
-    if (!date) return "";
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return "";
-    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-  };
-
   const renderStatusBadge = (status) => {
     switch (status?.toLowerCase()) {
       case 'interview':
       case 'interviewing':
         return <span className="px-3 py-1 bg-[#e6f4ea] text-[#188155] text-[11px] font-bold tracking-wider uppercase rounded-full">Interviewing</span>;
       case 'applied':
-      case 'screening':
-        return <span className="px-3 py-1 bg-[#e8f0fe] text-[#1967d2] text-[11px] font-bold tracking-wider uppercase rounded-full">Screening</span>;
-      case 'rejected':
+        return <span className="px-3 py-1 bg-[#e8f0fe] text-[#1967d2] text-[11px] font-bold tracking-wider uppercase rounded-full">Applied</span>;
       case 'closed':
         return <span className="px-3 py-1 bg-[#fce8e6] text-[#c5221f] text-[11px] font-bold tracking-wider uppercase rounded-full">Closed</span>;
       default:
-        return <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[11px] font-bold tracking-wider uppercase rounded-full">{status || 'Applied'}</span>;
+        return <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[11px] font-bold tracking-wider uppercase rounded-full">{status || 'Null'}</span>;
     }
   };
 
@@ -97,7 +88,6 @@ const Dashboard = () => {
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Applied</p>
           <div className="flex items-baseline gap-2">
             <span className="text-5xl font-bold text-[#116843]">{totalApplications || 12}</span>
-            <span className="text-sm font-semibold text-[#188155]">+2 this week</span>
           </div>
         </div>
 
@@ -105,8 +95,7 @@ const Dashboard = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Interviews</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-bold text-gray-900">{totalInterviews || 4}</span>
-            <span className="text-sm font-medium text-gray-500">Scheduled</span>
+            <span className="text-5xl font-bold text-gray-900">{totalInterviews || '0'}</span>
           </div>
         </div>
 
@@ -132,40 +121,47 @@ const Dashboard = () => {
           </div>
 
           <div className="space-y-4">
-            {/* Nếu mảng jobs có dữ liệu, map ra tối đa 3 job mới nhất. Nếu chưa có API, render UI cứng để test layout */}
-            {(jobs.length > 0 ? jobs.slice(0, 3) : [
-              { id: 1, title: "Senior UX Designer", companyName: "DesignFlow Studio", createdAt: "2023-10-12", status: "interviewing", logo: "https://api.dicebear.com/8.x/initials/svg?seed=DS&backgroundColor=116843" },
-              { id: 2, title: "Product Manager", companyName: "Terraform Corp", createdAt: "2023-10-10", status: "screening", logo: "https://api.dicebear.com/8.x/initials/svg?seed=TC&backgroundColor=e0f2fe&textColor=0369a1" },
-              { id: 3, title: "Visual Designer", companyName: "Arcturus AI", createdAt: "2023-10-05", status: "closed", logo: "https://api.dicebear.com/8.x/initials/svg?seed=AA&backgroundColor=f3f4f6&textColor=4b5563" }
-            ]).map((job) => (
-              <div key={job.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                
-                <div className="flex items-center gap-4">
-                  {/* Logo công ty */}
-                  <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 p-1 flex items-center justify-center overflow-hidden shrink-0">
-                    <img src={job.logo || `https://api.dicebear.com/8.x/initials/svg?seed=${job.companyName}&backgroundColor=f3f4f6`} alt="logo" className="w-full h-full object-contain" />
+            {jobs.length > 0 ? (
+              jobs.slice(0, 3).map((job) => (
+                <div key={job.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    {/* Logo công ty */}
+                    <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 p-1 flex items-center justify-center overflow-hidden shrink-0">
+                      <img src={job.logo || `https://api.dicebear.com/8.x/initials/svg?seed=${job.companyName}&backgroundColor=f3f4f6`} alt="logo" className="w-full h-full object-contain" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base">{job.title || job.jobTitle}</h3>
+                      <p className="text-sm text-gray-500 mt-0.5">{job.companyName}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base">{job.title || job.jobTitle}</h3>
-                    <p className="text-sm text-gray-500 mt-0.5">{job.companyName}</p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-8 lg:gap-12">
-                  <div className="hidden sm:block text-right">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Applied On</p>
-                    <p className="text-sm font-semibold text-gray-800">{formatDate(job.applicationDate)}</p>
+                  <div className="flex items-center gap-8 lg:gap-12">
+                    <div className="hidden sm:block text-right">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Applied On</p>
+                      <p className="text-sm font-semibold text-gray-800">{formatMessageTime(job.applicationDate)}</p>
+                    </div>
+                    <div className="w-28 flex justify-end">
+                      {renderStatusBadge(job.status)}
+                    </div>
+                    <button className="text-gray-400 hover:text-gray-700 p-2">
+                      <BsThreeDotsVertical />
+                    </button>
                   </div>
-                  <div className="w-28 flex justify-end">
-                    {renderStatusBadge(job.status)}
-                  </div>
-                  <button className="text-gray-400 hover:text-gray-700 p-2">
-                    <BsThreeDotsVertical />
-                  </button>
-                </div>
 
+                </div>
+              ))
+            ) : (
+              <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-200 text-center">
+                <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
+                  <LuSearch className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2">No recent applications yet</h3>
+                <p className="text-sm text-gray-500 mb-4">Your latest job applications will appear here once you start applying.</p>
+                <Link to="/candidate/job" className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#188155] text-white text-sm font-semibold hover:bg-[#116843] transition-colors">
+                  Explore jobs
+                </Link>
               </div>
-            ))}
+            )}
           </div>
         </div>
 

@@ -28,8 +28,9 @@ const clearRole = () => {
 
 const request = async (path, options = {}) => {
   const token = getToken();
+  const isFormData = options.body instanceof FormData;
   const headers = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(options.headers || {}),
   };
 
@@ -46,7 +47,11 @@ const request = async (path, options = {}) => {
     let errorMessage = "Request failed";
     try {
       const payload = await response.json();
-      errorMessage = payload.message || errorMessage;
+      if (payload?.detail) {
+        errorMessage = `${payload.message || errorMessage}: ${payload.detail}`;
+      } else {
+        errorMessage = payload.message || errorMessage;
+      }
     } catch {
       errorMessage = response.statusText || errorMessage;
     }
@@ -125,16 +130,40 @@ export const savedJobsApi = {
     }),
   };
 
-export const applyFromJob = (jobId) => {
+export const messagesApi = {
+  inbox: ({ limit = 10, offset = 0 } = {}) =>
+    request(`/messages/inbox?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
+  unreadCount: () => request("/messages/unread-count"),
+  markRead: (id) =>
+    request(`/messages/${id}/read`, {
+      method: "PATCH",
+    }),
+  send: (payload) =>
+    request("/messages", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+};
+
+export const applyFromJob = (jobId, cvFile, coverLetter = "") => {
   const normalizedJobId = Number(jobId);
 
   if (!Number.isInteger(normalizedJobId) || normalizedJobId <= 0) {
   throw new Error("Invalid jobId");
   }
 
+  if (!(cvFile instanceof File)) {
+    throw new Error("Invalid CV file");
+  }
+
+  const formData = new FormData();
+  formData.append("jobId", String(normalizedJobId));
+  formData.append("coverLetter", coverLetter);
+  formData.append("cvFile", cvFile);
+
   return request("/applications/apply", {
     method: "POST",
-    body: JSON.stringify({ jobId: normalizedJobId }),
+    body: formData,
     });
 };
 

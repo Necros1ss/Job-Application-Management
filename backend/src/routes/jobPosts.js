@@ -12,7 +12,15 @@ const mapRow = (row) => ({
   salary: row.salary || "",
   deadline: row.deadline,
   createdAt: row.created_at,
+  experience: row.experience,
+  employment_type: row.employment_type,
+  responsibilities: row.responsibilities,
+  requirements: row.requirements,
   companyName: row.company_name || "Unknown Company",
+  phone: row.phone || "",
+  website: row.website || "",
+  address: row.address || "",
+  industry: row.industry || "",
 });
 
 router.get("/", requireAuth, async (req, res) => {
@@ -29,7 +37,15 @@ router.get("/", requireAuth, async (req, res) => {
           jp.salary,
           jp.deadline,
           jp.created_at,
-          r.company_name
+          jp.experience,
+          jp.employment_type,
+          jp.responsibilities,
+          jp.requirements,
+          r.company_name,
+          r.phone,
+          r.website,
+          r.address,
+          r.industry
        FROM job_posts jp
        LEFT JOIN recruiters r ON r.id = jp.recruiter_id
        WHERE ($1 = ''
@@ -57,7 +73,15 @@ router.get('/:id', requireAuth, async (req, res) => {
           jp.salary,
           jp.deadline,
           jp.created_at,
-          r.company_name
+          jp.experience,
+          jp.employment_type,
+          jp.responsibilities,
+          jp.requirements,
+          r.company_name,
+          r.phone,
+          r.website,
+          r.address,
+          r.industry
        FROM job_posts jp
        LEFT JOIN recruiters r ON r.id = jp.recruiter_id
        WHERE jp.id = $1`,

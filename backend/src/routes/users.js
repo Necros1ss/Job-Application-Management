@@ -13,6 +13,7 @@ const mapProfile = (row) => ({
       : row.candidate_email || row.login_name,
   phone: row.role === "recruiter" ? row.recruiter_phone || "" : row.candidate_phone || "",
   location: row.role === "recruiter" ? "" : row.address || "",
+  dob: row.role === "recruiter" ? "" : row.candidate_dob || "", 
   experience: "",
   job_type: "",
   skills: [],
@@ -30,6 +31,7 @@ router.get("/me", requireAuth, async (req, res) => {
           c.email AS candidate_email,
           c.phone AS candidate_phone,
           c.address,
+          c.dob AS candidate_dob,
           r.company_name,
           r.email AS recruiter_email,
           r.phone AS recruiter_phone
@@ -51,7 +53,7 @@ router.get("/me", requireAuth, async (req, res) => {
 });
 
 router.patch("/me", requireAuth, async (req, res) => {
-  const { name, phone, location } = req.body;
+  const { name, phone, location, dob} = req.body;
 
   try {
     const roleResult = await pool.query("SELECT role, login_name FROM users WHERE id = $1", [
@@ -94,10 +96,11 @@ router.patch("/me", requireAuth, async (req, res) => {
       `UPDATE candidates
        SET name = COALESCE($1, name),
            phone = COALESCE($2, phone),
-           address = COALESCE($3, address)
-       WHERE id = $4
-       RETURNING id, name, email, phone, address`,
-      [name, phone, location, req.user.id]
+           address = COALESCE($3, address),
+           dob = COALESCE($4, dob)
+       WHERE id = $5
+       RETURNING id, name, email, phone, address, dob`,
+      [name, phone, location, dob, req.user.id]
     );
 
     if (candidateUpdate.rows.length === 0) {
@@ -113,6 +116,7 @@ router.patch("/me", requireAuth, async (req, res) => {
         candidate_email: candidateUpdate.rows[0].email,
         candidate_phone: candidateUpdate.rows[0].phone,
         address: candidateUpdate.rows[0].address,
+        candidate_dob: candidateUpdate.rows[0].dob, 
       })
     );
   } catch (error) {

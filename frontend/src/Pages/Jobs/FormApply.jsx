@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// Đảm bảo đường dẫn import API này khớp với cấu trúc thư mục của bạn
 import { applyFromJob } from "../../lib/api"; 
 
 const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
@@ -20,14 +19,14 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
 
     try {
       setIsLoading(true);
-      await applyFromJob(jobDetail?.id); 
+      await applyFromJob(jobDetail?.id, cvFile, coverLetter); 
       alert("Apply thành công.");   
       if (onSuccess) onSuccess();
       onClose(); 
-      setTimeout(() => { navigate("/job"); }, 1000);
+      setTimeout(() => { navigate("/candidate/job"); }, 1000);
     } catch (error) {
       console.error("Lỗi khi apply:", error);
-      alert("Apply thất bại, có thể bạn đã apply job này rồi.");   
+      alert(error.message || "Apply thất bại.");   
     } finally {
       setIsLoading(false);
     } 

@@ -15,6 +15,7 @@ import JobPost from "./Pages/Recruiters/JobPost";
 import Application from "./Pages/Recruiters/Application";
 import ForgotPass from "./Pages/Auth/ForgotPass";
 import JobDetail from "./Pages/Jobs/JobDetail";
+import Company from "./Pages/Info/Company";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
 
         <Route path="/" element={<Layout />}>
           <Route path="jobs/:id" element={<JobDetail />} />
+          <Route path="jobs/:id/company" element={<Company />} />
         </Route>
         
         <Route path="/candidate" element={<DashboardLayout allowedRole="candidate" />}>

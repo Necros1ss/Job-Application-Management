@@ -1,22 +1,18 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { messagesApi } from '../lib/api';
+import { LuBell } from "react-icons/lu";
 
 const TopBar = ({ userName, userEmail }) => {
   const location = useLocation();
 
-  // 1. Định nghĩa các role hợp lệ mà hệ thống bạn có
-  const validRoles = ['candidate', 'recruiters'];
+  const validRoles = ['candidate', 'recruiter'];
 
-  // 2. Lấy segment đầu tiên từ URL
   const firstSegment = location.pathname.split('/')[1];
 
-  // 3. KIỂM TRA: 
-  // Nếu segment đầu tiên nằm trong danh sách hợp lệ thì lấy nó.
-  // Nếu không (ví dụ là "jobs" hoặc trống), thì mặc định trả về "candidates".
   const currentRole = validRoles.includes(firstSegment) ? firstSegment : 'candidate';
 
   const navLinkStyle = (path) => {
-    // Kiểm tra active dựa trên path có chứa currentRole hay không
     const isActive = location.pathname.includes(path);
     return isActive
       ? "text-[#188155] font-semibold border-b-2 border-[#188155] pb-1"
@@ -35,12 +31,18 @@ const TopBar = ({ userName, userEmail }) => {
           <nav className="hidden md:flex items-center gap-6 mt-1 text-sm tracking-wide">
             <Link to={`/${currentRole}/job`} className={navLinkStyle(`/${currentRole}/job`)}>Find Jobs</Link>
             <Link to={`/${currentRole}/applications`} className={navLinkStyle(`/${currentRole}/applications`)}>Applications</Link>
-            <Link to={`/${currentRole}/messages`} className={navLinkStyle(`/${currentRole}/messages`)}>Messages</Link>
           </nav>
         </div>
 
-        {/* Thông tin User */}
         <div className="flex items-center gap-3">
+          <div className="relative mr-6 flex items-center h-full"> 
+            <button
+              type="button"
+              className="relative flex items-center justify-center p-2 hover:text-emerald-700 transition-colors"
+            >
+              <LuBell size={20} />
+            </button>
+          </div>
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-gray-800">{userName || "Tên Người Dùng"}</p>
             <p className="text-xs text-gray-500">{userEmail || "email@example.com"}</p>

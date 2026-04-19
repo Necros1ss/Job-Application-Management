@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import TopBar from "../../Components/TopBar";
 import { LuMapPin, LuBuilding2, LuTrendingUp } from "react-icons/lu";
 import { 
@@ -10,11 +10,17 @@ import {
 
 import { applyFromJob, usersApi, jobPostsApi, savedJobsApi, applicationsApi } from "../../lib/api";
 import FormApply from "./FormApply";
+import { formatMessageTime } from '../../utils/format';
 
 const JobDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  
+  const location = useLocation(); // Thêm dòng này
+  const validRoles = ['candidate', 'recruiter'];
+  // Khai báo firstSegment
+  const firstSegment = location.pathname.split('/')[1];
+  // Bây giờ mới tính currentRole
+  const currentRole = validRoles.includes(firstSegment) ? firstSegment : 'candidate';
   // State của bạn
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -42,13 +48,6 @@ const JobDetail = () => {
     } finally {
       setSavingJobIds((prev) => prev.filter(id => id !== jobId));
     }
-  };
-
-  const formatDeadline = (value) => {
-    if (!value) return "Chưa cập nhật";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "Chưa cập nhật";
-    return parsed.toLocaleDateString("vi-VN");
   };
 
   const checkDeadline = (value) => {
@@ -120,9 +119,10 @@ const JobDetail = () => {
     <div className='min-h-screen bg-gray-50 text-gray-800 font-sans'>
       {/* Breadcrumb */}
       <TopBar userName={userName} userEmail={userEmail} />
+
       <div className="max-w-6xl mx-auto px-6 pt-6 pb-4 text-sm text-gray-500">
-        Find Jobs <span className="mx-2">›</span> 
-        Design & Creative <span className="mx-2">›</span> 
+        <span className= "hover:text-emerald-700 transition-colors">Jobs Detail</span> 
+        <span className="mx-2"> / </span>
         <span className="text-gray-900 font-medium">{jobDetail?.title || "Senior UI/UX Designer"}</span>
       </div>
 
@@ -189,7 +189,7 @@ const JobDetail = () => {
                 <h2 className="text-xl font-bold text-gray-900">Job Description</h2>
               </div>
               <div className="text-gray-600 leading-relaxed whitespace-pre-line">
-                {jobDetail?.description || "At EcoSphere Solutions, we are building the future of sustainable energy management. We are looking for a Senior UI/UX Designer who is passionate about creating intuitive, editorial-grade digital experiences that empower users to monitor and optimize their carbon footprint.\n\nYou will lead the design vision for our flagship platform, working closely with engineering and product teams to translate complex data into beautiful, actionable interfaces."}
+                {jobDetail?.description || "Null"}
               </div>
             </div>
 
@@ -199,19 +199,9 @@ const JobDetail = () => {
                 <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
                 <h2 className="text-xl font-bold text-gray-900">Key Responsibilities</h2>
               </div>
-              <ul className="space-y-4">
-                {[
-                  "Lead the end-to-end design process from discovery and research to high-fidelity prototyping and hand-off.",
-                  "Collaborate with the engineering team to ensure high-quality implementation of our design system.",
-                  "Maintain and evolve our 'Editorial Curator' design system, ensuring consistency across all touchpoints.",
-                  "Conduct user interviews and usability testing to validate design decisions with data."
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-gray-600">
-                    <FaCheckCircle className="text-emerald-500 mt-1 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="text-gray-600 leading-relaxed whitespace-pre-line">
+                {jobDetail?.responsibilities || "Null"}
+              </div>
             </div>
 
             {/* Requirements */}
@@ -220,19 +210,9 @@ const JobDetail = () => {
                 <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
                 <h2 className="text-xl font-bold text-gray-900">Requirements</h2>
               </div>
-              <ul className="space-y-4">
-                {[
-                  "5+ years of experience in UI/UX Design, ideally within SaaS or Fintech environments.",
-                  "Expert proficiency in Figma and prototyping tools (Protopie, Framer).",
-                  "Strong understanding of accessibility standards (WCAG) and responsive design principles.",
-                  "Portfolio demonstrating high-end typography, layout, and visual hierarchy skills."
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-gray-600">
-                    <FaCheckCircle className="text-emerald-500 mt-1 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="text-gray-600 leading-relaxed whitespace-pre-line">
+                {jobDetail?.requirements || "Null"}
+              </div>
             </div>
 
             {/* Perks & Benefits */}
@@ -274,25 +254,41 @@ const JobDetail = () => {
                   <img src={jobDetail?.companyLogo || "https://api.dicebear.com/8.x/initials/svg?seed=ES&backgroundColor=e0f2fe&textColor=0369a1"} alt="Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900">{jobDetail?.companyName || "EcoSphere Solutions"}</h4>
-                  <p className="text-sm text-gray-500">Sustainability & Energy</p>
+                  <h4 className="font-bold text-gray-900">{jobDetail?.companyName || "Company Name"}</h4>
+                  <p className="text-sm text-gray-500">{jobDetail?.address || "Address"}</p>
                 </div>
               </div>
               <div className="space-y-4 mb-6 text-sm">
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span className="text-gray-500">Industry</span>
-                  <span className="font-semibold text-gray-800">{jobDetail?.industry || "Clean Tech"}</span>
+                  <span className="font-semibold text-gray-800">{jobDetail?.industry || ""}</span>
                 </div>
                 <div className="flex justify-between border-b border-gray-50 pb-2">
-                  <span className="text-gray-500">Team Size</span>
-                  <span className="font-semibold text-gray-800">50 - 200</span>
+                  <span className="text-gray-500">Phone</span>
+                  <span className="font-semibold text-gray-800">{jobDetail?.phone || "Phone"}</span>
                 </div>
                 <div className="flex justify-between pb-2">
                   <span className="text-gray-500">Website</span>
-                  <a href="#" className="font-semibold text-emerald-600 hover:underline">ecosphere.tech</a>
+                  <a href="#" className="font-semibold text-emerald-600 hover:underline">{jobDetail?.website || "Phone"}</a>
                 </div>
               </div>
-              <button className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition border border-gray-200">
+              <button
+                type="button"
+                onClick={() => navigate(`/jobs/${id}/company`, {
+                  state: {
+                    company: {
+                      id: jobDetail?.id,
+                      name: jobDetail?.companyName,
+                      logo: jobDetail?.companyLogo,
+                      industry: jobDetail?.industry,
+                      location: jobDetail?.location,
+                      jobTitle: jobDetail?.title,
+                      salary: jobDetail?.salary,
+                    },
+                  },
+                })}
+                className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition border border-gray-200"
+              >
                 View Profile
               </button>
             </div>
@@ -307,7 +303,7 @@ const JobDetail = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-0.5">Experience</p>
-                    <p className="font-bold text-gray-900">Senior (5+ Years)</p>
+                    <p className="font-bold text-gray-900">{jobDetail?.experience || "Null"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -316,7 +312,7 @@ const JobDetail = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-0.5">Employment Type</p>
-                    <p className="font-bold text-gray-900">Full-Time, Permanent</p>
+                    <p className="font-bold text-gray-900">{jobDetail?.employment_type || "Null"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -325,7 +321,7 @@ const JobDetail = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-0.5">Salary Range</p>
-                    <p className="font-bold text-gray-900">{jobDetail?.salary || "$95k - $130k / Year"}</p>
+                    <p className="font-bold text-gray-900">{jobDetail?.salary || "Null"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -334,7 +330,7 @@ const JobDetail = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-0.5">Deadline</p>
-                    <p className="font-bold text-gray-900">{formatDeadline(jobDetail?.deadline)}</p>
+                    <p className="font-bold text-gray-900">{formatMessageTime(jobDetail?.deadline)}</p>
                   </div>
                 </div>
               </div>

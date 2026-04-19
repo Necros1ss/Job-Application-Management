@@ -16,7 +16,7 @@ const DashboardLayout = ({ allowedRole }) => {
   }
 
   if (allowedRole && userRole !== allowedRole) {
-    return <Navigate to={userRole === "recruiter" ? "/recruiter" : "/dashboard"} replace />;
+    return <Navigate to={userRole === "recruiter" ? "/recruiter" : "/candidate"} replace />;
   }
 
   return (

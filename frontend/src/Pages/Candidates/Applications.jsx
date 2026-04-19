@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import { FaPlus, FaList, FaThLarge, FaTrashAlt } from "react-icons/fa";
 import { LuSearch } from "react-icons/lu";
-import { MdClose } from "react-icons/md";
-import AddNewJobs from "../../Components/AddNewJob";
-import EditJobModal from "../../Components/EditJobModal";
 import { applicationsApi, savedJobsApi, usersApi } from "../../lib/api"; // Đảm bảo đã import usersApi
 import TopBarDashboard from "../../Components/TopBarDashboard";
-import { Link } from "react-router-dom"; 
+import { Link, useNavigate } from "react-router-dom"; 
 
 const formatDate = (date) => {
   if (!date) return "";
@@ -16,9 +13,7 @@ const formatDate = (date) => {
 };
 
 const Applications = () => {
-  const [showJobModal, setShowJobModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedJob, setSelectedJob] = useState(null);
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
   const [checkedJobIds, setCheckedJobIds] = useState([]);
@@ -81,33 +76,9 @@ const Applications = () => {
     loadData();
   }, []);
 
-  const handleOpenJobModal = () => {
-    setShowJobModal(true);
-  };
-
-  const handleAddJob = async (newJob) => {
-    try {
-      const createdJob = await applicationsApi.create(newJob);
-      setJobs((prev) => [createdJob, ...prev]);
-      setErrorMessage("");
-    } catch (error) {
-      setErrorMessage(error.message || "Failed to create application");
-    }
-  };
-
-  const handleEditJob = async (updatedJob) => {
-    try {
-      const saved = await applicationsApi.update(updatedJob.id, updatedJob);
-      setJobs((prev) => prev.map((job) => (job.id === saved.id ? saved : job)));
-      setErrorMessage("");
-    } catch (error) {
-      setErrorMessage(error.message || "Failed to update application");
-    }
-  };
-
-  const handleOpenEditModal = (job) => {
-    setSelectedJob(job);
-    setShowEditModal(true);
+  const openJobDetail = (job) => {
+    if (!job?.jobPostId) return;
+    navigate(`/jobs/${job.jobPostId}`);
   };
 
   const handleCheckJob = (jobId) => {
@@ -257,7 +228,7 @@ const Applications = () => {
               className={`bg-white rounded-2xl p-6 shadow-sm flex flex-col justify-between h-[240px] transition-all hover:shadow-md cursor-pointer ${
                 job.status?.toLowerCase() === 'offered' ? 'border-2 border-[#188155]' : 'border border-gray-100'
               }`}
-              onClick={() => handleOpenEditModal(job)}
+              onClick={() => openJobDetail(job)}
             >
               {/* Card Header: Logo & Badge */}
               <div className="flex justify-between items-start mb-4">
@@ -338,7 +309,7 @@ const Applications = () => {
                         onChange={() => handleCheckJob(job.id)}
                       />
                     </td>
-                    <td className="px-6 py-4 cursor-pointer font-bold text-gray-900" onClick={() => handleOpenEditModal(job)}>
+                    <td className="px-6 py-4 cursor-pointer font-bold text-gray-900" onClick={() => openJobDetail(job)}>
                       {job.jobTitle}
                     </td>
                     <td className="px-6 py-4 text-gray-600">{job.companyName}</td>
@@ -365,19 +336,6 @@ const Applications = () => {
           )}
         </div>
       ) : null}
-
-      {/* --- MODALS --- */}
-      {showJobModal && (
-        <AddNewJobs setJobModal={setShowJobModal} onAddJob={handleAddJob} />
-      )}
-
-      {showEditModal && selectedJob && (
-        <EditJobModal
-          job={selectedJob}
-          setEditModal={setShowEditModal}
-          onEditJob={handleEditJob}
-        />
-      )}
 
     </div>
   );

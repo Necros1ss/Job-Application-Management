@@ -7,8 +7,9 @@ import {
   MdPictureAsPdf,
   MdClose
 } from "react-icons/md";
-import { usersApi } from "../lib/api"; // Đảm bảo đường dẫn này đúng với project của bạn
+import { usersApi } from "../lib/api";
 import ProfileTopBar from "../Components/ProfileTopBar";
+import { calculateAge } from '../utils/format';
 
 const Profile = () => {
   const [editingName, setEditingName] = useState(false);
@@ -18,10 +19,13 @@ const Profile = () => {
   const [editingResume, setEditingResume] = useState(false);
   const [editingSkills, setEditingSkills] = useState(false);
 
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
+  const [dob, setDoB] = useState("");
   const [experience, setExperience] = useState("");
   const [jobType, setJobType] = useState("");
   const [skills, setSkills] = useState([]);
@@ -30,6 +34,25 @@ const Profile = () => {
   const [profileError, setProfileError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  const formatDate = (value) => {
+    if (!value) return "Chưa cập nhật";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "Chưa cập nhật";
+    return parsed.toLocaleDateString("vi-VN");
+  };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await usersApi.me();
+        setUserName(response.name);
+        setUserEmail(response.email);
+        setJobs(await jobPostsApi.list());
+      } catch (error) {}
+    };
+    fetchUserData();
+  }, []);
+  
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -38,6 +61,7 @@ const Profile = () => {
         setEmail(profile.email || "");
         setPhone(profile.phone || "");
         setLocation(profile.location || "");
+        setDoB(profile.dob || "");
         setExperience(profile.experience || "");
         setJobType(profile.job_type || "");
         setSkills(Array.isArray(profile.skills) ? profile.skills : []);
@@ -57,6 +81,7 @@ const Profile = () => {
         name,
         phone,
         location,
+        dob,
         experience,
         jobType,
         skills,
@@ -66,6 +91,7 @@ const Profile = () => {
       setEmail(updated.email || "");
       setPhone(updated.phone || "");
       setLocation(updated.location || "");
+      setDoB(updated.dob || "");
       setExperience(updated.experience || "");
       setJobType(updated.job_type || "");
       setSkills(Array.isArray(updated.skills) ? updated.skills : []);
@@ -136,8 +162,8 @@ const Profile = () => {
   );
 
   return (
-    <div className="w-full">
-      <ProfileTopBar />
+    <div className="bg-[#fbfcfa] min-h-screen px-8 pt-4 pb-8 lg:px-10 lg:pt-5 lg:pb-10">      
+      <ProfileTopBar userName={userName} userEmail={userEmail}  />
       
       {/* ================= KHUNG CHỨA TOÀN BỘ NỘI DUNG PROFILE ================= */}
       <div className="w-full px-10 py-6 mx-auto font-sans text-gray-800">        
@@ -187,9 +213,36 @@ const Profile = () => {
                   <button onClick={() => handleEditToggle("name")} className="text-gray-400 hover:text-gray-800"><MdOutlineEdit size={22} /></button>
                 )}
               </div>
-              <p className="text-gray-600 mt-3 text-lg leading-relaxed max-w-2xl">
-                Refining the narrative of modern user experiences through curated design systems and strategic product thinking.
-              </p>
+        
+              <div className="mt-3">
+                {editingName ? (
+                  <div className="flex items-center justify-center md:justify-start gap-3">
+                    <span className="text-gray-600 text-lg font-medium">Date of Birth:</span>
+                    <input
+                      type="date"
+                      value={dob}
+                      onChange={(e) => setDoB(e.target.value)}
+                      className="text-lg bg-white border border-gray-200 rounded-lg px-3 py-1 outline-none focus:border-[#0b3b4d] text-gray-800 shadow-sm"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-gray-600 text-lg leading-relaxed max-w-2xl">
+                    <span className="font-medium mr-2">Date of Birth:</span>
+                    {dob ? (
+                      <span className="text-gray-900 font-semibold">{formatDate(dob)}</span>
+                    ) : (
+                      <span className="text-gray-400 italic">Not specified</span>
+                    )}
+                    <br />
+                    <span className="font-medium mr-2">Age:</span>
+                    {calculateAge(dob) !== null ? (
+                      <span className="text-gray-900 font-semibold">{calculateAge(dob)} years old</span>
+                    ) : (
+                      <span className="text-gray-400 italic">Not specified</span>
+                    )}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -220,17 +273,17 @@ const Profile = () => {
                 {editingPersonal ? (
                   <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" />
                 ) : (
-                  <p className="font-semibold text-gray-900">{phone || "+1 (555) 092-4412"}</p>
+                  <p className="font-semibold text-gray-900">{phone || ""}</p>
                 )}
               </div>
 
-              {/* Location */}
+              {/* Address */}
               <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Location</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Address</p>
                 {editingPersonal ? (
                   <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" />
                 ) : (
-                  <p className="font-semibold text-gray-900">{location || "San Francisco, CA"}</p>
+                  <p className="font-semibold text-gray-900">{location || ""}</p>
                 )}
               </div>
             </div>
@@ -347,33 +400,7 @@ const Profile = () => {
               </div>
             </div>
           </div>
-
-          {/* RESUME */}
-          <div className="bg-[#eef3f6] rounded-[20px] p-6 shadow-sm border border-[#d6e3eb] flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className="w-14 h-14 bg-white rounded-[14px] shadow-sm flex items-center justify-center text-[#0b3b4d]">
-                <MdPictureAsPdf size={28} />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-lg">
-                  {resume ? resume.name : "Resume_Alex_Rivera_2024.pdf"}
-                </h3>
-                <p className="text-sm text-gray-500">Last updated October 12, 2023</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
-              <label className="flex-1 md:flex-none cursor-pointer px-6 py-2.5 border-2 border-[#0b3b4d] text-[#0b3b4d] text-sm font-bold rounded-full hover:bg-[#0b3b4d]/5 transition text-center">
-                Replace File
-                <input type="file" className="hidden" onChange={handleResumeChange} />
-              </label>
-              <button className="flex-1 md:flex-none px-6 py-3 bg-[#0b3b4d] text-white text-sm font-bold rounded-full hover:bg-[#072733] transition shadow-md">
-                View Document
-              </button>
-            </div>
-          </div>
         </div>
-
       </div>
     </div>
   );

@@ -72,7 +72,7 @@ const Signup = () => {
       const payload = await authApi.signup({ name, email, password, role: userRole });
       tokenStorage.setToken(payload.token);
       tokenStorage.setRole(payload.user?.role || userRole);
-      navigate(payload.user?.role === "recruiter" ? "/recruiter" : "/dashboard");
+      navigate(payload.user?.role === "recruiter" ? "/recruiter" : "/candidate");
     } catch (error) {
       setFormError(error.message || "Failed to create account");
     } finally {
