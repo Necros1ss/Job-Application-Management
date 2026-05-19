@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { jobPostsApi, savedJobsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
+import Pagination from "../../Components/Pagination";
 
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Internship"];
 const LOCATIONS = ["Remote", "On-site", "Hybrid"];
@@ -23,6 +24,7 @@ const SALARY_RANGES = [
 
 const RECENT_SEARCHES_KEY = "jobtracker_recent_searches";
 const MAX_RECENT = 5;
+const JOBS_PER_PAGE = 10;
 
 const getRecentSearches = () => {
   try {
@@ -59,6 +61,9 @@ const Jobsearch = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [jobs, setJobs] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -91,6 +96,7 @@ const Jobsearch = () => {
     clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
     }, 350);
     return () => clearTimeout(debounceTimer.current);
   }, [searchTerm]);
@@ -100,14 +106,21 @@ const Jobsearch = () => {
       setIsLoading(true);
       try {
         const [jobsData, savedData] = await Promise.all([
-          jobPostsApi.list(debouncedSearch),
+          jobPostsApi.listPaginated({
+            search: debouncedSearch,
+            page: currentPage,
+            limit: JOBS_PER_PAGE,
+          }),
           savedJobsApi.list(),
         ]);
-        const normalizedJobs = (Array.isArray(jobsData) ? jobsData : []).map((job) => ({
+        const jobItems = Array.isArray(jobsData) ? jobsData : jobsData.data || [];
+        const normalizedJobs = jobItems.map((job) => ({
           ...job,
           id: Number(job.id),
         }));
         setJobs(normalizedJobs);
+        setTotalJobs(Array.isArray(jobsData) ? normalizedJobs.length : Number(jobsData.total || 0));
+        setTotalPages(Array.isArray(jobsData) ? 1 : Math.max(Number(jobsData.totalPages || 1), 1));
         const nextSavedIds = new Set();
         const nextSavedMap = new Map();
         savedData.forEach((item) => {
@@ -128,7 +141,11 @@ const Jobsearch = () => {
       }
     };
     loadJobs();
-  }, [debouncedSearch]);
+  }, [debouncedSearch, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedJobType, selectedLocation, selectedSalary]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -236,7 +253,7 @@ const Jobsearch = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-1">Find Your Dream Job</h1>
           <p className="text-gray-500">
-            {isLoading ? "Searching..." : `${filteredJobs.length} jobs found`}
+            {isLoading ? "Searching..." : `${totalJobs} jobs found`}
             {debouncedSearch && ` for "${debouncedSearch}"`}
           </p>
         </div>
@@ -431,8 +448,15 @@ const Jobsearch = () => {
         )}
 
         {!isLoading && filteredJobs.length > 0 && (
-          <div className="mt-12 text-center">
-            <p className="text-gray-400 text-sm">Showing {filteredJobs.length} of {jobs.length} jobs</p>
+          <div className="mt-12 space-y-4 text-center">
+            <p className="text-gray-400 text-sm">
+              Showing {filteredJobs.length} of {totalJobs} jobs
+            </p>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>
