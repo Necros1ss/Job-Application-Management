@@ -164,6 +164,7 @@ export const applicationsApi = {
 };
 
 export const interviewsApi = {
+  myInterviews: () => request("/interviews/my"),
   create: (payload) =>
     request("/interviews", {
       method: "POST",

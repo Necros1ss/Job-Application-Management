@@ -4,6 +4,38 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
+router.get("/my", requireAuth, async (req, res) => {
+  if (req.user.role !== "candidate") {
+    return res.status(403).json({ message: "Only candidate accounts can view their interviews" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT i.id,
+              i.interview_datetime,
+              i.mode,
+              i.meet_link,
+              i.location,
+              i.notes,
+              i.interviewer_name,
+              jp.title AS job_title,
+              r.company_name
+       FROM interviews i
+       INNER JOIN applications a ON a.id = i.application_id
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       INNER JOIN recruiters r ON r.id = jp.recruiter_id
+       WHERE a.candidate_id = $1
+         AND i.interview_datetime >= NOW()
+       ORDER BY i.interview_datetime ASC`,
+      [req.user.id]
+    );
+
+    return res.json(result.rows);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to load interviews", detail: error.message });
+  }
+});
+
 router.post("/", requireAuth, async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can schedule interviews" });
