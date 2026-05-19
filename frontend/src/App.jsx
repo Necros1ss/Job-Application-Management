@@ -15,8 +15,10 @@ import RecruiterDashboard from "./Pages/Recruiters/RecruiterDashboard";
 import JobPost from "./Pages/Recruiters/JobPost";
 import Application from "./Pages/Recruiters/Application";
 import ForgotPass from "./Pages/Auth/ForgotPass";
+import ResetPassword from "./Pages/Auth/ResetPassword";
 import JobDetail from "./Pages/Jobs/JobDetail";
 import Company from "./Pages/Info/Company";
+import NotFound from "./Pages/NotFound";
 
 function App() {
   return (
@@ -27,6 +29,7 @@ function App() {
         <Route path="signup" element={<SelectRole />} />
         <Route path="signup/create" element={<Signup />} />
         <Route path="forgot-password" element={<ForgotPass />} />
+        <Route path="reset-password" element={<ResetPassword />} />
 
         <Route path="/" element={<Layout />}>
           <Route path="jobs/:id" element={<JobDetail />} />
@@ -49,6 +52,7 @@ function App() {
           <Route path="job" element={<JobPost />} />
           <Route path="application" element={<Application/>} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

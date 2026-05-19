@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ApplicationDetail from './ApplicationDetail';
 import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api';
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
+import { SkeletonRow } from "../../Components/Skeleton";
 
 const stageMetaByStatus = {
   accepted: {
@@ -289,7 +290,9 @@ const Application = () => {
         {/* Data Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {loading ? (
-            <div className="px-6 py-10 text-center text-gray-500">Loading applications...</div>
+            <div>
+              {Array(6).fill(0).map((_, i) => <SkeletonRow key={i} />)}
+            </div>
           ) : error ? (
             <div className="px-6 py-10 text-center text-red-500">{error}</div>
           ) : (
