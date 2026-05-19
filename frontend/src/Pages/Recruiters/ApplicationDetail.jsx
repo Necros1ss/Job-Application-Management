@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { applicationsApi, interviewsApi, messagesApi } from '../../lib/api';
 import { formatMessageTime } from '../../utils/format';
 import { FaArrowLeft, FaDownload, FaEnvelope, FaEye, FaMailBulk, FaRegCalendarAlt, FaCheckCircle } from 'react-icons/fa';
+import { showError, showSuccess } from '../../utils/toast';
 
 const STATUS_OPTIONS = [
   { value: 'applied', label: 'New Application', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
@@ -54,7 +55,6 @@ const ApplicationDetail = ({ onBack, candidate }) => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [toast, setToast] = useState({ type: '', message: '' });
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -174,12 +174,6 @@ const ApplicationDetail = ({ onBack, candidate }) => {
     phone: candidatePhone,
   }), [candidateName, candidateJobTitle, candidateEmail, candidatePhone]);
 
-  const showToast = (type, message) => {
-    setToast({ type, message });
-    window.clearTimeout(showToast._timer);
-    showToast._timer = window.setTimeout(() => setToast({ type: '', message: '' }), 2500);
-  };
-
   const applyOptimisticStatus = async (runner, optimisticStatus, successMessage) => {
     if (!source?.id) return;
 
@@ -193,11 +187,11 @@ const ApplicationDetail = ({ onBack, candidate }) => {
       const response = await runner();
       const nextStatus = response?.status || optimisticStatus;
       setDetail((prev) => (prev ? { ...prev, status: nextStatus } : prev));
-      showToast('success', successMessage);
+      showSuccess(successMessage);
       return response;
     } catch (err) {
       setDetail((prev) => (prev ? { ...prev, status: previousStatus } : prev));
-      showToast('error', err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
       throw err;
     } finally {
       setIsUpdatingStatus(false);
@@ -261,7 +255,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(downloadUrl);
-      showToast('success', 'Đã tải CV xuống');
+      showSuccess('Đã tải CV xuống');
     } catch (loadError) {
       setPreviewError(loadError.message || 'Unable to download CV');
     }
@@ -296,9 +290,9 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         applicationId: source.id,
       });
       setShowMessageModal(false);
-      showToast('success', 'Đã gửi thư đến candidate');
+      showSuccess('Đã gửi thư đến candidate');
     } catch (err) {
-      showToast('error', err.message || 'Failed to send message');
+      showError(err.message || 'Failed to send message');
     } finally {
       setIsSendingMessage(false);
     }
@@ -371,9 +365,9 @@ const ApplicationDetail = ({ onBack, candidate }) => {
 
       setShowOfferModal(false);
       setDetail((prev) => (prev ? { ...prev, status: 'accepted' } : prev));
-      showToast('success', 'Đã gửi offer và cập nhật trạng thái');
+      showSuccess('Đã gửi offer và cập nhật trạng thái');
     } catch (err) {
-      showToast('error', err.message || 'Failed to send offer');
+      showError(err.message || 'Failed to send offer');
     } finally {
       setIsSendingMessage(false);
     }
@@ -411,12 +405,6 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         {(error || previewError) && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
             {error || previewError}
-          </div>
-        )}
-
-        {toast.message && (
-          <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
-            {toast.message}
           </div>
         )}
 

@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash, FaTimes, FaCheck, FaLock, FaTrashAlt } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaLock, FaTrashAlt } from "react-icons/fa";
 import { tokenStorage } from "../lib/api";
 import DeleteAccountModal from "../Components/DeleteAccountModal";
+import { showError, showSuccess } from "../utils/toast";
 
 const Settings = () => {
-  const navigate = useNavigate();
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -15,8 +14,6 @@ const Settings = () => {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const validatePassword = (pwd) => {
     if (pwd.length < 8) return "Password must be at least 8 characters";
@@ -25,24 +22,22 @@ const Settings = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
 
     if (!currentPassword) {
-      setError("Please enter your current password.");
+      showError("Please enter your current password.");
       return;
     }
     const newPwdError = validatePassword(newPassword);
     if (newPwdError) {
-      setError(newPwdError);
+      showError(newPwdError);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match.");
+      showError("New passwords do not match.");
       return;
     }
     if (currentPassword === newPassword) {
-      setError("New password must be different from current password.");
+      showError("New password must be different from current password.");
       return;
     }
 
@@ -60,13 +55,13 @@ const Settings = () => {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.message || "Failed to change password");
         }
-        setSuccess("Password changed successfully!");
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
+        showSuccess("Password changed successfully!");
       });
     } catch (err) {
-      setError(err.message || "Failed to change password");
+      showError(err.message || "Failed to change password");
     } finally {
       setIsSubmitting(false);
     }
@@ -92,19 +87,6 @@ const Settings = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
-              <FaTimes size={16} />
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 text-sm">
-              <FaCheck size={16} />
-              {success}
-            </div>
-          )}
-
           {/* Current Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>

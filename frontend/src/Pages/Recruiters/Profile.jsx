@@ -15,6 +15,7 @@ import {
 } from "react-icons/md";
 import { usersApi } from "../../lib/api";
 import ProfileTopBar from "../../Components/ProfileTopBar";
+import { showError, showSuccess } from "../../utils/toast";
 
 const Profile = () => {
   // Trạng thái Edit cho từng section
@@ -117,8 +118,9 @@ const Profile = () => {
       setDescription(updated.description || "");
 
       setProfileError("");
+      showSuccess("Profile saved successfully");
     } catch (error) {
-      setProfileError(error.message || "Failed to save profile");
+      showError(error.message || "Failed to save profile");
     } finally {
       setIsSaving(false);
     }

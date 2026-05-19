@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { jobPostsApi, savedJobsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
+import { showError, showSuccess } from "../../utils/toast";
 
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Internship"];
 const LOCATIONS = ["Remote", "On-site", "Hybrid"];
@@ -170,6 +171,7 @@ const Jobsearch = () => {
           n.delete(jobId);
           return n;
         });
+        showSuccess("Job removed from saved jobs");
       } else {
         const saved = await savedJobsApi.save(jobId);
         const savedPayload = Array.isArray(saved) ? saved[0] : saved;
@@ -182,9 +184,10 @@ const Jobsearch = () => {
             return n;
           });
         }
+        showSuccess("Job saved successfully");
       }
     } catch (error) {
-      console.error("Save/unsave failed:", error);
+      showError(error.message || "Failed to update saved job");
     } finally {
       setSavingJobIds((prev) => { const n = new Set(prev); n.delete(jobId); return n; });
     }
