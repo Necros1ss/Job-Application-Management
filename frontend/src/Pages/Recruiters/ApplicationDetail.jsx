@@ -223,7 +223,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
     await applyOptimisticStatus(
       () => applicationsApi.updateStatus(source.id, nextStatus),
       nextStatus,
-      'Cập nhật trạng thái thành công'
+      'Status updated successfully'
     );
   };
 
@@ -317,7 +317,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         notes: scheduleForm.notes,
       }),
       'scheduled_interview',
-      'Đã lên lịch phỏng vấn'
+      'Interview scheduled successfully'
     );
 
     setShowScheduleModal(false);
@@ -341,7 +341,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         emailBody: rejectForm.emailBody,
       }),
       'rejected',
-      'Đã từ chối hồ sơ'
+      'Application rejected successfully'
     );
 
     setShowRejectModal(false);

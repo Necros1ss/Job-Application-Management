@@ -85,6 +85,15 @@ CREATE TABLE applications (
     CONSTRAINT uq_candidate_job UNIQUE (candidate_id, job_post_id)
 );
 
+CREATE TABLE password_reset_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE interviews (
     id BIGSERIAL PRIMARY KEY,
     application_id BIGINT NOT NULL,
@@ -138,18 +147,18 @@ CREATE TABLE messages (
 );
 
 CREATE TABLE IF NOT EXISTS application_files (
-	id BIGINT PRIMARY KEY,
-	application_id BIGINT NOT NULL,
-	file_type VARCHAR(30) NOT NULL DEFAULT 'cv',
-	file_name VARCHAR(255) NOT NULL,
-	mime_type VARCHAR(120) NOT NULL,
-	file_size_bytes INTEGER NOT NULL CHECK (file_size_bytes > 0),
-	file_data BYTEA NOT NULL,
-	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-	CONSTRAINT fk_application_files_application
-	FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
-	CONSTRAINT uq_application_file_type
-	UNIQUE (application_id, file_type)
+    id BIGINT PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    file_type VARCHAR(30) NOT NULL DEFAULT 'cv',
+    file_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(120) NOT NULL,
+    file_size_bytes INTEGER NOT NULL CHECK (file_size_bytes > 0),
+    file_data BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_application_files_application
+    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT uq_application_file_type
+    UNIQUE (application_id, file_type)
 );
 
 CREATE INDEX IF NOT EXISTS idx_application_files_application_id

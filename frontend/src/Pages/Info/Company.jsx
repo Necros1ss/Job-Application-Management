@@ -43,10 +43,10 @@ const Company = () => {
 
   const companySubtitle = useMemo(() => {
     if (!jobDetail?.jobTitle) {
-      return "Thông tin công ty tuyển dụng";
+      return "Hiring company information";
     }
 
-    return `Đang tuyển: ${jobDetail.jobTitle}`;
+    return `Hiring for: ${jobDetail.jobTitle}`;
   }, [jobDetail?.jobTitle]);
 
   return (
@@ -116,8 +116,8 @@ const Company = () => {
                 <h2 className="text-xl font-bold text-slate-900 mb-4">About this company</h2>
                 <p className="text-slate-600 leading-7">
                   {isLoading
-                    ? "Đang tải thông tin công ty..."
-                    : "Trang này hiển thị thông tin công ty tuyển dụng dựa trên job bạn vừa xem. Nếu backend chưa có dữ liệu chi tiết riêng cho công ty, các thông tin ở đây sẽ được suy ra từ job post hiện tại để bạn vẫn có một trang profile rõ ràng và nhất quán."}
+                    ? "Loading company information..."
+                    : "This page displays hiring company information based on the job you just viewed. If detailed company profile data is not available yet from the backend, this page uses the current job post data so the company profile still stays clear and consistent."}
                 </p>
               </div>
             </div>

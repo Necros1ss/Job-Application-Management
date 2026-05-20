@@ -95,7 +95,7 @@ const JobDetail = () => {
         }
       }
     } catch (error) {
-      console.error("Lỗi khi lưu:", error);
+      console.error("Save failed:", error);
     } finally {
       setSavingJobIds((prev) => {
         const next = new Set(prev);
@@ -165,7 +165,7 @@ const JobDetail = () => {
       );
       setIsApplied(alreadyApplied);
     } catch (error) {
-      console.error("Lỗi check trạng thái apply:", error);
+      console.error("Failed to check application status:", error);
       setIsApplied(false);
     }
   };
@@ -241,7 +241,7 @@ const JobDetail = () => {
         ...prev,
         deadline: nextDeadline,
       }));
-      alert("Đã lưu trạng thái tin tuyển dụng");
+      alert("Job status saved.");
     } catch (error) {
       setRecruiterStatus(currentRecruiterStatus);
       alert(error.message || "Failed to update job status");
@@ -253,11 +253,11 @@ const JobDetail = () => {
   let buttonText = "Apply Now";
   let applyButtonClass = "flex-1 md:flex-none flex items-center justify-center px-8 py-2.5 font-semibold rounded-lg transition shadow-sm text-white ";
   if (isApplied) {
-    buttonText = "Đã ứng tuyển";
+    buttonText = "Applied";
     applyButtonClass += "bg-gray-400 cursor-not-allowed"; 
   } 
   else if (isClosed) {
-    buttonText = "Đã hết hạn";
+    buttonText = "Expired";
     applyButtonClass += "bg-red-500 cursor-not-allowed"; 
   } 
   else {

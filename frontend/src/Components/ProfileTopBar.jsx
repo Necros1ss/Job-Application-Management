@@ -80,7 +80,6 @@ const ProfileTopBar = ({ userName, userEmail }) => {
 
   // Load danh sách tin nhắn
   const loadInbox = async () => {
-    if (!isCandidate) return setInboxError('Tin nhan chi ho tro cho candidate.');
     try {
       setLoadingInbox(true);
       setInboxError('');
@@ -118,7 +117,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
 
   // Gom nhóm logic hiển thị nội dung dropdown
   const renderInboxContent = () => {
-    if (loadingInbox) return <div className="px-4 py-8 text-center text-sm text-gray-500">Đang tải tin nhắn...</div>;
+    if (loadingInbox) return <div className="px-4 py-8 text-center text-sm text-gray-500">Loading messages...</div>;
     if (inboxError) return <div className="px-4 py-8 text-center text-sm text-red-500">{inboxError}</div>;
     if (messages.length === 0) return <div className="px-4 py-8 text-center text-sm text-gray-500">No messages yet</div>;
     
@@ -135,7 +134,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
           </p>
           {!message.isRead && <span className="mt-1 w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />}
         </div>
-        <p className="text-xs text-gray-500 mt-1">Từ: {message.senderName || 'Recruiter'}</p>
+        <p className="text-xs text-gray-500 mt-1">From: {message.senderName || 'Recruiter'}</p>
         <p className="text-sm text-gray-600 mt-1 line-clamp-2">{message.content}</p>
         <p className="text-[11px] text-gray-400 mt-2">{formatMessageTime(message.createdAt)}</p>
       </button>
@@ -190,7 +189,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
                 <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{selectedMessage.subject}</p>
-                    <p className="text-xs text-gray-500 mt-1">Từ: {selectedMessage.senderName || 'Recruiter'}</p>
+                    <p className="text-xs text-gray-500 mt-1">From: {selectedMessage.senderName || 'Recruiter'}</p>
                   </div>
                   <button
                     type="button"
@@ -221,7 +220,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
           {/* User Info */}
           <div className="flex items-center gap-3 ml-2">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-gray-800">{userName || "Tên Người Dùng"}</p>
+              <p className="text-sm font-semibold text-gray-800">{userName || "User Name"}</p>
               <p className="text-xs text-gray-500">{userEmail || "email@example.com"}</p>
             </div>
             <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold border border-emerald-200">

@@ -36,10 +36,10 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const formatDate = (value) => {
-    if (!value) return "Chưa cập nhật";
+    if (!value) return "Not updated";
     const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "Chưa cập nhật";
-    return parsed.toLocaleDateString("vi-VN");
+    if (Number.isNaN(parsed.getTime())) return "Not updated";
+    return parsed.toLocaleDateString("en-US");
   };
 
   useEffect(() => {

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ApplicationDetail from './ApplicationDetail';
 import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api';
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
+import Pagination from "../../Components/Pagination";
 
 const stageMetaByStatus = {
   accepted: {
@@ -114,6 +115,9 @@ const Application = () => {
   // State quản lý việc chuyển đổi giữa màn hình Danh sách và màn hình Chi tiết
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [applications, setApplications] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalApplications, setTotalApplications] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [jobOptions, setJobOptions] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -130,7 +134,11 @@ const Application = () => {
         setLoading(true);
         setError('');
         const [applicationsResult, jobsResult] = await Promise.all([
-          applicationsApi.listForRecruiter(),
+          applicationsApi.listForRecruiterPaginated({
+            page: currentPage,
+            limit: PAGE_SIZE,
+            jobPostId: selectedJobId,
+          }),
           jobPostsApi.listMine(),
         ]);
 
@@ -139,7 +147,20 @@ const Application = () => {
         setUserEmail(profile.email || "");
 
         if (isMounted) {
-          setApplications(Array.isArray(applicationsResult) ? applicationsResult : []);
+          const applicationItems = Array.isArray(applicationsResult)
+            ? applicationsResult
+            : applicationsResult.data || [];
+          setApplications(applicationItems);
+          setTotalApplications(
+            Array.isArray(applicationsResult)
+              ? applicationItems.length
+              : Number(applicationsResult.total || 0)
+          );
+          setTotalPages(
+            Array.isArray(applicationsResult)
+              ? 1
+              : Math.max(Number(applicationsResult.totalPages || 1), 1)
+          );
           setJobOptions(Array.isArray(jobsResult) ? jobsResult : []);
         }
 
@@ -161,16 +182,10 @@ const Application = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentPage, selectedJobId]);
 
   const filteredApplications = useMemo(() => {
-    const selectedId = Number(selectedJobId);
-    const byJob =
-      selectedJobId === 'all'
-        ? applications
-        : applications.filter((item) => Number(item.jobPostId) === selectedId);
-
-    return [...byJob].sort((a, b) => {
+    return [...applications].sort((a, b) => {
       if (selectedJobId === 'all') {
         const titleCompare = (a.jobTitle || '').localeCompare(b.jobTitle || '');
         if (titleCompare !== 0) return titleCompare;
@@ -179,6 +194,10 @@ const Application = () => {
       return new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime();
     });
   }, [applications, selectedJobId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedJobId]);
 
   const displayApplications = useMemo(
     () => filteredApplications.map(toDisplayRow),
@@ -207,8 +226,6 @@ const Application = () => {
     const selected = jobOptions.find((job) => String(job.id) === String(selectedJobId));
     return selected?.title || 'Unknown Position';
   }, [jobOptions, selectedJobId]);
-
-  const totalPages = Math.ceil(displayApplications.length / PAGE_SIZE);
 
   // Nếu có ứng viên được chọn, render trang Chi tiết (ApplicationDetail)
   if (selectedApplication) {
@@ -384,16 +401,14 @@ const Application = () => {
 
           {/* Footer / Pagination */}
           <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-            {totalPages > 1 && (
-              <div className="flex gap-1.5">
-                <button className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded hover:bg-gray-50 text-gray-400">&lt;</button>
-                <button className="w-8 h-8 flex items-center justify-center bg-emerald-700 text-white rounded font-medium shadow-sm">1</button>
-                <button className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded hover:bg-gray-50 font-medium">2</button>
-                <button className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded hover:bg-gray-50 font-medium">3</button>
-                <span className="w-8 h-8 flex items-center justify-center text-gray-400">...</span>
-                <button className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded hover:bg-gray-50 text-gray-400">&gt;</button>
-              </div>
-            )}
+            <span>
+              Showing {displayApplications.length} of {totalApplications} applications
+            </span>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </div>
       </div>
