@@ -37,10 +37,10 @@ const Signup = () => {
   };
 
   const validatePassword = (password) => {
-    const isValidLength = password.length >= 5;
+    const isValidLength = password.length >= 8;
 
     if (!isValidLength) {
-      return "Password must be 5 or more characters.";
+      return "Password must be 8 or more characters.";
     }
     return "";
   };
@@ -134,7 +134,7 @@ const Signup = () => {
                 <input
                   type={showPassword ? "text" : "password"}
                   id="password"
-                  placeholder="Password (5 or more characters)"
+                  placeholder="Password (8 or more characters)"
                   value={password}
                   onChange={handlePasswordChange}
                   required

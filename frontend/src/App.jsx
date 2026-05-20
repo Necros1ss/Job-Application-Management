@@ -18,6 +18,9 @@ import ForgotPass from "./Pages/Auth/ForgotPass";
 import ResetPassword from "./Pages/Auth/ResetPassword";
 import JobDetail from "./Pages/Jobs/JobDetail";
 import Company from "./Pages/Info/Company";
+import AdminDashboard from "./Pages/Admin/AdminDashboard";
+import AdminUsers from "./Pages/Admin/AdminUsers";
+import AdminJobs from "./Pages/Admin/AdminJobs";
 
 function App() {
   return (
@@ -50,6 +53,14 @@ function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="job" element={<JobPost />} />
           <Route path="application" element={<Application />} />
+        </Route>
+
+        <Route path="/admin" element={<DashboardLayout allowedRole="admin" />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="jobs" element={<AdminJobs />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </Router>

@@ -25,7 +25,7 @@ const SideBar = ({ role = "candidate" }) => {
     const currentItem = menuItems.find((item) => {
       return currentPath === item.path ||
         currentPath.includes(item.path) ||
-        (item.path === "dashboard" && (currentPath === "" || currentPath === "candidate" || currentPath === "recruiter"));
+        (item.path === "dashboard" && (currentPath === "" || currentPath === "candidate" || currentPath === "recruiter" || currentPath === "admin"));
     });
     if (currentItem) {
       setPageTitle(currentItem.label);
@@ -37,7 +37,7 @@ const SideBar = ({ role = "candidate" }) => {
   const isActive = (itemPath) => {
     const currentPath = location.pathname.split("/").filter(Boolean).pop() || "";
     if (itemPath === "dashboard") {
-      return currentPath === "" || currentPath === "candidate" || currentPath === "recruiter" || currentPath === "dashboard";
+      return currentPath === "" || currentPath === "candidate" || currentPath === "recruiter" || currentPath === "admin" || currentPath === "dashboard";
     }
     return currentPath === itemPath;
   };
@@ -95,7 +95,7 @@ const SideBar = ({ role = "candidate" }) => {
               return (
                 <li key={item.id} onClick={toggleMenu}>
                   <Link
-                    to={item.path}
+                    to={`/${role}/${item.path}`}
                     className={`flex items-center gap-2 py-2.5 pl-5 rounded-xl cursor-pointer transition-all duration-200 ${
                       active
                         ? "bg-white/15 text-white font-semibold"

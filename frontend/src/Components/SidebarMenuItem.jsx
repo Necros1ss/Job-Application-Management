@@ -1,6 +1,7 @@
 import { BsBriefcaseFill, BsFillPersonFill, BsPeople } from "react-icons/bs";
 import { AiFillFolderOpen } from "react-icons/ai";
 import { RiLayoutMasonryFill } from "react-icons/ri";
+import { RiBarChart2Fill, RiShieldUserFill } from "react-icons/ri";
 
 const candidateMenu = [
   {
@@ -56,6 +57,27 @@ const recruiterMenu = [
   }
 ];
 
+const adminMenu = [
+  {
+    id: 0,
+    label: "Overview",
+    icon: <RiBarChart2Fill />,
+    path: "dashboard",
+  },
+  {
+    id: 1,
+    label: "Users",
+    icon: <RiShieldUserFill />,
+    path: "users",
+  },
+  {
+    id: 2,
+    label: "Jobs",
+    icon: <BsBriefcaseFill />,
+    path: "jobs",
+  },
+];
+
 export const SidebarMenuItem = (role = "candidate") =>
-  role === "recruiter" ? recruiterMenu : candidateMenu;
+  role === "recruiter" ? recruiterMenu : role === "admin" ? adminMenu : candidateMenu;
 

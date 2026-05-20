@@ -5,6 +5,7 @@ import { tokenStorage } from "./lib/api";
 const DashboardLayout = ({ allowedRole }) => {
   const token = tokenStorage.getToken();
   const userRole = tokenStorage.getRole();
+  const allowedRoles = Array.isArray(allowedRole) ? allowedRole : allowedRole ? [allowedRole] : [];
 
   if (!token) {
     return <Navigate to="/login" replace />;
@@ -15,8 +16,9 @@ const DashboardLayout = ({ allowedRole }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRole && userRole !== allowedRole) {
-    return <Navigate to={userRole === "recruiter" ? "/recruiter" : "/candidate"} replace />;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+    const fallbackRoute = userRole === "recruiter" ? "/recruiter" : userRole === "admin" ? "/admin" : "/candidate";
+    return <Navigate to={fallbackRoute} replace />;
   }
 
   return (

@@ -4,8 +4,11 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { ensureApplicationRejectionColumns, ensureApplicationStatusEnum, testDbConnection } from "./config/db.js";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { ensureAdminUserColumns, ensureApplicationRejectionColumns, ensureApplicationStatusEnum, ensureJobModerationColumns, testDbConnection } from "./config/db.js";
 import authRoutes from "./routes/auth.js";
+import adminRoutes from "./routes/admin.js";
 import userRoutes from "./routes/users.js";
 import applicationRoutes from "./routes/applications.js";
 import jobPostRoutes from "./routes/jobPosts.js";
@@ -40,7 +43,17 @@ app.use(
     },
   })
 );
+app.use(helmet());
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(morgan("dev"));
 
 app.get("/api/health", (_req, res) => {
@@ -48,6 +61,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/job-posts", jobPostRoutes);
@@ -62,22 +76,22 @@ app.use((err, _req, res, _next) => {
 
   if (err?.name === "MulterError") {
     if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({ message: "CV file is too large", detail: "Maximum allowed size is 20MB" });
+      return res.status(400).json({ success: false, message: "CV file is too large", detail: "Maximum allowed size is 20MB" });
     }
 
     if (err.code === "LIMIT_UNEXPECTED_FILE") {
-      return res.status(400).json({ message: "Invalid CV upload field", detail: "Expected field name is cvFile" });
+      return res.status(400).json({ success: false, message: "Invalid CV upload field", detail: "Expected field name is cvFile" });
     }
 
-    return res.status(400).json({ message: "Invalid CV upload", detail: err.message });
+    return res.status(400).json({ success: false, message: "Invalid CV upload", detail: err.message });
   }
 
   if (typeof err?.message === "string" && err.message.includes("Only PDF, DOC and DOCX")) {
-    return res.status(400).json({ message: err.message });
+    return res.status(400).json({ success: false, message: err.message });
   }
 
   const detail = process.env.NODE_ENV === "production" ? "An unexpected error occurred" : err?.message || "Unknown error";
-  return res.status(500).json({ message: "Internal server error", detail });
+  return res.status(500).json({ success: false, message: "Internal server error", detail });
 });
 
 const startServer = async () => {
@@ -86,6 +100,8 @@ const startServer = async () => {
   }
 
   await testDbConnection();
+  await ensureAdminUserColumns();
+  await ensureJobModerationColumns();
   await ensureApplicationStatusEnum();
   await ensureApplicationRejectionColumns();
   app.listen(port, () => {

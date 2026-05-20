@@ -1,5 +1,6 @@
-CREATE TYPE user_role AS ENUM ('candidate', 'recruiter');
+CREATE TYPE user_role AS ENUM ('candidate', 'recruiter', 'admin');
 CREATE TYPE application_status AS ENUM ('applied', 'reviewed', 'scheduled_interview', 'accepted', 'rejected');
+CREATE TYPE job_post_status AS ENUM ('active', 'hidden', 'deleted');
 
 DO $$
 BEGIN
@@ -21,6 +22,9 @@ CREATE TABLE users (
     login_name VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role user_role NOT NULL,
+  is_locked BOOLEAN NOT NULL DEFAULT false,
+  is_deleted BOOLEAN NOT NULL DEFAULT false,
+  deleted_at TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -64,7 +68,9 @@ CREATE TABLE job_posts (
     employment_type VARCHAR(100),
     responsibilities TEXT,
     requirements TEXT,
-    status varchar(20),
+    status job_post_status NOT NULL DEFAULT 'active',
+    moderated_by BIGINT NULL,
+    moderated_at TIMESTAMPTZ NULL,
     CONSTRAINT fk_job_recruiter
       FOREIGN KEY (recruiter_id) REFERENCES recruiters(id) ON DELETE CASCADE
 );

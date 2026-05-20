@@ -47,6 +47,9 @@ const request = async (path, options = {}) => {
     let errorMessage = "Request failed";
     try {
       const payload = await response.json();
+      if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+        errorMessage = payload.errors.map((error) => error.message).join("; ");
+      }
       if (payload?.detail) {
         errorMessage = `${payload.message || errorMessage}: ${payload.detail}`;
       } else {
@@ -63,7 +66,13 @@ const request = async (path, options = {}) => {
     return null;
   }
 
-  return response.json();
+  const payload = await response.json();
+
+  if (payload && typeof payload === "object" && payload.success === true && Object.prototype.hasOwnProperty.call(payload, "data")) {
+    return payload.data;
+  }
+
+  return payload;
 };
 
 const requestBlob = async (path, options = {}) => {
@@ -262,4 +271,31 @@ export const tokenStorage = {
     clearToken();
     clearRole();
   },
+};
+
+const buildQueryString = (params = {}) => {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+
+    searchParams.set(key, String(value));
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+};
+
+export const adminApi = {
+  getStats: () => request("/admin/stats"),
+  listUsers: (params = {}) => request(`/admin/users${buildQueryString(params)}`),
+  listJobs: (params = {}) => request(`/admin/jobs${buildQueryString(params)}`),
+  lockUser: (id) => request(`/admin/users/${id}/lock`, { method: "PATCH" }),
+  unlockUser: (id) => request(`/admin/users/${id}/unlock`, { method: "PATCH" }),
+  deleteUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
+  hideJob: (id) => request(`/admin/jobs/${id}/hide`, { method: "PATCH" }),
+  unhideJob: (id) => request(`/admin/jobs/${id}/unhide`, { method: "PATCH" }),
+  deleteJob: (id) => request(`/admin/jobs/${id}`, { method: "DELETE" }),
 };
