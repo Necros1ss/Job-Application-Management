@@ -55,7 +55,7 @@ const TopBar = ({ userName, userEmail, roleOverride }) => {
             </button>
           </div>
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-gray-800">{userName || "Tên Người Dùng"}</p>
+            <p className="text-sm font-semibold text-gray-800">{userName || "User Name"}</p>
             <p className="text-xs text-gray-500">{userEmail || "email@example.com"}</p>
           </div>
           <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold border border-emerald-200">

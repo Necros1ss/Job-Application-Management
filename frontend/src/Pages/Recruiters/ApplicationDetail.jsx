@@ -229,7 +229,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
     await applyOptimisticStatus(
       () => applicationsApi.updateStatus(source.id, nextStatus),
       nextStatus,
-      'Cập nhật trạng thái thành công'
+      'Status updated successfully'
     );
   };
 
@@ -261,7 +261,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(downloadUrl);
-      showToast('success', 'Đã tải CV xuống');
+      showToast('success', 'CV downloaded successfully');
     } catch (loadError) {
       setPreviewError(loadError.message || 'Unable to download CV');
     }
@@ -296,7 +296,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         applicationId: source.id,
       });
       setShowMessageModal(false);
-      showToast('success', 'Đã gửi thư đến candidate');
+      showToast('success', 'Message sent to candidate');
     } catch (err) {
       showToast('error', err.message || 'Failed to send message');
     } finally {
@@ -323,7 +323,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         notes: scheduleForm.notes,
       }),
       'scheduled_interview',
-      'Đã lên lịch phỏng vấn'
+      'Interview scheduled successfully'
     );
 
     setShowScheduleModal(false);
@@ -347,7 +347,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         emailBody: rejectForm.emailBody,
       }),
       'rejected',
-      'Đã từ chối hồ sơ'
+      'Application rejected successfully'
     );
 
     setShowRejectModal(false);
@@ -371,7 +371,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
 
       setShowOfferModal(false);
       setDetail((prev) => (prev ? { ...prev, status: 'accepted' } : prev));
-      showToast('success', 'Đã gửi offer và cập nhật trạng thái');
+      showToast('success', 'Offer sent and status updated');
     } catch (err) {
       showToast('error', err.message || 'Failed to send offer');
     } finally {

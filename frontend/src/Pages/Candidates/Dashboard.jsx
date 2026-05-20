@@ -89,7 +89,7 @@ const Dashboard = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Applied</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-bold text-[#116843]">{totalApplications || 12}</span>
+            <span className="text-5xl font-bold text-[#116843]">{totalApplications || "??"}</span>
           </div>
         </div>
 

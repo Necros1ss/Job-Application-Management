@@ -292,58 +292,6 @@ router.get("/recruiter/:id/cv", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req, res) => {
-  if (req.user.role !== "candidate") {
-    return res.status(403).json({ message: "Only candidate accounts can create applications" });
-  }
-
-  const { jobTitle, companyName, applicationDate, status } = req.body;
-  const dbStatus = toDbStatus(status);
-
-  if (!jobTitle || !companyName || !applicationDate || !status || !dbStatus) {
-    return res.status(400).json({ message: "jobTitle, companyName, applicationDate and status are required" });
-  }
-
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const recruiterId = await ensureRecruiterForCompany(client, companyName);
-
-    const jobPostInsert = await client.query(
-      `INSERT INTO job_posts (recruiter_id, title)
-       VALUES ($1, $2)
-       RETURNING id`,
-      [recruiterId, jobTitle]
-    );
-
-    const jobPostId = jobPostInsert.rows[0].id;
-
-    const appInsert = await client.query(
-      `INSERT INTO applications (candidate_id, job_post_id, applied_at, status)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, applied_at::date AS application_date, status`,
-      [req.user.id, jobPostId, applicationDate, dbStatus]
-    );
-
-    await client.query("COMMIT");
-
-    return res.status(201).json({
-      id: appInsert.rows[0].id,
-      jobTitle,
-      companyName,
-      applicationDate: appInsert.rows[0].application_date,
-      status: toClientStatus(appInsert.rows[0].status),
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    return res.status(500).json({ message: "Failed to create application", detail: error.message });
-  } finally {
-    client.release();
-  }
-});
-
 router.put("/:id", requireAuth, async (req, res) => {
   if (req.user.role !== "candidate") {
     return res.status(403).json({ message: "Only candidate accounts can update applications" });
@@ -442,13 +390,14 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
+
+
 router.post("/apply", requireAuth, uploadCv.single("cvFile"), async (req, res) => {
   if (req.user.role !== "candidate") {
     return res.status(403).json({ message: "Access Denied" });
   }
 
   const jobId = Number(req.body?.jobId);
-  const coverLetter = typeof req.body?.coverLetter === "string" ? req.body.coverLetter.trim() : "";
 
   if (!jobId || isNaN(jobId)) {
     return res.status(400).json({ message: "Invalid Job ID provided." });

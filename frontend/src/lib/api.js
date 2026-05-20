@@ -137,11 +137,6 @@ export const applicationsApi = {
   listForRecruiter: () => request("/applications/recruiter"),
   getForRecruiter: (id) => request(`/applications/recruiter/${id}`),
   getRecruiterCvFile: (id) => requestBlob(`/applications/recruiter/${id}/cv`),
-  create: (payload) =>
-    request("/applications", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
   update: (id, payload) =>
     request(`/applications/${id}`, {
       method: "PUT",
