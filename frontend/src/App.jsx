@@ -16,6 +16,7 @@ import JobPost from "./Pages/Recruiters/JobPost";
 import Application from "./Pages/Recruiters/Application";
 import InterviewList from "./Pages/Recruiters/InterviewList";
 import ForgotPass from "./Pages/Auth/ForgotPass";
+import ResetPassword from "./Pages/Auth/ResetPassword";
 import JobDetail from "./Pages/Jobs/JobDetail";
 import Company from "./Pages/Info/Company";
 
@@ -28,12 +29,13 @@ function App() {
         <Route path="signup" element={<SelectRole />} />
         <Route path="signup/create" element={<Signup />} />
         <Route path="forgot-password" element={<ForgotPass />} />
+        <Route path="reset-password" element={<ResetPassword />} />
 
         <Route path="/" element={<Layout />}>
           <Route path="jobs/:id" element={<JobDetail />} />
           <Route path="jobs/:id/company" element={<Company />} />
         </Route>
-        
+
         <Route path="/candidate" element={<DashboardLayout allowedRole="candidate" />}>
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
