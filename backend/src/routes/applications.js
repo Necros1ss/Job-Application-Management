@@ -7,6 +7,14 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
+const getPagination = (query) => {
+  const page = Math.max(Number.parseInt(query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(Number.parseInt(query.limit, 10) || 10, 1), 50);
+  const offset = (page - 1) * limit;
+
+  return { page, limit, offset };
+};
+
 const normalizeUploadedFilename = (originalName) => {
   if (typeof originalName !== "string" || originalName.length === 0) {
     return "cv-upload";
@@ -181,7 +189,30 @@ router.get("/recruiter", requireAuth, async (req, res) => {
     return res.status(403).json({ message: "Only recruiter accounts can access this resource" });
   }
 
+  const { page, limit, offset } = getPagination(req.query);
+  const jobPostId = Number(req.query.jobPostId);
+  const hasJobPostFilter = Number.isInteger(jobPostId) && jobPostId > 0;
+
   try {
+    const baseParams = [req.user.id];
+    let filterSql = "WHERE jp.recruiter_id = $1";
+
+    if (hasJobPostFilter) {
+      baseParams.push(jobPostId);
+      filterSql += " AND jp.id = $2";
+    }
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM applications a
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       ${filterSql}`,
+      baseParams
+    );
+
+    const total = Number(countResult.rows[0]?.total || 0);
+    const totalPages = Math.ceil(total / limit);
+
     const result = await pool.query(
       `SELECT
           a.id,
@@ -200,12 +231,18 @@ router.get("/recruiter", requireAuth, async (req, res) => {
        INNER JOIN job_posts jp ON jp.id = a.job_post_id
        LEFT JOIN recruiters r ON r.id = jp.recruiter_id
          LEFT JOIN application_files af ON af.application_id = a.id AND af.file_type = 'cv'
-       WHERE jp.recruiter_id = $1
-       ORDER BY a.applied_at DESC, a.id DESC`,
-      [req.user.id]
+       ${filterSql}
+       ORDER BY a.applied_at DESC, a.id DESC
+       LIMIT $${baseParams.length + 1} OFFSET $${baseParams.length + 2}`,
+      [...baseParams, limit, offset]
     );
 
-    return res.json(result.rows.map(mapRecruiterRow));
+    return res.json({
+      data: result.rows.map(mapRecruiterRow),
+      total,
+      page,
+      totalPages,
+    });
   } catch (error) {
     return res.status(500).json({ message: "Failed to load recruiter applications", detail: error.message });
   }
