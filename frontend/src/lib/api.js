@@ -164,7 +164,10 @@ export const applicationsApi = {
 };
 
 export const interviewsApi = {
-  myInterviews: () => request("/interviews/my"),
+  listForRecruiter: ({ upcoming = false } = {}) => {
+    const query = upcoming ? "?upcoming=true" : "";
+    return request(`/interviews/recruiter${query}`);
+  },
   create: (payload) =>
     request("/interviews", {
       method: "POST",
