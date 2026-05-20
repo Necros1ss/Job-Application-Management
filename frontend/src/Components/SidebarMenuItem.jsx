@@ -2,6 +2,7 @@ import { BsBriefcaseFill, BsFillPersonFill, BsPeople } from "react-icons/bs";
 import { AiFillFolderOpen } from "react-icons/ai";
 import { RiLayoutMasonryFill } from "react-icons/ri";
 import { RiBarChart2Fill, RiShieldUserFill } from "react-icons/ri";
+import { FaCalendar } from "react-icons/fa";
 
 const candidateMenu = [
   {
@@ -51,6 +52,12 @@ const recruiterMenu = [
   },
   {
     id: 3,
+    label: "Interviews",
+    icon: <FaCalendar />,
+    path: "interviews",
+  },
+  {
+    id: 4,
     label: "Profile",
     icon: <BsFillPersonFill />,
     path: "profile",
