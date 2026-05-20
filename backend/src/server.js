@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ensureApplicationRejectionColumns, ensureApplicationStatusEnum, testDbConnection } from "./config/db.js";
@@ -20,6 +22,38 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app = express();
 const port = process.env.PORT || 5000;
+const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
+const rateLimitMax = Number(process.env.RATE_LIMIT_MAX) || 100;
+
+const generalLimiter = rateLimit({
+  windowMs: rateLimitWindowMs,
+  max: rateLimitMax,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: "Too many requests, please try again later",
+  },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: "Too many authentication attempts, please try again later",
+  },
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: "Too many upload attempts, please try again later",
+  },
+});
 
 const configuredOrigins = (process.env.CLIENT_ORIGIN || "")
   .split(",")
@@ -28,6 +62,7 @@ const configuredOrigins = (process.env.CLIENT_ORIGIN || "")
 const allowedOrigins = new Set(configuredOrigins);
 const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
+app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -42,13 +77,15 @@ app.use(
 );
 app.use(express.json());
 app.use(morgan("dev"));
+app.use("/api", generalLimiter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/applications/apply", uploadLimiter);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/job-posts", jobPostRoutes);
 app.use("/api/saved-jobs", savedJobsRoutes);
