@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { applyFromJob } from "../../lib/api"; 
+import { showError, showSuccess } from "../../utils/toast";
 
 const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
   const navigate = useNavigate();
@@ -13,20 +14,19 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
   const handleApplySubmit = async (e) => {
     e.preventDefault();
     if (!cvFile) {
-      alert("Please upload your CV.");
+      showError("Vui lòng tải lên CV của bạn.");
       return;
     }
 
     try {
       setIsLoading(true);
       await applyFromJob(jobDetail?.id, cvFile, coverLetter); 
-      alert("Application submitted successfully.");
+      showSuccess("Apply thành công.");   
       if (onSuccess) onSuccess();
       onClose(); 
       setTimeout(() => { navigate("/candidate/job"); }, 1000);
     } catch (error) {
-      console.error("Apply failed:", error);
-      alert(error.message || "Application failed.");
+      showError(error.message || "Apply thất bại.");   
     } finally {
       setIsLoading(false);
     } 

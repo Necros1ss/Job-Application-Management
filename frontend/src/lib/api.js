@@ -143,7 +143,22 @@ export const usersApi = {
 
 export const applicationsApi = {
   list: () => request("/applications"),
-  listForRecruiter: () => request("/applications/recruiter"),
+  listForRecruiter: async () => {
+    const response = await request("/applications/recruiter");
+    return Array.isArray(response) ? response : response.data || [];
+  },
+  listForRecruiterPaginated: ({ page = 1, limit = 10, jobPostId = "" } = {}) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (jobPostId && jobPostId !== "all") {
+      params.set("jobPostId", String(jobPostId));
+    }
+
+    return request(`/applications/recruiter?${params.toString()}`);
+  },
   getForRecruiter: (id) => request(`/applications/recruiter/${id}`),
   getRecruiterCvFile: (id) => requestBlob(`/applications/recruiter/${id}/cv`),
   update: (id, payload) =>
@@ -173,6 +188,10 @@ export const applicationsApi = {
 };
 
 export const interviewsApi = {
+  myInterviews: ({ upcoming = false } = {}) => {
+    const query = upcoming ? "?upcoming=true" : "";
+    return request(`/interviews${query}`);
+  },
   listForRecruiter: ({ upcoming = false } = {}) => {
     const query = upcoming ? "?upcoming=true" : "";
     return request(`/interviews/recruiter${query}`);
@@ -185,10 +204,24 @@ export const interviewsApi = {
 };
 
 export const jobPostsApi = {
-  list: (search = "") => {
+  list: async (search = "") => {
     const normalizedSearch = search.trim();
     const query = normalizedSearch ? `?search=${encodeURIComponent(normalizedSearch)}` : "";
-    return request(`/job-posts${query}`);
+    const response = await request(`/job-posts${query}`);
+    return Array.isArray(response) ? response : response.data || [];
+  },
+
+  listPaginated: ({ search = "", page = 1, limit = 10 } = {}) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    const normalizedSearch = search.trim();
+    if (normalizedSearch) {
+      params.set("search", normalizedSearch);
+    }
+
+    return request(`/job-posts?${params.toString()}`);
   },
 
   listMine: () => request("/job-posts/mine"),

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FaTimes } from "react-icons/fa";
 import { jobPostsApi } from "../../lib/api";
+import { showError, showSuccess } from "../../utils/toast";
 
 const EditJob = ({ isOpen, job, onClose, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,17 +29,18 @@ const EditJob = ({ isOpen, job, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) {
-      setError("Job title is required.");
+      showError("Job title is required.");
       return;
     }
     setIsSubmitting(true);
     setError("");
     try {
       await jobPostsApi.update(job.id, form);
+      showSuccess("Job updated successfully");
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      setError(err.message || "Failed to update job");
+      showError(err.message || "Failed to update job");
     } finally {
       setIsSubmitting(false);
     }

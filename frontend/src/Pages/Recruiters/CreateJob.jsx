@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FaTimes, FaMapMarker, FaDollarSign, FaBriefcase, FaRegCalendarAlt, FaBookOpen, FaCheck } from "react-icons/fa";
 import { jobPostsApi } from "../../lib/api";
+import { showError, showSuccess } from "../../utils/toast";
 
 const CreateJob = ({ isOpen, onClose, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,17 +29,18 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) {
-      setError("Job title is required.");
+      showError("Job title is required.");
       return;
     }
     setIsSubmitting(true);
     setError("");
     try {
       await jobPostsApi.create(form);
+      showSuccess("Job created successfully");
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      setError(err.message || "Failed to create job");
+      showError(err.message || "Failed to create job");
     } finally {
       setIsSubmitting(false);
     }
