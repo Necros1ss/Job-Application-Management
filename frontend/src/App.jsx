@@ -19,6 +19,7 @@ import ForgotPass from "./Pages/Auth/ForgotPass";
 import ResetPassword from "./Pages/Auth/ResetPassword";
 import JobDetail from "./Pages/Jobs/JobDetail";
 import Company from "./Pages/Info/Company";
+import NotFound from "./Pages/NotFound";
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
           <Route path="application" element={<Application/>} />
           <Route path="interviews" element={<InterviewList />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

@@ -3,6 +3,7 @@ import { FaPlus, FaList, FaThLarge, FaTrashAlt } from "react-icons/fa";
 import { FaSearch } from "react-icons/fa";
 import { applicationsApi, savedJobsApi, usersApi } from "../../lib/api"; // Đảm bảo đã import usersApi
 import TopBarDashboard from "../../Components/TopBarDashboard";
+import { SkeletonCard, SkeletonRow } from "../../Components/Skeleton";
 import { Link, useNavigate } from "react-router-dom"; 
 import { showError, showSuccess } from "../../utils/toast";
 
@@ -205,7 +206,17 @@ const Applications = () => {
           </div>
         </div>
 
-        {isLoading && <p className="text-sm text-gray-500">Loading applications...</p>}
+        {isLoading && isCardView && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {Array(4).fill(0).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        )}
+
+        {isLoading && !isCardView && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-12">
+            {Array(5).fill(0).map((_, i) => <SkeletonRow key={i} />)}
+          </div>
+        )}
 
         {/* ================== GRID VIEW (CARDS) ================== */}
         {!isLoading && isCardView ? (
