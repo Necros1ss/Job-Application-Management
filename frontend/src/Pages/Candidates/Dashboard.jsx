@@ -1,25 +1,28 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; 
-import { applicationsApi, usersApi } from "../../lib/api";
+import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
-import { FaUserCircle, FaSearch, FaBookOpen } from "react-icons/fa";
+import { FaUserCircle, FaSearch, FaBookOpen, FaVideo, FaMapMarkerAlt } from "react-icons/fa";
 import { formatMessageTime  } from '../../utils/format';
 
 const Dashboard = () => {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [jobs, setJobs] = useState([]);
+  const [interviews, setInterviews] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [profile, applications] = await Promise.all([
+        const [profile, applications, myInterviews] = await Promise.all([
           usersApi.me(),
           applicationsApi.list(),
+          interviewsApi.myInterviews(),
         ]);
 
         setJobs(applications);
+        setInterviews(myInterviews);
         setUserName(profile.name || "");
         setUserEmail(profile.email || "");
         setErrorMessage("");
@@ -66,6 +69,43 @@ const Dashboard = () => {
     }
   };
 
+  const formatInterviewDateTime = (value) => {
+    if (!value) return "Not scheduled";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Not scheduled";
+
+    const weekday = date.toLocaleDateString("vi-VN", { weekday: "long" });
+    const formattedDate = date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const formattedTime = date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return `${weekday}, ${formattedDate} lúc ${formattedTime}`;
+  };
+
+  const renderInterviewModeBadge = (mode) => {
+    const normalizedMode = (mode || "").toLowerCase();
+    const isOnline = normalizedMode === "online";
+
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${
+          isOnline
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-orange-50 text-orange-700"
+        }`}
+      >
+        {isOnline ? "Online" : "Offline"}
+      </span>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <TopBarDashboard userName={userName} userEmail={userEmail} />
@@ -89,7 +129,7 @@ const Dashboard = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Applied</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-bold text-[#116843]">{totalApplications || 12}</span>
+            <span className="text-5xl font-bold text-[#116843]">{totalApplications || "??"}</span>
           </div>
         </div>
 
@@ -165,6 +205,56 @@ const Dashboard = () => {
 
         {/* CỘT PHẢI: Getting Started (Các Action Cards) */}
         <div className="w-full lg:w-1/3">
+          <div className="flex justify-between items-end mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Upcoming Interviews</h2>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+            {interviews.length > 0 ? (
+              <div className="space-y-5">
+                {interviews.slice(0, 3).map((interview) => {
+                  const isOnline = (interview.mode || "").toLowerCase() === "online";
+
+                  return (
+                    <div key={interview.id} className="border-b border-gray-100 pb-5 last:border-b-0 last:pb-0">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <h3 className="font-bold text-gray-900 text-base">{interview.job_title}</h3>
+                          <p className="text-sm text-gray-500 mt-0.5">{interview.company_name}</p>
+                        </div>
+                        {renderInterviewModeBadge(interview.mode)}
+                      </div>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {formatInterviewDateTime(interview.interview_datetime)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
+                        {isOnline ? <FaVideo className="text-emerald-600" /> : <FaMapMarkerAlt className="text-orange-600" />}
+                        {isOnline ? "Online meeting" : interview.location || "Offline interview"}
+                      </p>
+                      {isOnline && interview.meet_link && (
+                        <a
+                          href={interview.meet_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center mt-4 px-4 py-2 rounded-lg bg-[#188155] text-white text-sm font-semibold hover:bg-[#116843] transition-colors"
+                        >
+                          Join Meeting
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 mx-auto rounded-full bg-gray-50 text-gray-500 flex items-center justify-center mb-3">
+                  <FaBookOpen className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-semibold text-gray-800">No upcoming interviews</p>
+              </div>
+            )}
+          </div>
+
           <h2 className="text-xl font-bold text-gray-900 mb-6">Getting Started</h2>
           
           <div className="space-y-4">

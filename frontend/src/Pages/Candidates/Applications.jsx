@@ -4,6 +4,7 @@ import { FaSearch } from "react-icons/fa";
 import { applicationsApi, savedJobsApi, usersApi } from "../../lib/api"; // Đảm bảo đã import usersApi
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { Link, useNavigate } from "react-router-dom"; 
+import { showError, showSuccess } from "../../utils/toast";
 
 const formatDate = (date) => {
   if (!date) return "";
@@ -83,9 +84,10 @@ const Applications = () => {
         setCheckedJobIds((prev) => prev.filter((id) => id !== jobToDelete.id));
       } 
       setErrorMessage("");
+      showSuccess(activeTab === "saved" ? "Saved job removed" : "Application deleted successfully");
     } catch (error) {
       const fallback = activeTab === "saved" ? "Failed to delete saved job" : "Failed to delete application";
-      setErrorMessage(error.message || fallback);
+      showError(error.message || fallback);
     }
   }
 
@@ -99,13 +101,14 @@ const Applications = () => {
 
     const failed = results.filter((result) => result.status === "rejected");
     if (failed.length > 0) {
-      setErrorMessage("Some applications could not be deleted. Please retry.");
+      showError("Some applications could not be deleted. Please retry.");
       return;
     }
 
     setJobs((prev) => prev.filter((job) => !checkedJobIds.includes(job.id)));
     setCheckedJobIds([]);
     setErrorMessage("");
+    showSuccess("Selected applications deleted successfully");
   };
 
   const normalizedSearch = searchTerm.trim().toLowerCase();

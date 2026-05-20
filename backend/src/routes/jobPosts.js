@@ -4,6 +4,14 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
+const getPagination = (query) => {
+  const page = Math.max(Number.parseInt(query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(Number.parseInt(query.limit, 10) || 10, 1), 50);
+  const offset = (page - 1) * limit;
+
+  return { page, limit, offset };
+};
+
 const mapRow = (row) => ({
   id: row.id,
   recruiterId: row.recruiter_id,
@@ -29,8 +37,23 @@ const mapRow = (row) => ({
 router.get("/", requireAuth, async (req, res) => {
   const search = (req.query.search || "").toString().trim();
   const searchLike = `%${search}%`;
+  const { page, limit, offset } = getPagination(req.query);
 
   try {
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM job_posts jp
+       LEFT JOIN recruiters r ON r.id = jp.recruiter_id
+       WHERE ($1 = ''
+         OR jp.title ILIKE $2
+         OR COALESCE(r.company_name, '') ILIKE $2
+         OR COALESCE(jp.location, '') ILIKE $2)`,
+      [search, searchLike]
+    );
+
+    const total = Number(countResult.rows[0]?.total || 0);
+    const totalPages = Math.ceil(total / limit);
+
     const result = await pool.query(
       `SELECT
           jp.id,
@@ -56,11 +79,17 @@ router.get("/", requireAuth, async (req, res) => {
          OR jp.title ILIKE $2
          OR COALESCE(r.company_name, '') ILIKE $2
          OR COALESCE(jp.location, '') ILIKE $2)
-       ORDER BY jp.created_at DESC, jp.id DESC`,
-      [search, searchLike]
+       ORDER BY jp.created_at DESC, jp.id DESC
+       LIMIT $3 OFFSET $4`,
+      [search, searchLike, limit, offset]
     );
 
-    return res.json(result.rows.map(mapRow));
+    return res.json({
+      data: result.rows.map(mapRow),
+      total,
+      page,
+      totalPages,
+    });
   } catch (error) {
     return res.status(500).json({ message: "Failed to load job posts", detail: error.message });
   }

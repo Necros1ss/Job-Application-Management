@@ -10,6 +10,7 @@ import {
 import { usersApi } from "../lib/api";
 import ProfileTopBar from "../Components/ProfileTopBar";
 import { calculateAge } from '../utils/format';
+import { showError, showSuccess } from "../utils/toast";
 
 const Profile = () => {
   const [editingName, setEditingName] = useState(false);
@@ -35,10 +36,10 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const formatDate = (value) => {
-    if (!value) return "Chưa cập nhật";
+    if (!value) return "Not updated";
     const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "Chưa cập nhật";
-    return parsed.toLocaleDateString("vi-VN");
+    if (Number.isNaN(parsed.getTime())) return "Not updated";
+    return parsed.toLocaleDateString("en-US");
   };
 
   useEffect(() => {
@@ -96,8 +97,9 @@ const Profile = () => {
       setJobType(updated.job_type || "");
       setSkills(Array.isArray(updated.skills) ? updated.skills : []);
       setProfileError("");
+      showSuccess("Profile saved successfully");
     } catch (error) {
-      setProfileError(error.message || "Failed to save profile");
+      showError(error.message || "Failed to save profile");
     } finally {
       setIsSaving(false);
     }

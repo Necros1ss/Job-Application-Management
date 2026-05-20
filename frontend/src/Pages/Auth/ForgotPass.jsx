@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { authApi } from "../../lib/api";
+import { Link } from "react-router-dom";
 import { FaEnvelope, FaCheck, FaArrowLeft } from "react-icons/fa";
+import { authApi } from "../../lib/api";
 
 const ForgotPass = () => {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,8 +50,8 @@ const ForgotPass = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Check your email</h2>
           <p className="text-gray-500 mb-6 leading-relaxed">
-            We sent a password reset link to <strong className="text-gray-700">{email}</strong>.
-            Please check your inbox and spam folder.
+            If an account with <strong className="text-gray-700">{email}</strong> exists,
+            we sent a password reset link. Please check your inbox and spam folder.
           </p>
           <p className="text-sm text-gray-400 mb-6">
             Didn't receive the email?{" "}

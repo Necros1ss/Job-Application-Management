@@ -7,6 +7,14 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
+const getPagination = (query) => {
+  const page = Math.max(Number.parseInt(query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(Number.parseInt(query.limit, 10) || 10, 1), 50);
+  const offset = (page - 1) * limit;
+
+  return { page, limit, offset };
+};
+
 const normalizeUploadedFilename = (originalName) => {
   if (typeof originalName !== "string" || originalName.length === 0) {
     return "cv-upload";
@@ -181,7 +189,30 @@ router.get("/recruiter", requireAuth, async (req, res) => {
     return res.status(403).json({ message: "Only recruiter accounts can access this resource" });
   }
 
+  const { page, limit, offset } = getPagination(req.query);
+  const jobPostId = Number(req.query.jobPostId);
+  const hasJobPostFilter = Number.isInteger(jobPostId) && jobPostId > 0;
+
   try {
+    const baseParams = [req.user.id];
+    let filterSql = "WHERE jp.recruiter_id = $1";
+
+    if (hasJobPostFilter) {
+      baseParams.push(jobPostId);
+      filterSql += " AND jp.id = $2";
+    }
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM applications a
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       ${filterSql}`,
+      baseParams
+    );
+
+    const total = Number(countResult.rows[0]?.total || 0);
+    const totalPages = Math.ceil(total / limit);
+
     const result = await pool.query(
       `SELECT
           a.id,
@@ -200,12 +231,18 @@ router.get("/recruiter", requireAuth, async (req, res) => {
        INNER JOIN job_posts jp ON jp.id = a.job_post_id
        LEFT JOIN recruiters r ON r.id = jp.recruiter_id
          LEFT JOIN application_files af ON af.application_id = a.id AND af.file_type = 'cv'
-       WHERE jp.recruiter_id = $1
-       ORDER BY a.applied_at DESC, a.id DESC`,
-      [req.user.id]
+       ${filterSql}
+       ORDER BY a.applied_at DESC, a.id DESC
+       LIMIT $${baseParams.length + 1} OFFSET $${baseParams.length + 2}`,
+      [...baseParams, limit, offset]
     );
 
-    return res.json(result.rows.map(mapRecruiterRow));
+    return res.json({
+      data: result.rows.map(mapRecruiterRow),
+      total,
+      page,
+      totalPages,
+    });
   } catch (error) {
     return res.status(500).json({ message: "Failed to load recruiter applications", detail: error.message });
   }
@@ -289,58 +326,6 @@ router.get("/recruiter/:id/cv", requireAuth, async (req, res) => {
     return res.send(file.file_data);
   } catch (error) {
     return res.status(500).json({ message: "Failed to load CV file", detail: error.message });
-  }
-});
-
-router.post("/", requireAuth, async (req, res) => {
-  if (req.user.role !== "candidate") {
-    return res.status(403).json({ message: "Only candidate accounts can create applications" });
-  }
-
-  const { jobTitle, companyName, applicationDate, status } = req.body;
-  const dbStatus = toDbStatus(status);
-
-  if (!jobTitle || !companyName || !applicationDate || !status || !dbStatus) {
-    return res.status(400).json({ message: "jobTitle, companyName, applicationDate and status are required" });
-  }
-
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const recruiterId = await ensureRecruiterForCompany(client, companyName);
-
-    const jobPostInsert = await client.query(
-      `INSERT INTO job_posts (recruiter_id, title)
-       VALUES ($1, $2)
-       RETURNING id`,
-      [recruiterId, jobTitle]
-    );
-
-    const jobPostId = jobPostInsert.rows[0].id;
-
-    const appInsert = await client.query(
-      `INSERT INTO applications (candidate_id, job_post_id, applied_at, status)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, applied_at::date AS application_date, status`,
-      [req.user.id, jobPostId, applicationDate, dbStatus]
-    );
-
-    await client.query("COMMIT");
-
-    return res.status(201).json({
-      id: appInsert.rows[0].id,
-      jobTitle,
-      companyName,
-      applicationDate: appInsert.rows[0].application_date,
-      status: toClientStatus(appInsert.rows[0].status),
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    return res.status(500).json({ message: "Failed to create application", detail: error.message });
-  } finally {
-    client.release();
   }
 });
 
@@ -442,13 +427,14 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
+
+
 router.post("/apply", requireAuth, uploadCv.single("cvFile"), async (req, res) => {
   if (req.user.role !== "candidate") {
     return res.status(403).json({ message: "Access Denied" });
   }
 
   const jobId = Number(req.body?.jobId);
-  const coverLetter = typeof req.body?.coverLetter === "string" ? req.body.coverLetter.trim() : "";
 
   if (!jobId || isNaN(jobId)) {
     return res.status(400).json({ message: "Invalid Job ID provided." });

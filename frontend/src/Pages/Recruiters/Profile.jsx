@@ -15,6 +15,7 @@ import {
 } from "react-icons/md";
 import { usersApi } from "../../lib/api";
 import ProfileTopBar from "../../Components/ProfileTopBar";
+import { showError, showSuccess } from "../../utils/toast";
 
 const Profile = () => {
   // Trạng thái Edit cho từng section
@@ -117,8 +118,9 @@ const Profile = () => {
       setDescription(updated.description || "");
 
       setProfileError("");
+      showSuccess("Profile saved successfully");
     } catch (error) {
-      setProfileError(error.message || "Failed to save profile");
+      showError(error.message || "Failed to save profile");
     } finally {
       setIsSaving(false);
     }
@@ -298,7 +300,7 @@ const Profile = () => {
               <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 md:col-span-2">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdBusiness /> Company Legal Name</p>
                 {editingOrganization ? (
-                  <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Tên đầy đủ của công ty..." />
+                  <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Full legal company name..." />
                 ) : (
                   <p className="font-semibold text-gray-900">{companyName || "Not specified"}</p>
                 )}
@@ -332,9 +334,9 @@ const Profile = () => {
 
               {/* Tax Code */}
               <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdVpnKey /> Tax Code (Mã số thuế)</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdVpnKey /> Tax Code</p>
                 {editingOrganization ? (
-                  <input type="text" value={taxCode} onChange={(e) => setTaxCode(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Nhập mã số thuế..." />
+                  <input type="text" value={taxCode} onChange={(e) => setTaxCode(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Enter tax code..." />
                 ) : (
                   <p className="font-semibold text-gray-900">{taxCode || "Not specified"}</p>
                 )}
@@ -344,7 +346,7 @@ const Profile = () => {
               <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdLocationOn /> Address</p>
                 {editingOrganization ? (
-                  <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Địa chỉ văn phòng..." />
+                  <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Office address..." />
                 ) : (
                   <p className="font-semibold text-gray-900">{address || "Not specified"}</p>
                 )}
@@ -359,7 +361,7 @@ const Profile = () => {
                     onChange={(e) => setDescription(e.target.value)} 
                     rows={4}
                     className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d] resize-none" 
-                    placeholder="Giới thiệu về văn hóa, môi trường và sứ mệnh của công ty..." 
+                    placeholder="Describe your company culture, work environment, and mission..." 
                   />
                 ) : (
                   <p className="font-semibold text-gray-900 whitespace-pre-line">{description || "No description provided."}</p>

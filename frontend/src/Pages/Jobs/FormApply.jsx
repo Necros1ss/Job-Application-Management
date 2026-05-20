@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { applyFromJob } from "../../lib/api"; 
+import { showError, showSuccess } from "../../utils/toast";
 
 const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
   const navigate = useNavigate();
@@ -13,20 +14,19 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
   const handleApplySubmit = async (e) => {
     e.preventDefault();
     if (!cvFile) {
-      alert("Vui lòng tải lên CV của bạn.");
+      showError("Vui lòng tải lên CV của bạn.");
       return;
     }
 
     try {
       setIsLoading(true);
       await applyFromJob(jobDetail?.id, cvFile, coverLetter); 
-      alert("Apply thành công.");   
+      showSuccess("Apply thành công.");   
       if (onSuccess) onSuccess();
       onClose(); 
       setTimeout(() => { navigate("/candidate/job"); }, 1000);
     } catch (error) {
-      console.error("Lỗi khi apply:", error);
-      alert(error.message || "Apply thất bại.");   
+      showError(error.message || "Apply thất bại.");   
     } finally {
       setIsLoading(false);
     } 
@@ -36,7 +36,7 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
       <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
         <div className="flex justify-between items-center mb-5">
-          <h3 className="text-xl font-bold text-gray-900">Nộp hồ sơ ứng tuyển</h3>
+          <h3 className="text-xl font-bold text-gray-900">Submit Your Application</h3>
           <button 
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition text-xl"
@@ -48,14 +48,14 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
         <form onSubmit={handleApplySubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Vị trí: <span className="font-normal">{jobDetail?.title}</span>
+              Position: <span className="font-normal">{jobDetail?.title}</span>
             </label>
           </div>
 
           {/* Upload CV */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Tải lên CV (PDF, DOCX) <span className="text-red-500">*</span>
+              Upload CV (PDF, DOCX) <span className="text-red-500">*</span>
             </label>
             <div className="flex items-center justify-center w-full">
               <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
@@ -64,10 +64,10 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <p className="mb-2 text-sm text-gray-500">
-                    <span className="font-semibold">Nhấn để tải lên</span> hoặc kéo thả file
+                    <span className="font-semibold">Click to upload</span> or drag and drop
                   </p>
                   <p className="text-xs text-gray-500">
-                    {cvFile ? cvFile.name : "Chưa có file nào được chọn"}
+                    {cvFile ? cvFile.name : "No file selected"}
                   </p>
                 </div>
                 <input 
@@ -83,12 +83,12 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
           {/* Cover Letter */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Thư giới thiệu (Cover Letter)
+              Cover Letter
             </label>
             <textarea 
               rows="4"
               className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition resize-none"
-              placeholder="Viết đôi lời giới thiệu về bản thân và lý do bạn phù hợp với công việc này..."
+              placeholder="Write a short introduction about yourself and why you are a fit for this role..."
               value={coverLetter}
               onChange={(e) => setCoverLetter(e.target.value)}
             ></textarea>
@@ -101,14 +101,14 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
               onClick={onClose}
               className="px-5 py-2.5 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition"
             >
-              Hủy
+              Cancel
             </button>
             <button 
               type="submit"
               disabled={isLoading}
               className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-sm transition disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLoading ? "Đang gửi..." : "Gửi hồ sơ"}
+              {isLoading ? "Submitting..." : "Submit Application"}
             </button>
           </div>
         </form>
