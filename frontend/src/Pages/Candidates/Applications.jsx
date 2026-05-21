@@ -4,7 +4,7 @@ import { FaSearch } from "react-icons/fa";
 import { applicationsApi, savedJobsApi, usersApi } from "../../lib/api"; // Đảm bảo đã import usersApi
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonRow } from "../../Components/Skeleton";
-import { Link, useNavigate } from "react-router-dom"; 
+import { Link, useLocation, useNavigate } from "react-router-dom"; 
 import { showError, showSuccess } from "../../utils/toast";
 
 const formatDate = (date) => {
@@ -16,8 +16,9 @@ const formatDate = (date) => {
 
 const Applications = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [jobs, setJobs] = useState([]);
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState(location.pathname.endsWith("/saved-jobs") ? "saved" : "all");
   const [checkedJobIds, setCheckedJobIds] = useState([]);
   const [isCardView, setIsCardView] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +41,9 @@ const Applications = () => {
       setUserEmail(profile.email || "");
       setErrorMessage("");
     } catch (error) {
-      setErrorMessage(error.message || "Failed to load applications");
+      const message = error.message || "Failed to load applications";
+      setErrorMessage(message);
+      showError(message);
     } finally {
       setIsLoading(false);
     }
@@ -52,6 +55,7 @@ const Applications = () => {
       const data = await savedJobsApi.list();
       setSavedJobs(data);
     } catch (error) {
+      showError(error.message || "Failed to load saved jobs");
     } finally {
       setSavedJobsLoading(false);
     }
@@ -61,6 +65,12 @@ const Applications = () => {
     loadJobs();
     loadSavedJobs();
   }, []);
+
+  useEffect(() => {
+    if (location.pathname.endsWith("/saved-jobs")) {
+      setActiveTab("saved");
+    }
+  }, [location.pathname]);
 
   const openJobDetail = (job) => {
     if (!job?.jobPostId) return;
@@ -206,20 +216,20 @@ const Applications = () => {
           </div>
         </div>
 
-        {isLoading && isCardView && (
+        {(isLoading || savedJobsLoading) && isCardView && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {Array(4).fill(0).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         )}
 
-        {isLoading && !isCardView && (
+        {(isLoading || savedJobsLoading) && !isCardView && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-12">
             {Array(5).fill(0).map((_, i) => <SkeletonRow key={i} />)}
           </div>
         )}
 
         {/* ================== GRID VIEW (CARDS) ================== */}
-        {!isLoading && isCardView ? (
+        {!isLoading && !savedJobsLoading && isCardView ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           
           {visibleJobs.map((job) => (
@@ -285,7 +295,7 @@ const Applications = () => {
         ) : null}
 
         {/* ================== LIST VIEW (TABLE) ================== */}
-        {!isLoading && !isCardView ? (
+        {!isLoading && !savedJobsLoading && !isCardView ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">

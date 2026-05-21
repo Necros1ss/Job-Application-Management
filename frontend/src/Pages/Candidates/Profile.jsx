@@ -48,7 +48,9 @@ const Profile = () => {
         const response = await usersApi.me();
         setUserName(response.name);
         setUserEmail(response.email);
-      } catch (error) {}
+      } catch (error) {
+        showError(error.message || "Failed to load profile summary");
+      }
     };
     fetchUserData();
   }, []);
@@ -67,7 +69,9 @@ const Profile = () => {
         setSkills(Array.isArray(profile.skills) ? profile.skills : []);
         setProfileError("");
       } catch (error) {
-        setProfileError(error.message || "Failed to load profile");
+        const message = error.message || "Failed to load profile";
+        setProfileError(message);
+        showError(message);
       }
     };
 

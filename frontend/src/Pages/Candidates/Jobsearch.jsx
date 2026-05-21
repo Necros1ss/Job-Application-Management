@@ -11,6 +11,8 @@ import {
 import { jobPostsApi, savedJobsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard } from "../../Components/Skeleton";
+import Pagination from "../../Components/Pagination";
+import { showError, showSuccess } from "../../utils/toast";
 
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Internship"];
 const LOCATIONS = ["Remote", "On-site", "Hybrid"];
@@ -86,7 +88,9 @@ const Jobsearch = () => {
         const profile = await usersApi.me();
         setUserName(profile.name || "");
         setUserEmail(profile.email || "");
-      } catch (_) {}
+      } catch (error) {
+        showError(error.message || "Failed to load profile");
+      }
     };
     loadProfile();
     setRecentSearches(getRecentSearches());
@@ -135,7 +139,9 @@ const Jobsearch = () => {
         setSavedJobIdMap(nextSavedMap);
         setErrorMessage("");
       } catch (error) {
-        setErrorMessage(error.message || "Failed to load jobs");
+        const message = error.message || "Failed to load jobs";
+        setErrorMessage(message);
+        showError(message);
       } finally {
         setIsLoading(false);
       }

@@ -435,6 +435,7 @@ router.post("/apply", requireAuth, uploadCv.single("cvFile"), async (req, res) =
   }
 
   const jobId = Number(req.body?.jobId);
+  const coverLetter = typeof req.body?.coverLetter === "string" ? req.body.coverLetter.trim() : "";
 
   if (!jobId || isNaN(jobId)) {
     return res.status(400).json({ message: "Invalid Job ID provided." });
@@ -483,6 +484,13 @@ router.post("/apply", requireAuth, uploadCv.single("cvFile"), async (req, res) =
        VALUES ($1, $2, NOW(), 'applied')
        RETURNING *`,
       [req.user.id, jobId]
+    );
+
+    await client.query(
+      `UPDATE applications
+       SET cover_letter = $1
+       WHERE id = $2`,
+      [coverLetter, application.rows[0].id]
     );
 
     const normalizedFileName = normalizeUploadedFilename(req.file.originalname);

@@ -1,7 +1,7 @@
 import { BsBriefcaseFill, BsFillPersonFill, BsPeople } from "react-icons/bs";
 import { AiFillFolderOpen } from "react-icons/ai";
 import { RiLayoutMasonryFill } from "react-icons/ri";
-import { FaCalendar } from "react-icons/fa";
+import { FaCalendar, FaEnvelope } from "react-icons/fa";
 
 const candidateMenu = [
   {
@@ -24,6 +24,12 @@ const candidateMenu = [
   },
   {
     id: 3,
+    label: "Messages",
+    icon: <FaEnvelope />,
+    path: "messages",
+  },
+  {
+    id: 4,
     label: "Profile",
     icon: <BsFillPersonFill />,
     path: "profile",

@@ -27,9 +27,9 @@ const mapProfile = (row) => ({
   tax_code: row.role === "recruiter" ? row.recruiter_tax_code || "" : "",
   description: row.role === "recruiter" ? row.recruiter_description || "" : "",
   dob: row.role === "recruiter" ? "" : row.candidate_dob || "", 
-  experience: "",
-  job_type: "",
-  skills: [],
+  experience: row.role === "recruiter" ? "" : row.experience || "",
+  job_type: row.role === "recruiter" ? "" : row.job_type || "",
+  skills: row.role === "recruiter" ? [] : row.skills || [],
   role: row.role,
 });
 
@@ -45,6 +45,9 @@ router.get("/me", requireAuth, async (req, res) => {
           c.phone AS candidate_phone,
           c.address,
           c.dob AS candidate_dob,
+          c.skills,
+          c.experience,
+          c.job_type,
           r.company_name,
           r.company_name AS recruiter_name,
           r.email AS recruiter_email,
@@ -89,6 +92,10 @@ router.patch("/me", requireAuth, async (req, res) => {
     tax_code: taxCode,
     description,
     company_name: companyName,
+    skills,
+    experience,
+    job_type: jobType,
+    jobType: camelJobType,
   } = req.body;
 
   try {
@@ -162,10 +169,22 @@ router.patch("/me", requireAuth, async (req, res) => {
        SET name = COALESCE($1, name),
            phone = COALESCE($2, phone),
            address = COALESCE($3, address),
-           dob = COALESCE($4, dob)
-       WHERE id = $5
-       RETURNING id, name, email, phone, address, dob`,
-      [name, phone, location, dob, req.user.id]
+           dob = COALESCE($4, dob),
+           skills = COALESCE($5, skills),
+           experience = COALESCE($6, experience),
+           job_type = COALESCE($7, job_type)
+       WHERE id = $8
+       RETURNING id, name, email, phone, address, dob, skills, experience, job_type`,
+      [
+        name,
+        phone,
+        location,
+        dob,
+        Array.isArray(skills) ? skills : null,
+        experience,
+        jobType ?? camelJobType,
+        req.user.id,
+      ]
     );
 
     if (candidateUpdate.rows.length === 0) {
@@ -182,6 +201,9 @@ router.patch("/me", requireAuth, async (req, res) => {
         candidate_phone: candidateUpdate.rows[0].phone,
         address: candidateUpdate.rows[0].address,
         candidate_dob: candidateUpdate.rows[0].dob, 
+        skills: candidateUpdate.rows[0].skills,
+        experience: candidateUpdate.rows[0].experience,
+        job_type: candidateUpdate.rows[0].job_type,
       })
     );
   } catch (error) {
