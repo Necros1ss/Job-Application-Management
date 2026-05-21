@@ -31,6 +31,9 @@ CREATE TABLE candidates (
     phone VARCHAR(20),
     dob DATE,
     address TEXT,
+    skills TEXT[] DEFAULT '{}',
+    experience VARCHAR(100),
+    job_type VARCHAR(50),
     CONSTRAINT fk_candidate_user
       FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -75,6 +78,7 @@ CREATE TABLE applications (
     job_post_id BIGINT NOT NULL,
     applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     cv_file_path VARCHAR(255),
+    cover_letter TEXT,
     status application_status NOT NULL DEFAULT 'applied',
     rejection_reason TEXT,
     rejection_email_body TEXT,
