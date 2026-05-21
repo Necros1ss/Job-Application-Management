@@ -4,6 +4,30 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
+const createApplicationEvent = async (
+  client,
+  { applicationId, actorUserId, eventType, title, description = "", metadata = {} }
+) => {
+  await client.query(
+    `INSERT INTO application_events (
+       application_id,
+       actor_user_id,
+       event_type,
+       title,
+       description,
+       metadata
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+    [
+      applicationId,
+      actorUserId,
+      eventType,
+      title,
+      description,
+      JSON.stringify(metadata),
+    ]
+  );
+};
+
 const mapInboxRow = (row) => ({
   id: row.id,
   subject: row.subject,
@@ -182,6 +206,17 @@ router.post("/", requireAuth, async (req, res) => {
         normalizedApplicationId,
       ]
     );
+
+    if (normalizedApplicationId) {
+      await createApplicationEvent(client, {
+        applicationId: normalizedApplicationId,
+        actorUserId: req.user.id,
+        eventType: "message_sent",
+        title: "Message sent",
+        description: subject.trim(),
+        metadata: { messageId: result.rows[0]?.id },
+      });
+    }
 
     await client.query("COMMIT");
 
