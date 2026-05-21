@@ -53,6 +53,45 @@ const Login = () => {
               <FaBriefcase />
             </div>
             <h1 className="max-w-md text-[40px] font-semibold leading-none text-black">Run hiring and HR from one workspace.</h1>
+
+            <div className="mt-10 rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+              <div className="mb-4 flex items-center justify-between border-b border-[#e5e5e5] pb-3">
+                <div>
+                  <p className="text-xs font-medium uppercase text-[#737373]">Pipeline</p>
+                  <p className="mt-1 text-sm font-medium text-black">Frontend Engineer</p>
+                </div>
+                <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-white">Live</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  ["Applied", 4],
+                  ["Interview", 2],
+                  ["Offer", 1],
+                ].map(([stage, count]) => (
+                  <div key={stage} className="rounded-[10px] border border-[#e5e5e5] bg-[#f2f2f2] p-3">
+                    <p className="text-[11px] font-medium uppercase text-[#737373]">{stage}</p>
+                    <p className="mt-2 text-2xl font-semibold text-black">{count}</p>
+                    <div className="mt-4 space-y-2">
+                      <div className="h-2 rounded-full bg-black" />
+                      <div className="h-2 w-2/3 rounded-full bg-[#e5e5e5]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 rounded-[10px] border border-[#e5e5e5] p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="h-2 w-28 rounded-full bg-black" />
+                  <div className="h-6 w-16 rounded-full bg-[#f2f2f2]" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-2 w-full rounded-full bg-[#e5e5e5]" />
+                  <div className="h-2 w-5/6 rounded-full bg-[#e5e5e5]" />
+                </div>
+              </div>
+            </div>
+
             <div className="mt-8 space-y-4">
               {["Recruitment pipeline", "Onboarding checklist", "Employee and leave management"].map((item) => (
                 <div key={item} className="flex items-center gap-3 text-sm font-medium text-[#0a0a0a]">
