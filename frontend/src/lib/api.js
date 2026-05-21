@@ -150,6 +150,7 @@ export const applicationsApi = {
 
     return request(`/applications/recruiter?${params.toString()}`);
   },
+  listRecruiterActivity: () => request("/applications/recruiter/activity"),
   getForRecruiter: (id) => request(`/applications/recruiter/${id}`),
   getRecruiterCvFile: (id) => requestBlob(`/applications/recruiter/${id}/cv`),
   update: (id, payload) =>
@@ -161,6 +162,25 @@ export const applicationsApi = {
     request(`/applications/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
+    }),
+  updateRating: (id, rating) =>
+    request(`/applications/${id}/rating`, {
+      method: "PATCH",
+      body: JSON.stringify({ rating }),
+    }),
+  addNote: (id, payload) =>
+    request(`/applications/${id}/notes`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateNote: (id, noteId, payload) =>
+    request(`/applications/${id}/notes/${noteId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteNote: (id, noteId) =>
+    request(`/applications/${id}/notes/${noteId}`, {
+      method: "DELETE",
     }),
   reject: (id, payload) =>
     request(`/applications/${id}/reject`, {
