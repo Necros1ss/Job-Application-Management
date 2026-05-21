@@ -16,11 +16,13 @@ import JobPost from "./Pages/Recruiters/JobPost";
 import Application from "./Pages/Recruiters/Application";
 import InterviewList from "./Pages/Recruiters/InterviewList";
 import RecruiterOnboarding from "./Pages/Recruiters/Onboarding";
+import Employees from "./Pages/Recruiters/Employees";
 import ApplicationDetail from "./Pages/Recruiters/ApplicationDetail";
 import CreateJob from "./Pages/Recruiters/CreateJob";
 import EditJob from "./Pages/Recruiters/EditJob";
 import Messages from "./Pages/Candidates/Messages";
 import CandidateOnboarding from "./Pages/Candidates/Onboarding";
+import EmployeePortal from "./Pages/Candidates/EmployeePortal";
 import ForgotPass from "./Pages/Auth/ForgotPass";
 import ResetPassword from "./Pages/Auth/ResetPassword";
 import JobDetail from "./Pages/Jobs/JobDetail";
@@ -51,6 +53,7 @@ function App() {
           <Route path="profile" element={<CandidateProfile />} />
           <Route path="messages" element={<Messages />} />
           <Route path="onboarding" element={<CandidateOnboarding />} />
+          <Route path="employee" element={<EmployeePortal />} />
           <Route path="saved-jobs" element={<Applications />} />
           <Route path="settings" element={<Settings />} />
         </Route>
@@ -66,6 +69,7 @@ function App() {
           <Route path="application/:id" element={<ApplicationDetail />} />
           <Route path="interviews" element={<InterviewList />} />
           <Route path="onboarding" element={<RecruiterOnboarding />} />
+          <Route path="employees" element={<Employees />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

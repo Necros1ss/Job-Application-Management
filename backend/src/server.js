@@ -15,6 +15,7 @@ import savedJobsRoutes from "./routes/savedJobs.js";
 import messageRoutes from "./routes/messages.js";
 import interviewRoutes from "./routes/interviews.js";
 import onboardingRoutes from "./routes/onboarding.js";
+import employeeRoutes from "./routes/employees.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -93,6 +94,7 @@ app.use("/api/saved-jobs", savedJobsRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/interviews", interviewRoutes);
 app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/employees", employeeRoutes);
 
 app.use((err, _req, res, _next) => {
   if (process.env.NODE_ENV !== "test") {
