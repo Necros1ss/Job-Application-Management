@@ -99,6 +99,9 @@ const mapRecruiterRow = (row) => ({
   jobPostId: row.job_post_id,
   applicationDate: row.application_date,
   status: row.status,
+  coverLetter: row.cover_letter || "",
+  rating: row.rating,
+  noteCount: Number(row.note_count || 0),
   candidateName: row.candidate_name,
   candidateEmail: row.candidate_email,
   candidatePhone: row.candidate_phone,
@@ -106,6 +109,56 @@ const mapRecruiterRow = (row) => ({
   companyName: row.company_name,
   cvFileName: row.cv_file_name,
 });
+
+const mapNoteRow = (row) => ({
+  id: row.id,
+  applicationId: row.application_id,
+  recruiterId: row.recruiter_id,
+  note: row.note,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapEventRow = (row) => ({
+  id: row.id,
+  applicationId: row.application_id,
+  actorUserId: row.actor_user_id,
+  eventType: row.event_type,
+  title: row.title,
+  description: row.description,
+  metadata: row.metadata || {},
+  createdAt: row.created_at,
+});
+
+const mapRecruiterDetailRow = (row) => ({
+  ...mapRecruiterRow(row),
+  coverLetter: row.cover_letter || "",
+  rating: row.rating,
+});
+
+const createApplicationEvent = async (
+  client,
+  { applicationId, actorUserId, eventType, title, description = "", metadata = {} }
+) => {
+  await client.query(
+    `INSERT INTO application_events (
+       application_id,
+       actor_user_id,
+       event_type,
+       title,
+       description,
+       metadata
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+    [
+      applicationId,
+      actorUserId,
+      eventType,
+      title,
+      description,
+      JSON.stringify(metadata),
+    ]
+  );
+};
 
 const ensureRecruiterForCompany = async (client, companyName) => {
   const normalizedCompanyName = companyName.trim();
@@ -192,6 +245,9 @@ router.get("/recruiter", requireAuth, async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
   const jobPostId = Number(req.query.jobPostId);
   const hasJobPostFilter = Number.isInteger(jobPostId) && jobPostId > 0;
+  const rawStatus = typeof req.query.status === "string" ? req.query.status.trim().toLowerCase() : "";
+  const validStatuses = new Set(["applied", "reviewed", "scheduled_interview", "accepted", "rejected"]);
+  const hasStatusFilter = validStatuses.has(rawStatus);
 
   try {
     const baseParams = [req.user.id];
@@ -200,6 +256,11 @@ router.get("/recruiter", requireAuth, async (req, res) => {
     if (hasJobPostFilter) {
       baseParams.push(jobPostId);
       filterSql += " AND jp.id = $2";
+    }
+
+    if (hasStatusFilter) {
+      baseParams.push(rawStatus);
+      filterSql += ` AND a.status = $${baseParams.length}`;
     }
 
     const countResult = await pool.query(
@@ -220,6 +281,9 @@ router.get("/recruiter", requireAuth, async (req, res) => {
           a.job_post_id,
           a.applied_at::date AS application_date,
           a.status,
+          a.cover_letter,
+          a.rating,
+          COUNT(an.id)::int AS note_count,
           c.name AS candidate_name,
           c.email AS candidate_email,
           c.phone AS candidate_phone,
@@ -231,7 +295,21 @@ router.get("/recruiter", requireAuth, async (req, res) => {
        INNER JOIN job_posts jp ON jp.id = a.job_post_id
        LEFT JOIN recruiters r ON r.id = jp.recruiter_id
          LEFT JOIN application_files af ON af.application_id = a.id AND af.file_type = 'cv'
+         LEFT JOIN application_notes an ON an.application_id = a.id
        ${filterSql}
+       GROUP BY a.id,
+                a.candidate_id,
+                a.job_post_id,
+                a.applied_at,
+                a.status,
+                a.cover_letter,
+                a.rating,
+                c.name,
+                c.email,
+                c.phone,
+                jp.title,
+                r.company_name,
+                af.file_name
        ORDER BY a.applied_at DESC, a.id DESC
        LIMIT $${baseParams.length + 1} OFFSET $${baseParams.length + 2}`,
       [...baseParams, limit, offset]
@@ -266,6 +344,8 @@ router.get("/recruiter/:id", requireAuth, async (req, res) => {
           a.job_post_id,
           a.applied_at::date AS application_date,
           a.status,
+          a.cover_letter,
+          a.rating,
           c.name AS candidate_name,
           c.email AS candidate_email,
           c.phone AS candidate_phone,
@@ -286,7 +366,27 @@ router.get("/recruiter/:id", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "Application not found" });
     }
 
-    return res.json(mapRecruiterRow(result.rows[0]));
+    const notesResult = await pool.query(
+      `SELECT id, application_id, recruiter_id, note, created_at, updated_at
+       FROM application_notes
+       WHERE application_id = $1
+       ORDER BY created_at DESC, id DESC`,
+      [applicationId]
+    );
+
+    const eventsResult = await pool.query(
+      `SELECT id, application_id, actor_user_id, event_type, title, description, metadata, created_at
+       FROM application_events
+       WHERE application_id = $1
+       ORDER BY created_at DESC, id DESC`,
+      [applicationId]
+    );
+
+    return res.json({
+      ...mapRecruiterDetailRow(result.rows[0]),
+      notes: notesResult.rows.map(mapNoteRow),
+      events: eventsResult.rows.map(mapEventRow),
+    });
   } catch (error) {
     return res.status(500).json({ message: "Failed to load recruiter application detail", detail: error.message });
   }
@@ -493,6 +593,15 @@ router.post("/apply", requireAuth, uploadCv.single("cvFile"), async (req, res) =
       [coverLetter, application.rows[0].id]
     );
 
+    await createApplicationEvent(client, {
+      applicationId: application.rows[0].id,
+      actorUserId: req.user.id,
+      eventType: "application_submitted",
+      title: "Application submitted",
+      description: coverLetter ? "Candidate included a cover letter." : "",
+      metadata: { jobId },
+    });
+
     const normalizedFileName = normalizeUploadedFilename(req.file.originalname);
 
     await client.query(
@@ -546,8 +655,12 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
     return res.status(400).json({ message: "Invalid status. Must be one of: applied, reviewed, scheduled_interview, accepted, rejected" });
   }
 
+  const client = await pool.connect();
+
   try {
-    const result = await pool.query(
+    await client.query("BEGIN");
+
+    const result = await client.query(
       `UPDATE applications a
        SET status = $1
        FROM job_posts jp
@@ -559,12 +672,251 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
     );
 
     if (result.rowCount === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ message: "Application not found or you don't have permission to update it" });
     }
 
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "status_changed",
+      title: `Status changed to ${status}`,
+      metadata: { status },
+    });
+
+    await client.query("COMMIT");
+
     return res.json({ id: applicationId, status });
   } catch (error) {
+    await client.query("ROLLBACK");
     return res.status(500).json({ message: "Failed to update application status", detail: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+router.patch("/:id/rating", requireAuth, async (req, res) => {
+  if (req.user.role !== "recruiter") {
+    return res.status(403).json({ message: "Only recruiter accounts can rate applications" });
+  }
+
+  const applicationId = Number(req.params.id);
+  if (!Number.isInteger(applicationId) || applicationId <= 0) {
+    return res.status(400).json({ message: "Invalid application id" });
+  }
+
+  const rating = req.body.rating === null ? null : Number(req.body.rating);
+  if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 5)) {
+    return res.status(400).json({ message: "Rating must be between 1 and 5" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `UPDATE applications a
+       SET rating = $1
+       FROM job_posts jp
+       WHERE a.id = $2
+         AND a.job_post_id = jp.id
+         AND jp.recruiter_id = $3
+       RETURNING a.id, a.rating`,
+      [rating, applicationId, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Application not found or you don't have permission to update it" });
+    }
+
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "rating_updated",
+      title: rating === null ? "Rating cleared" : `Rating set to ${rating}/5`,
+      metadata: { rating },
+    });
+
+    await client.query("COMMIT");
+    return res.json({ id: applicationId, rating: result.rows[0].rating });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ message: "Failed to update rating", detail: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+router.post("/:id/notes", requireAuth, async (req, res) => {
+  if (req.user.role !== "recruiter") {
+    return res.status(403).json({ message: "Only recruiter accounts can add notes" });
+  }
+
+  const applicationId = Number(req.params.id);
+  const note = typeof req.body.note === "string" ? req.body.note.trim() : "";
+
+  if (!Number.isInteger(applicationId) || applicationId <= 0) {
+    return res.status(400).json({ message: "Invalid application id" });
+  }
+
+  if (!note) {
+    return res.status(400).json({ message: "Note is required" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    const ownership = await client.query(
+      `SELECT a.id
+       FROM applications a
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       WHERE a.id = $1 AND jp.recruiter_id = $2
+       LIMIT 1`,
+      [applicationId, req.user.id]
+    );
+
+    if (ownership.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Application not found or you don't have permission to add notes" });
+    }
+
+    const result = await client.query(
+      `INSERT INTO application_notes (application_id, recruiter_id, note)
+       VALUES ($1, $2, $3)
+       RETURNING id, application_id, recruiter_id, note, created_at, updated_at`,
+      [applicationId, req.user.id, note]
+    );
+
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "note_added",
+      title: "Internal note added",
+      description: note,
+      metadata: { noteId: result.rows[0].id },
+    });
+
+    await client.query("COMMIT");
+    return res.status(201).json(mapNoteRow(result.rows[0]));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ message: "Failed to add note", detail: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+router.put("/:id/notes/:noteId", requireAuth, async (req, res) => {
+  if (req.user.role !== "recruiter") {
+    return res.status(403).json({ message: "Only recruiter accounts can update notes" });
+  }
+
+  const applicationId = Number(req.params.id);
+  const noteId = Number(req.params.noteId);
+  const note = typeof req.body.note === "string" ? req.body.note.trim() : "";
+
+  if (!Number.isInteger(applicationId) || applicationId <= 0 || !Number.isInteger(noteId) || noteId <= 0) {
+    return res.status(400).json({ message: "Invalid note reference" });
+  }
+
+  if (!note) {
+    return res.status(400).json({ message: "Note is required" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `UPDATE application_notes an
+       SET note = $1,
+           updated_at = now()
+       FROM applications a
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       WHERE an.id = $2
+         AND an.application_id = $3
+         AND an.application_id = a.id
+         AND an.recruiter_id = $4
+         AND jp.recruiter_id = $4
+       RETURNING an.id, an.application_id, an.recruiter_id, an.note, an.created_at, an.updated_at`,
+      [note, noteId, applicationId, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Note not found or you don't have permission to update it" });
+    }
+
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "note_updated",
+      title: "Internal note updated",
+      description: note,
+      metadata: { noteId },
+    });
+
+    await client.query("COMMIT");
+    return res.json(mapNoteRow(result.rows[0]));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ message: "Failed to update note", detail: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+router.delete("/:id/notes/:noteId", requireAuth, async (req, res) => {
+  if (req.user.role !== "recruiter") {
+    return res.status(403).json({ message: "Only recruiter accounts can delete notes" });
+  }
+
+  const applicationId = Number(req.params.id);
+  const noteId = Number(req.params.noteId);
+
+  if (!Number.isInteger(applicationId) || applicationId <= 0 || !Number.isInteger(noteId) || noteId <= 0) {
+    return res.status(400).json({ message: "Invalid note reference" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `DELETE FROM application_notes an
+       USING applications a
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       WHERE an.id = $1
+         AND an.application_id = $2
+         AND an.application_id = a.id
+         AND an.recruiter_id = $3
+         AND jp.recruiter_id = $3
+       RETURNING an.id`,
+      [noteId, applicationId, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Note not found or you don't have permission to delete it" });
+    }
+
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "note_deleted",
+      title: "Internal note deleted",
+      metadata: { noteId },
+    });
+
+    await client.query("COMMIT");
+    return res.status(204).send();
+  } catch (error) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ message: "Failed to delete note", detail: error.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -634,6 +986,15 @@ router.post("/:id/reject", requireAuth, async (req, res) => {
         applicationId,
       ]
     );
+
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "application_rejected",
+      title: "Application rejected",
+      description: reason || emailBody,
+      metadata: { reason },
+    });
 
     await client.query("COMMIT");
 
@@ -711,6 +1072,15 @@ router.post("/:id/offer", requireAuth, async (req, res) => {
         applicationId,
       ]
     );
+
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "offer_sent",
+      title: "Offer sent",
+      description: subject,
+      metadata: { messageId: messageResult.rows[0]?.id },
+    });
 
     await client.query("COMMIT");
 
