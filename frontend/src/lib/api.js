@@ -179,6 +179,7 @@ export const applicationsApi = {
 };
 
 export const interviewsApi = {
+  listForCandidate: () => request("/interviews/candidate"),
   listForRecruiter: ({ upcoming = false } = {}) => {
     const query = upcoming ? "?upcoming=true" : "";
     return request(`/interviews/recruiter${query}`);

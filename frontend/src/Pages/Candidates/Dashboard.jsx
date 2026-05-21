@@ -3,13 +3,15 @@ import { Link } from "react-router-dom";
 import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
-import { FaUserCircle, FaSearch, FaBookOpen } from "react-icons/fa";
+import { FaUserCircle, FaSearch, FaBookOpen, FaMapMarkerAlt, FaVideo } from "react-icons/fa";
 import { formatMessageTime  } from '../../utils/format';
+import { showError } from "../../utils/toast";
 
 const Dashboard = () => {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [jobs, setJobs] = useState([]);
+  const [interviews, setInterviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -17,10 +19,10 @@ const Dashboard = () => {
     const loadDashboardData = async () => {
       try {
         setIsLoading(true);
-        const [profile, applications] = await Promise.all([
+        const [profile, applications, myInterviews] = await Promise.all([
           usersApi.me(),
           applicationsApi.list(),
-          interviewsApi.myInterviews(),
+          interviewsApi.listForCandidate(),
         ]);
 
         setJobs(applications);
@@ -29,7 +31,9 @@ const Dashboard = () => {
         setUserEmail(profile.email || "");
         setErrorMessage("");
       } catch (error) {
-        setErrorMessage(error.message || "Failed to load dashboard data");
+        const message = error.message || "Failed to load dashboard data";
+        setErrorMessage(message);
+        showError(message);
       } finally {
         setIsLoading(false);
       }
@@ -45,7 +49,7 @@ const Dashboard = () => {
   }, {});
 
   const totalApplications = jobs.length;
-  const totalInterviews = (jobStatusCount.interview || 0) + (jobStatusCount.scheduled_interview || 0);
+  const totalInterviews = interviews.length;
   const totalOffers = jobs.filter((job) => {
     const normalized = (job.status || '').toLowerCase();
     return normalized === 'offered' || normalized === 'accepted';
@@ -228,7 +232,11 @@ const Dashboard = () => {
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-            {interviews.length > 0 ? (
+            {isLoading ? (
+              <div className="space-y-4">
+                {Array(2).fill(0).map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            ) : interviews.length > 0 ? (
               <div className="space-y-5">
                 {interviews.slice(0, 3).map((interview) => {
                   const isOnline = (interview.mode || "").toLowerCase() === "online";
