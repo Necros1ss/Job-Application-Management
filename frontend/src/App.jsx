@@ -5,6 +5,7 @@ import Layout from "./Layout";
 import Login from "./Pages/Auth/Login";
 import SelectRole from "./Pages/Auth/SelectRole";
 import Signup from "./Pages/Auth/Signup";
+import Landing from "./Pages/Landing";
 import Dashboard from "./Pages/Candidates/Dashboard";
 import Applications from "./Pages/Candidates/Applications";
 import Jobsearch from "./Pages/Candidates/Jobsearch";
@@ -33,7 +34,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route index element={<Login />} />
+        <Route index element={<Landing />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SelectRole />} />
         <Route path="signup/create" element={<Signup />} />
