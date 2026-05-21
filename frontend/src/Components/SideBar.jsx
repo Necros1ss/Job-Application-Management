@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { SidebarMenuItem } from "./SidebarMenuItem";
-import { RiLogoutCircleRFill, RiSettings5Fill } from "react-icons/ri";
+import { RiLogoutCircleRFill } from "react-icons/ri";
 import { BsLayoutSidebarInset } from "react-icons/bs";
 import { Link, useLocation } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
@@ -113,18 +113,6 @@ const SideBar = ({ role = "candidate" }) => {
 
         <div className="absolute bottom-1 left-4 right-4 bg-[#19211D] rounded-xl">
           <ul className="py-3 text-white space-y-1">
-            <li>
-              <Link
-                to={`/${role}/settings`}
-                className="flex items-center gap-2 py-2 pl-5 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-white/10"
-                onClick={toggleMenu}
-              >
-                <span className="text-xl">
-                  <RiSettings5Fill />
-                </span>
-                <div className="text-sm">Settings</div>
-              </Link>
-            </li>
             <li>
               <div
                 className="flex items-center gap-2 py-2 pl-5 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-white/10"

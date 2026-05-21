@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaSearch, FaBell, FaEnvelope, FaChevronDown } from "react-icons/fa";
+import { FaSearch, FaBell, FaEnvelope } from "react-icons/fa";
 import { useLocation } from 'react-router-dom';
 import { messagesApi } from '../lib/api';
 import { formatMessageTime } from '../utils/format';
+import AccountMenu from './AccountMenu';
 
 const TopBarRecruiter = ({
   userName,
@@ -109,15 +110,6 @@ const TopBarRecruiter = ({
     ));
   };
 
-  const initials = typeof userName === 'string' && userName.trim().length > 0
-    ? userName
-        .split(' ')
-        .map((part) => part[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
-    : 'U';
-
   return (
     <header className="w-full bg-white border-b border-gray-200">
       <div className={`px-6 lg:px-10 h-20 flex items-center gap-6 ${isSearchControlled ? "justify-between" : "justify-end"}`}>
@@ -175,27 +167,7 @@ const TopBarRecruiter = ({
 
           <div className="h-8 w-px bg-gray-200" />
 
-          <button
-            type="button"
-            className="flex items-center gap-3 hover:bg-gray-50 rounded-xl px-2 py-1.5 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                  {initials}
-                </div>
-              )}
-            </div>
-
-            <div className="text-left hidden sm:block leading-tight">
-              <p className="text-[13px] font-semibold text-gray-800 leading-none">{userName || "Recruiter"}</p>
-              <p className="text-[13px] text-gray-500 mt-1">{userEmail || "Senior Associate"}</p>
-            </div>
-
-            <FaChevronDown size={12} className="text-gray-400 -translate-y-1" />
-          </button>
+          <AccountMenu userName={userName || "Recruiter"} userEmail={userEmail} avatarUrl={avatarUrl} />
         </div>
       </div>
     </header>

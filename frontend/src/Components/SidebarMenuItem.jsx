@@ -1,4 +1,4 @@
-import { BsBriefcaseFill, BsFillPersonFill, BsPeople } from "react-icons/bs";
+import { BsBriefcaseFill, BsPeople } from "react-icons/bs";
 import { AiFillFolderOpen } from "react-icons/ai";
 import { RiLayoutMasonryFill } from "react-icons/ri";
 import { FaCalendar, FaClipboardList, FaEnvelope, FaUserTie } from "react-icons/fa";
@@ -40,12 +40,6 @@ const candidateMenu = [
     icon: <FaUserTie />,
     path: "employee",
   },
-  {
-    id: 6,
-    label: "Profile",
-    icon: <BsFillPersonFill />,
-    path: "profile",
-  },
 ];
 
 const recruiterMenu = [
@@ -85,12 +79,6 @@ const recruiterMenu = [
     icon: <FaUserTie />,
     path: "employees",
   },
-  {
-    id: 6,
-    label: "Profile",
-    icon: <BsFillPersonFill />,
-    path: "profile",
-  }
 ];
 
 export const SidebarMenuItem = (role = "candidate") =>

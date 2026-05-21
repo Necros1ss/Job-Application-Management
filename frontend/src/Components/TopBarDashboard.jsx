@@ -3,6 +3,7 @@ import { FaSearch, FaBell } from "react-icons/fa";
 import { useLocation } from 'react-router-dom';
 import { messagesApi } from '../lib/api';
 import { formatMessageTime } from '../utils/format';
+import AccountMenu from './AccountMenu';
 
 const TopBarDashboard = ({
   userName,
@@ -233,22 +234,7 @@ const TopBarDashboard = ({
             </div>
           )}
 
-          {/* Thông tin người dùng */}
-          <div className="flex items-center gap-3 ml-2">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-gray-800">{userName || "User Name"}</p>
-              <p className="text-xs text-gray-500">{userEmail || "email@example.com"}</p>
-            </div>
-            <button className="w-9 h-9 rounded-full overflow-hidden border border-white ml-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                  {typeof userName === 'string' && userName.length > 0 ? userName.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
-            </button>
-          </div>
+          <AccountMenu userName={userName} userEmail={userEmail} avatarUrl={avatarUrl} />
         </div>
       </div>
     </header>
