@@ -179,6 +179,25 @@ CREATE TABLE application_events (
       FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
+CREATE TABLE onboarding_tasks (
+    id BIGSERIAL PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    recruiter_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date DATE,
+    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_onboarding_tasks_application
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_onboarding_tasks_recruiter
+      FOREIGN KEY (recruiter_id) REFERENCES recruiters(id) ON DELETE CASCADE,
+    CONSTRAINT chk_onboarding_tasks_status
+      CHECK (status IN ('pending', 'in_progress', 'completed'))
+);
+
 CREATE TABLE IF NOT EXISTS application_files (
     id BIGINT PRIMARY KEY,
     application_id BIGINT NOT NULL,
@@ -205,3 +224,5 @@ CREATE INDEX idx_messages_receiver_read_created ON messages(receiver_candidate_i
 CREATE INDEX idx_messages_application_id ON messages(application_id);
 CREATE INDEX idx_application_notes_application_id ON application_notes(application_id);
 CREATE INDEX idx_application_events_application_created ON application_events(application_id, created_at DESC);
+CREATE INDEX idx_onboarding_tasks_application_id ON onboarding_tasks(application_id);
+CREATE INDEX idx_onboarding_tasks_recruiter_status ON onboarding_tasks(recruiter_id, status);
