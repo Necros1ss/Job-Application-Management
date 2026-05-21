@@ -79,6 +79,7 @@ CREATE TABLE applications (
     applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     cv_file_path VARCHAR(255),
     cover_letter TEXT,
+    rating INTEGER,
     status application_status NOT NULL DEFAULT 'applied',
     rejection_reason TEXT,
     rejection_email_body TEXT,
@@ -150,6 +151,34 @@ CREATE TABLE messages (
       FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE SET NULL
 );
 
+CREATE TABLE application_notes (
+    id BIGSERIAL PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    recruiter_id BIGINT NOT NULL,
+    note TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_application_notes_application
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_application_notes_recruiter
+      FOREIGN KEY (recruiter_id) REFERENCES recruiters(id) ON DELETE CASCADE
+);
+
+CREATE TABLE application_events (
+    id BIGSERIAL PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    actor_user_id BIGINT,
+    event_type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_application_events_application
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_application_events_actor
+      FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS application_files (
     id BIGINT PRIMARY KEY,
     application_id BIGINT NOT NULL,
@@ -174,3 +203,5 @@ CREATE INDEX idx_messages_receiver_candidate_id ON messages(receiver_candidate_i
 CREATE INDEX idx_messages_sender_recruiter_id ON messages(sender_recruiter_id);
 CREATE INDEX idx_messages_receiver_read_created ON messages(receiver_candidate_id, is_read, created_at DESC);
 CREATE INDEX idx_messages_application_id ON messages(application_id);
+CREATE INDEX idx_application_notes_application_id ON application_notes(application_id);
+CREATE INDEX idx_application_events_application_created ON application_events(application_id, created_at DESC);
