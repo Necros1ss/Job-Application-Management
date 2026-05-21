@@ -97,10 +97,12 @@ export const forgotPassword = async (req, res) => {
   try {
     if (normalizedEmail) {
       const userResult = await pool.query(
-        `SELECT u.id, c.email
-         FROM candidates c
-         JOIN users u ON u.id = c.id
-         WHERE c.email = $1
+        `SELECT u.id,
+                COALESCE(c.email, r.email) AS email
+         FROM users u
+         LEFT JOIN candidates c ON c.id = u.id
+         LEFT JOIN recruiters r ON r.id = u.id
+         WHERE u.login_name = $1
          LIMIT 1`,
         [normalizedEmail]
       );

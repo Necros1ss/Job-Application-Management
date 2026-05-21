@@ -1,7 +1,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { pool } from "../config/db.js";
+import { signup, login, forgotPassword, resetPassword } from "../controllers/authController.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
