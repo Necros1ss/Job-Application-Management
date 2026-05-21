@@ -1,7 +1,7 @@
 import { BsBriefcaseFill, BsFillPersonFill, BsPeople } from "react-icons/bs";
 import { AiFillFolderOpen } from "react-icons/ai";
 import { RiLayoutMasonryFill } from "react-icons/ri";
-import { FaCalendar, FaEnvelope } from "react-icons/fa";
+import { FaCalendar, FaClipboardList, FaEnvelope } from "react-icons/fa";
 
 const candidateMenu = [
   {
@@ -30,6 +30,12 @@ const candidateMenu = [
   },
   {
     id: 4,
+    label: "Onboarding",
+    icon: <FaClipboardList />,
+    path: "onboarding",
+  },
+  {
+    id: 5,
     label: "Profile",
     icon: <BsFillPersonFill />,
     path: "profile",
@@ -63,6 +69,12 @@ const recruiterMenu = [
   },
   {
     id: 4,
+    label: "Onboarding",
+    icon: <FaClipboardList />,
+    path: "onboarding",
+  },
+  {
+    id: 5,
     label: "Profile",
     icon: <BsFillPersonFill />,
     path: "profile",
