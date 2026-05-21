@@ -37,50 +37,50 @@ const AccountMenu = ({ userName, userEmail, avatarUrl }) => {
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+        className="flex items-center gap-3 rounded-[10px] px-2 py-1.5 transition-colors hover:bg-[#f2f2f2] focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
         aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         <div className="text-right hidden sm:block leading-tight">
-          <p className="text-sm font-semibold text-gray-900 leading-none">{userName || "User Name"}</p>
-          <p className="text-xs text-gray-500 mt-1">{userEmail || "email@example.com"}</p>
+          <p className="text-sm font-medium leading-none text-[#0a0a0a]">{userName || "User Name"}</p>
+          <p className="mt-1 text-xs text-[#737373]">{userEmail || "email@example.com"}</p>
         </div>
 
-        <div className="w-10 h-10 rounded-full overflow-hidden border border-emerald-200 bg-emerald-100">
+        <div className="h-10 w-10 overflow-hidden rounded-full border border-[#e5e5e5] bg-[#f2f2f2]">
           {avatarUrl ? (
             <img src={avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full text-emerald-700 flex items-center justify-center font-bold text-sm">
+            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-black">
               {initials}
             </div>
           )}
         </div>
 
-        <FaChevronDown size={12} className="hidden sm:block text-gray-400" />
+        <FaChevronDown size={12} className="hidden text-[#737373] sm:block" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-56 rounded-xl border border-gray-100 bg-white shadow-xl overflow-hidden z-50">
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-            <p className="text-sm font-semibold text-gray-900">{userName || "User Name"}</p>
-            <p className="text-xs text-gray-500 truncate mt-0.5">{userEmail || "email@example.com"}</p>
+        <div className="absolute right-0 z-50 mt-3 w-56 overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+          <div className="border-b border-[#e5e5e5] bg-[#f2f2f2] px-4 py-3">
+            <p className="text-sm font-medium text-[#0a0a0a]">{userName || "User Name"}</p>
+            <p className="mt-0.5 truncate text-xs text-[#737373]">{userEmail || "email@example.com"}</p>
           </div>
 
           <Link
             to={`${basePath}/profile`}
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]"
           >
-            <FaUserCircle className="text-emerald-600" />
+            <FaUserCircle className="text-black" />
             Profile
           </Link>
 
           <Link
             to={`${basePath}/settings`}
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]"
           >
-            <FaCog className="text-emerald-600" />
+            <FaCog className="text-black" />
             Settings
           </Link>
         </div>

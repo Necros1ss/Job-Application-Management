@@ -20,9 +20,9 @@ const DashboardLayout = ({ allowedRole }) => {
   }
 
   return (
-    <div className="bg-[#ffffff]">
+    <div className="min-h-screen bg-white">
       <SideBar role={userRole} />
-      <div className="px-6 pb-6 flex-grow lg:ml-56 h-auto pt-16 lg:pt-4 bg">
+      <div className="h-auto flex-grow px-6 pb-6 pt-16 lg:ml-56 lg:pt-4">
         <Outlet />
       </div>
     </div>

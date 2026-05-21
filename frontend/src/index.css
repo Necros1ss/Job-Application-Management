@@ -1,3 +1,158 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-canvas-white: #ffffff;
+  --color-ghost-gray: #f2f2f2;
+  --color-subtle-ash: #e5e5e5;
+  --color-midtone-gray: #737373;
+  --color-rich-black: #0a0a0a;
+  --color-deep-black: #000000;
+  --color-callout-red: #c22b10;
+  --color-success-green: #10c22b;
+  --font-geist: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-geist-mono: "Geist Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --radius-pill: 9999px;
+  --radius-badge: 26px;
+  --radius-cards: 14px;
+  --radius-input: 10px;
+  --radius-buttons: 10px;
+  --shadow-subtle-2: 0 0 0 1px rgba(10, 10, 10, 0.1);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: var(--color-canvas-white);
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--color-canvas-white);
+    color: var(--color-rich-black);
+    font-family: var(--font-geist);
+    letter-spacing: 0;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    letter-spacing: 0;
+  }
+
+  ::selection {
+    background: var(--color-deep-black);
+    color: var(--color-canvas-white);
+  }
+}
+
+@layer components {
+  .blueprint-card {
+    border: 1px solid var(--color-subtle-ash);
+    border-radius: var(--radius-cards);
+    background: var(--color-canvas-white);
+    box-shadow: var(--shadow-subtle-2);
+  }
+
+  .blueprint-input {
+    border: 1px solid var(--color-subtle-ash);
+    border-radius: var(--radius-input);
+    background: var(--color-canvas-white);
+    color: var(--color-rich-black);
+  }
+
+  .blueprint-input:focus {
+    border-color: var(--color-deep-black);
+    box-shadow: 0 0 0 2px var(--color-canvas-white), 0 0 0 3px var(--color-deep-black);
+    outline: none;
+  }
+
+  .blueprint-primary {
+    border-radius: var(--radius-buttons);
+    background: var(--color-deep-black);
+    color: var(--color-canvas-white);
+  }
+
+  .blueprint-primary:hover {
+    background: var(--color-rich-black);
+  }
+
+  .blueprint-tag {
+    border-radius: var(--radius-badge);
+    background: var(--color-ghost-gray);
+    color: var(--color-rich-black);
+  }
+}
+
+@layer utilities {
+  .bg-emerald-600,
+  .bg-emerald-500,
+  .bg-\[\#188155\] {
+    background-color: var(--color-deep-black) !important;
+  }
+
+  .hover\:bg-emerald-700:hover,
+  .hover\:bg-emerald-600:hover {
+    background-color: var(--color-rich-black) !important;
+  }
+
+  .bg-emerald-50,
+  .bg-emerald-100,
+  .bg-emerald-50\/40 {
+    background-color: var(--color-ghost-gray) !important;
+  }
+
+  .hover\:bg-emerald-50:hover,
+  .hover\:bg-emerald-50\/40:hover,
+  .hover\:bg-emerald-100:hover {
+    background-color: var(--color-ghost-gray) !important;
+  }
+
+  .text-emerald-800,
+  .text-emerald-700,
+  .text-emerald-600,
+  .text-\[\#188155\],
+  .hover\:text-emerald-800:hover,
+  .hover\:text-emerald-700:hover,
+  .hover\:text-emerald-600:hover {
+    color: var(--color-rich-black) !important;
+  }
+
+  .text-emerald-300,
+  .text-emerald-200,
+  .text-emerald-100 {
+    color: var(--color-midtone-gray) !important;
+  }
+
+  .border-emerald-400,
+  .border-emerald-300,
+  .border-emerald-200,
+  .border-emerald-100 {
+    border-color: var(--color-subtle-ash) !important;
+  }
+
+  .focus\:border-emerald-400:focus,
+  .focus\:border-emerald-300:focus {
+    border-color: var(--color-deep-black) !important;
+  }
+
+  .focus\:ring-emerald-500:focus,
+  .focus\:ring-emerald-200:focus,
+  .focus\:ring-emerald-100:focus {
+    --tw-ring-color: var(--color-deep-black) !important;
+  }
+
+  .shadow-emerald-900\/30,
+  .shadow-emerald-100 {
+    --tw-shadow-color: rgba(10, 10, 10, 0.12) !important;
+    --tw-shadow: var(--tw-shadow-colored) !important;
+  }
+}
