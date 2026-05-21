@@ -326,6 +326,46 @@ router.get("/recruiter", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/recruiter/activity", requireAuth, async (req, res) => {
+  if (req.user.role !== "recruiter") {
+    return res.status(403).json({ message: "Only recruiter accounts can access activity" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT ae.id,
+              ae.application_id,
+              ae.event_type,
+              ae.title,
+              ae.description,
+              ae.created_at,
+              c.name AS candidate_name,
+              jp.title AS job_title
+       FROM application_events ae
+       INNER JOIN applications a ON a.id = ae.application_id
+       INNER JOIN candidates c ON c.id = a.candidate_id
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       WHERE jp.recruiter_id = $1
+       ORDER BY ae.created_at DESC, ae.id DESC
+       LIMIT 10`,
+      [req.user.id]
+    );
+
+    return res.json(result.rows.map((row) => ({
+      id: row.id,
+      applicationId: row.application_id,
+      eventType: row.event_type,
+      title: row.title,
+      description: row.description,
+      createdAt: row.created_at,
+      candidateName: row.candidate_name,
+      jobTitle: row.job_title,
+    })));
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to load recruitment activity", detail: error.message });
+  }
+});
+
 router.get("/recruiter/:id", requireAuth, async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can access this resource" });
