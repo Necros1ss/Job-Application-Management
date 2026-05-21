@@ -4,6 +4,30 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
+const createApplicationEvent = async (
+  client,
+  { applicationId, actorUserId, eventType, title, description = "", metadata = {} }
+) => {
+  await client.query(
+    `INSERT INTO application_events (
+       application_id,
+       actor_user_id,
+       event_type,
+       title,
+       description,
+       metadata
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+    [
+      applicationId,
+      actorUserId,
+      eventType,
+      title,
+      description,
+      JSON.stringify(metadata),
+    ]
+  );
+};
+
 router.get("/recruiter", requireAuth, async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can view recruiter interviews" });
@@ -178,6 +202,19 @@ router.post("/", requireAuth, async (req, res) => {
        WHERE id = $1`,
       [applicationId]
     );
+
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "interview_scheduled",
+      title: "Interview scheduled",
+      description: notes,
+      metadata: {
+        interviewId: interviewResult.rows[0]?.id,
+        interviewDateTime,
+        mode,
+      },
+    });
 
     await client.query("COMMIT");
 

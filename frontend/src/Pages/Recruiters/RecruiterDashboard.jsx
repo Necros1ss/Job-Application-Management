@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { FaBriefcase, FaUsers, FaCalendar, FaCheckCircle } from "react-icons/fa";
+import { FaBriefcase, FaUsers, FaCalendar, FaCheckCircle, FaChartLine, FaHistory } from "react-icons/fa";
 import { jobPostsApi, applicationsApi, usersApi } from "../../lib/api";
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
+import { showError } from "../../utils/toast";
 
 const StatCard = ({ title, value, subtitle, icon: Icon, color = "emerald" }) => {
   const colorMap = {
@@ -52,6 +53,7 @@ const RecruiterDashboard = () => {
 
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
+  const [activity, setActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,17 +63,21 @@ const RecruiterDashboard = () => {
       try {
         setIsLoading(true);
         setError("");
-        const [profile, jobsData, appsData] = await Promise.all([
+        const [profile, jobsData, appsData, activityData] = await Promise.all([
           usersApi.me(),
           jobPostsApi.listMine(),
           applicationsApi.listForRecruiter(),
+          applicationsApi.listRecruiterActivity(),
         ]);
         setUserName(profile.name || "");
         setUserEmail(profile.email || "");
         setJobs(Array.isArray(jobsData) ? jobsData : []);
         setApplications(Array.isArray(appsData) ? appsData : []);
+        setActivity(Array.isArray(activityData) ? activityData : []);
       } catch (err) {
-        setError(err.message || "Failed to load dashboard data");
+        const message = err.message || "Failed to load dashboard data";
+        setError(message);
+        showError(message);
       } finally {
         setIsLoading(false);
       }
@@ -92,6 +98,36 @@ const RecruiterDashboard = () => {
 
     return { totalJobs, activeJobs, totalCandidates, interviews, offers, pending };
   }, [jobs, applications]);
+
+  const funnelStats = useMemo(() => {
+    const interviewConversion = stats.totalCandidates > 0
+      ? Math.round((stats.interviews / stats.totalCandidates) * 100)
+      : 0;
+    const offerConversion = stats.interviews > 0
+      ? Math.round((stats.offers / stats.interviews) * 100)
+      : 0;
+
+    return [
+      {
+        label: "Applications",
+        value: stats.totalCandidates,
+        percent: stats.totalCandidates > 0 ? 100 : 0,
+        caption: "Total candidates",
+      },
+      {
+        label: "Interviews",
+        value: stats.interviews,
+        percent: interviewConversion,
+        caption: `${interviewConversion}% from applications`,
+      },
+      {
+        label: "Offers",
+        value: stats.offers,
+        percent: offerConversion,
+        caption: `${offerConversion}% from interviews`,
+      },
+    ];
+  }, [stats]);
 
   const recentApplications = useMemo(() => {
     return [...applications]
@@ -160,6 +196,14 @@ const RecruiterDashboard = () => {
     if (s === "rejected")
       return <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">Rejected</span>;
     return <span className="px-2.5 py-1 bg-yellow-50 text-yellow-700 text-xs font-bold rounded-full">Pending</span>;
+  };
+
+  const getActivityDot = (eventType) => {
+    if (eventType === "offer_sent") return "bg-emerald-500";
+    if (eventType === "interview_scheduled") return "bg-amber-500";
+    if (eventType === "application_rejected") return "bg-red-500";
+    if (eventType === "message_sent") return "bg-blue-500";
+    return "bg-slate-400";
   };
 
   if (isLoading) {
@@ -363,67 +407,130 @@ const RecruiterDashboard = () => {
             )}
           </div>
 
-          {/* RIGHT: Active Jobs Summary */}
-          <div className="w-full lg:w-80 xl:w-96">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold text-gray-900">Active Jobs</h2>
-              <Link
-                to="/recruiter/job"
-                className="text-sm font-semibold text-emerald-600 hover:underline"
-              >
-                Manage
-              </Link>
+          {/* RIGHT: Funnel, Activity, Active Jobs Summary */}
+          <div className="w-full lg:w-80 xl:w-96 space-y-6">
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Recruitment Funnel</h2>
+                  <p className="text-xs text-gray-500 mt-1">Pipeline conversion snapshot</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <FaChartLine size={18} />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {funnelStats.map((item) => (
+                  <div key={item.label}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-semibold text-gray-700">{item.label}</span>
+                      <span className="text-sm font-bold text-gray-900">{item.value}</span>
+                    </div>
+                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(item.percent, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1.5">{item.caption}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {jobs.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FaBriefcase size={24} className="text-gray-400" />
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
+                  <p className="text-xs text-gray-500 mt-1">Latest candidate workflow updates</p>
                 </div>
-                <h3 className="font-bold text-gray-900 mb-1">No jobs posted</h3>
-                <p className="text-sm text-gray-500 mb-4">Start by creating your first job posting.</p>
-                <button
-                  onClick={() => navigate("/recruiter/job")}
-                  className="px-5 py-2 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700"
-                >
-                  Create Job
-                </button>
+                <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
+                  <FaHistory size={18} />
+                </div>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {jobs.slice(0, 5).map((job) => {
-                  const isActive = !job.deadline || new Date(job.deadline) >= new Date();
-                  return (
-                    <div
-                      key={job.id}
-                      className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-sm transition-shadow cursor-pointer"
-                      onClick={() => navigate("/recruiter/job")}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 truncate">{job.title}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {job.applicantCount || 0} applicants
-                          </p>
-                        </div>
-                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full shrink-0 ${
-                          isActive
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                            : "bg-red-50 text-red-600 border border-red-100"
-                        }`}>
-                          {isActive ? "Active" : "Closed"}
-                        </span>
-                      </div>
-                      {job.deadline && (
-                        <p className="text-xs text-gray-400 mt-2">
-                          Deadline: {new Date(job.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+
+              {activity.length === 0 ? (
+                <p className="text-sm text-gray-500">No recruitment activity yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {activity.map((item) => (
+                    <div key={item.id} className="flex gap-3">
+                      <span className={`mt-1.5 w-2.5 h-2.5 rounded-full shrink-0 ${getActivityDot(item.eventType)}`} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {item.candidateName || "Unknown Candidate"} · {item.jobTitle || "Unknown Job"}
                         </p>
-                      )}
+                        <p className="text-xs text-gray-400 mt-1">{formatTime(item.createdAt)}</p>
+                      </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xl font-bold text-gray-900">Active Jobs</h2>
+                <Link
+                  to="/recruiter/job"
+                  className="text-sm font-semibold text-emerald-600 hover:underline"
+                >
+                  Manage
+                </Link>
               </div>
-            )}
+
+              {jobs.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FaBriefcase size={24} className="text-gray-400" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-1">No jobs posted</h3>
+                  <p className="text-sm text-gray-500 mb-4">Start by creating your first job posting.</p>
+                  <button
+                    onClick={() => navigate("/recruiter/job")}
+                    className="px-5 py-2 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700"
+                  >
+                    Create Job
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {jobs.slice(0, 5).map((job) => {
+                    const isActive = !job.deadline || new Date(job.deadline) >= new Date();
+                    return (
+                      <div
+                        key={job.id}
+                        className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-sm transition-shadow cursor-pointer"
+                        onClick={() => navigate("/recruiter/job")}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 truncate">{job.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {job.applicantCount || 0} applicants
+                            </p>
+                          </div>
+                          <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full shrink-0 ${
+                            isActive
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                              : "bg-red-50 text-red-600 border border-red-100"
+                          }`}>
+                            {isActive ? "Active" : "Closed"}
+                          </span>
+                        </div>
+                        {job.deadline && (
+                          <p className="text-xs text-gray-400 mt-2">
+                            Deadline: {new Date(job.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
