@@ -3,8 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { authApi, tokenStorage } from "../../lib/api";
 import { FaArrowLeft, FaBriefcase, FaCheckCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { showError } from "../../utils/toast";
+import LanguageSwitcher from "../../Components/LanguageSwitcher";
+import { useI18n } from "../../lib/i18n";
 
 const Login = () => {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState("");
@@ -42,13 +45,13 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-8 text-[#0a0a0a]">
+    <div className="min-h-screen blueprint-grid-bg px-4 py-8 text-[#0a0a0a]">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)] lg:grid-cols-[1.05fr_.95fr]">
-        <div className="hidden border-r border-[#e5e5e5] bg-[#f2f2f2] p-10 text-[#0a0a0a] lg:flex lg:flex-col lg:justify-between">
+        <div className="blueprint-hero-panel hidden rounded-none border-0 border-r border-[#e5e5e5] p-10 text-[#0a0a0a] lg:flex lg:flex-col lg:justify-between">
           <Link to="/" className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-[#737373] hover:bg-white hover:text-black">
             <FaArrowLeft /> Back to home
           </Link>
-          <div>
+          <div className="relative z-10">
             <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-[10px] border border-[#e5e5e5] bg-white text-black">
               <FaBriefcase />
             </div>
@@ -92,9 +95,9 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="mt-8 space-y-4">
+            <div className="mt-8 grid gap-3">
               {["Recruitment pipeline", "Onboarding checklist", "Employee and leave management"].map((item) => (
-                <div key={item} className="flex items-center gap-3 text-sm font-medium text-[#0a0a0a]">
+                <div key={item} className="flex items-center gap-3 rounded-[10px] border border-[#e5e5e5] bg-white/80 px-3 py-2 text-sm font-medium text-[#0a0a0a]">
                   <FaCheckCircle className="text-black" />
                   {item}
                 </div>
@@ -110,14 +113,17 @@ const Login = () => {
             </Link>
             <div className="mb-8">
               <p className="text-xs font-medium uppercase text-[#737373]">Welcome back</p>
-              <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">Log in to Job Tracker</h2>
-              <p className="mt-3 text-sm leading-6 text-[#737373]">Access recruitment, onboarding, employee, attendance, and leave tools.</p>
+              <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">{t("auth.loginTitle")}</h2>
+              <p className="mt-3 text-sm leading-6 text-[#737373]">{t("auth.loginSubtitle")}</p>
+            </div>
+            <div className="mb-6">
+              <LanguageSwitcher />
             </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                Email
+                {t("auth.email")}
               </label>
               <input
                 type="text"
@@ -133,13 +139,13 @@ const Login = () => {
             <div>
               <span className="flex justify-between items-center">
                 <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                  Password
+                  {t("auth.password")}
                 </label>
                 <Link
                   to="/forgot-password"
                   className="text-sm font-medium text-[#737373] hover:text-black hover:underline"
                 >
-                  Forgot password?
+                  {t("auth.forgotPassword")}
                 </Link>
               </span>
               <div className="relative">
@@ -171,12 +177,12 @@ const Login = () => {
                 disabled={isSubmitting}
                 className="flex w-full justify-center rounded-[10px] bg-black px-12 py-2.5 text-sm font-semibold text-white hover:bg-[#0a0a0a] disabled:opacity-60"
               >
-                {isSubmitting ? "Signing in..." : "Sign in"}
+                {isSubmitting ? t("auth.signingIn") : t("auth.signIn")}
               </button>
               <p className="mt-4 text-sm text-[#737373]">
-                Don&apos;t have an account?{" "}
+                {t("auth.noAccount")}{" "}
                 <Link to="/signup" className="font-medium text-black hover:underline">
-                  Create one
+                  {t("auth.createOne")}
                 </Link>
               </p>
             </div>

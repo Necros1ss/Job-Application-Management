@@ -9,6 +9,8 @@ import {
   FaUserTie,
   FaUsers,
 } from "react-icons/fa";
+import LanguageSwitcher from "../Components/LanguageSwitcher";
+import { useI18n } from "../lib/i18n";
 
 const modules = [
   {
@@ -41,69 +43,98 @@ const metrics = [
 ];
 
 const Landing = () => {
+  const { t } = useI18n();
+
   return (
-    <div className="min-h-screen bg-white text-[#0a0a0a]">
+    <div className="min-h-screen blueprint-grid-bg text-[#0a0a0a]">
       <header className="sticky inset-x-0 top-0 z-50 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-10">
           <Link to="/" className="text-lg font-semibold text-black">
-            Job Tracker
+            {t("app.name")}
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#737373] md:flex">
-            <a href="#modules" className="hover:text-black">Modules</a>
-            <a href="#workflow" className="hover:text-black">Workflow</a>
-            <a href="#why" className="hover:text-black">Why Us</a>
+            <a href="#modules" className="hover:text-black">{t("nav.modules")}</a>
+            <a href="#workflow" className="hover:text-black">{t("nav.workflow")}</a>
+            <a href="#why" className="hover:text-black">{t("nav.whyUs")}</a>
           </nav>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher compact />
             <Link to="/login" className="rounded-full px-3 py-2 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]">
-              Log in
+              {t("auth.login")}
             </Link>
             <Link
               to="/signup"
               className="rounded-[10px] bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-[#0a0a0a]"
             >
-              Start Free
+              {t("auth.startFree")}
             </Link>
           </div>
         </div>
       </header>
 
       <section className="border-b border-[#e5e5e5]">
-        <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col items-center justify-center px-6 py-20 text-center lg:px-10">
+        <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl grid-cols-1 items-center gap-10 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr] lg:px-10">
           <div className="max-w-3xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-3 py-1.5 text-xs font-medium text-[#0a0a0a]">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] shadow-[0_0_0_1px_rgba(10,10,10,0.04)]">
               <FaCheckCircle className="text-black" />
-              Open, self-hosted hiring and HR workflow
+              {t("landing.badge")}
             </div>
-            <h1 className="text-[44px] font-semibold leading-none text-black sm:text-[48px]">
-              Job Tracker HRMS
+            <h1 className="max-w-3xl text-[44px] font-semibold leading-none text-black sm:text-[48px]">
+              {t("landing.title")}
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-[18px] leading-[1.33] text-[#0a0a0a]">
-              A practical hiring workspace inspired by open-source HR systems: recruitment, interviews,
-              onboarding, employee records, attendance, and leave in one calm dashboard.
+            <p className="mt-6 max-w-2xl text-[18px] leading-[1.33] text-[#0a0a0a]">
+              {t("landing.subtitle")}
             </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/signup"
                 className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-black px-12 py-2 text-sm font-semibold text-white hover:bg-[#0a0a0a]"
               >
-                Create workspace <FaArrowRight />
+                {t("auth.createWorkspace")} <FaArrowRight />
               </Link>
               <Link
                 to="/login"
                 className="inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]"
               >
-                Log in
+                {t("auth.login")}
               </Link>
             </div>
           </div>
 
-          <div className="mt-20 grid w-full grid-cols-2 gap-3 rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.1)] md:grid-cols-4">
-            {metrics.map(([label, value]) => (
-              <div key={label} className="rounded-[10px] bg-[#f2f2f2] p-4 text-left">
-                <p className="text-xs font-medium uppercase text-[#737373]">{label}</p>
-                <p className="mt-2 text-3xl font-semibold text-black">{value}</p>
+          <div className="blueprint-hero-panel p-5">
+            <div className="relative z-10 rounded-[10px] border border-[#e5e5e5] bg-white p-4">
+              <div className="mb-4 flex items-center justify-between border-b border-[#e5e5e5] pb-3">
+                <div>
+                  <p className="blueprint-kicker">Operating console</p>
+                  <p className="mt-1 text-sm font-medium text-black">Recruitment command board</p>
+                </div>
+                <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-white">Live</span>
               </div>
-            ))}
+
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {metrics.map(([label, value]) => (
+                  <div key={label} className="rounded-[10px] border border-[#e5e5e5] bg-[#f2f2f2] p-4 text-left">
+                    <p className="text-xs font-medium uppercase text-[#737373]">{label}</p>
+                    <p className="blueprint-metric mt-2 text-3xl font-semibold text-black">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                {["Applied", "Interview", "Offer"].map((stage, index) => (
+                  <div key={stage} className="rounded-[10px] border border-[#e5e5e5] bg-white p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium uppercase text-[#737373]">{stage}</span>
+                      <span className="font-mono text-xs text-[#737373]">0{index + 1}</span>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="h-2 rounded-full bg-black" />
+                      <div className="h-2 w-2/3 rounded-full bg-[#e5e5e5]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -123,12 +154,13 @@ const Landing = () => {
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {modules.map(({ title, description, icon: Icon }) => (
-            <div key={title} className="rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+            <div key={title} className="blueprint-card p-4">
               <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#e5e5e5] bg-[#f2f2f2] text-black">
                 <Icon size={20} />
               </div>
               <h3 className="text-base font-medium text-[#0a0a0a]">{title}</h3>
               <p className="mt-3 text-sm leading-6 text-[#737373]">{description}</p>
+              <div className="mt-5 h-px w-full blueprint-divider" />
             </div>
           ))}
         </div>
@@ -154,7 +186,7 @@ const Landing = () => {
             </div>
           </div>
 
-          <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+          <div className="blueprint-card p-4">
             <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-4 text-[#0a0a0a]">
               <div className="mb-5 flex items-center justify-between">
                 <div>
@@ -190,7 +222,7 @@ const Landing = () => {
             ["Open workflow", "No black box: every stage is visible in the database and UI."],
             ["Built for teams", "Recruiters and candidates each get purpose-built views."],
           ].map(([title, description]) => (
-            <div key={title} className="rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+            <div key={title} className="blueprint-card p-4">
               <FaUsers className="mb-5 text-black" size={22} />
               <h3 className="font-medium text-[#0a0a0a]">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-[#737373]">{description}</p>

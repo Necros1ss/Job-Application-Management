@@ -60,6 +60,13 @@
     border-radius: var(--radius-cards);
     background: var(--color-canvas-white);
     box-shadow: var(--shadow-subtle-2);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .blueprint-card:hover {
+    border-color: #cfcfcf;
+    box-shadow: 0 0 0 1px rgba(10, 10, 10, 0.16);
+    transform: translateY(-1px);
   }
 
   .blueprint-input {
@@ -90,9 +97,66 @@
     background: var(--color-ghost-gray);
     color: var(--color-rich-black);
   }
+
+  .blueprint-hero-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--color-subtle-ash);
+    border-radius: var(--radius-cards);
+    background:
+      linear-gradient(90deg, rgba(229, 229, 229, 0.44) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(229, 229, 229, 0.44) 1px, transparent 1px),
+      var(--color-canvas-white);
+    background-size: 28px 28px;
+    box-shadow: var(--shadow-subtle-2);
+  }
+
+  .blueprint-hero-panel::after {
+    content: "";
+    position: absolute;
+    inset: 16px;
+    pointer-events: none;
+    border: 1px solid rgba(10, 10, 10, 0.08);
+    border-radius: 10px;
+  }
+
+  .blueprint-kicker {
+    color: var(--color-midtone-gray);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+
+  .blueprint-metric {
+    font-family: var(--font-geist-mono);
+    letter-spacing: 0;
+  }
 }
 
 @layer utilities {
+  .blueprint-grid-bg {
+    background-color: var(--color-canvas-white);
+    background-image:
+      linear-gradient(90deg, rgba(229, 229, 229, 0.42) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(229, 229, 229, 0.42) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .blueprint-dots {
+    background-image: radial-gradient(rgba(10, 10, 10, 0.13) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+
+  .blueprint-divider {
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-subtle-ash) 0,
+      var(--color-subtle-ash) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+  }
+
   .bg-emerald-600,
   .bg-emerald-500,
   .bg-\[\#188155\] {

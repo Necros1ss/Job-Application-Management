@@ -6,7 +6,7 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import path from "path";
 import { fileURLToPath } from "url";
-import { ensureApplicationRejectionColumns, ensureApplicationStatusEnum, testDbConnection } from "./config/db.js";
+import { ensureApplicationRejectionColumns, ensureApplicationStatusEnum, ensurePhaseSchema, testDbConnection } from "./config/db.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import applicationRoutes from "./routes/applications.js";
@@ -129,6 +129,7 @@ const startServer = async () => {
   await testDbConnection();
   await ensureApplicationStatusEnum();
   await ensureApplicationRejectionColumns();
+  await ensurePhaseSchema();
   app.listen(port, () => {
     console.log(`API server running on http://localhost:${port}`);
   });

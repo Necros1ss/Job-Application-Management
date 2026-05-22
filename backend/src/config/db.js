@@ -87,3 +87,201 @@ export const ensureApplicationRejectionColumns = async () => {
     client.release();
   }
 };
+
+export const ensurePhaseSchema = async () => {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `DO $$
+       BEGIN
+         ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS deadline DATE;
+         ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS experience VARCHAR(100);
+         ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS employment_type VARCHAR(100);
+         ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS responsibilities TEXT;
+         ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS requirements TEXT;
+         ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS status VARCHAR(20);
+
+         ALTER TABLE applications ADD COLUMN IF NOT EXISTS cover_letter TEXT;
+         ALTER TABLE applications ADD COLUMN IF NOT EXISTS rating INTEGER;
+         ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+         ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_email_body TEXT;
+
+         ALTER TABLE candidates ADD COLUMN IF NOT EXISTS skills TEXT[] DEFAULT '{}';
+         ALTER TABLE candidates ADD COLUMN IF NOT EXISTS experience VARCHAR(100);
+         ALTER TABLE candidates ADD COLUMN IF NOT EXISTS job_type VARCHAR(50);
+
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS website VARCHAR(500);
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS address VARCHAR(500);
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS industry VARCHAR(100);
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS linkedin VARCHAR(500);
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS company_size VARCHAR(50);
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS tax_code VARCHAR(50);
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS description TEXT;
+       END $$;`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS application_notes (
+         id BIGSERIAL PRIMARY KEY,
+         application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+         recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,
+         note TEXT NOT NULL,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+       )`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS application_events (
+         id BIGSERIAL PRIMARY KEY,
+         application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+         actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+         event_type VARCHAR(50) NOT NULL,
+         title VARCHAR(255) NOT NULL,
+         description TEXT,
+         metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+       )`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS application_files (
+         id BIGSERIAL PRIMARY KEY,
+         application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+         file_type VARCHAR(30) NOT NULL DEFAULT 'cv',
+         file_name VARCHAR(255) NOT NULL,
+         mime_type VARCHAR(120) NOT NULL,
+         file_size_bytes INTEGER NOT NULL CHECK (file_size_bytes > 0),
+         file_data BYTEA NOT NULL,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT uq_application_file_type UNIQUE (application_id, file_type)
+       )`
+    );
+
+    await client.query(
+      `DO $$
+       BEGIN
+         IF EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'public'
+             AND table_name = 'application_files'
+             AND column_name = 'id'
+             AND column_default IS NULL
+         ) THEN
+           CREATE SEQUENCE IF NOT EXISTS application_files_id_seq OWNED BY application_files.id;
+           ALTER TABLE application_files ALTER COLUMN id SET DEFAULT nextval('application_files_id_seq');
+           PERFORM setval(
+             'application_files_id_seq',
+             GREATEST(COALESCE((SELECT MAX(id) FROM application_files), 0), 1),
+             true
+           );
+         END IF;
+       END $$;`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS messages (
+         id BIGSERIAL PRIMARY KEY,
+         sender_recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,
+         receiver_candidate_id BIGINT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+         job_post_id BIGINT REFERENCES job_posts(id) ON DELETE SET NULL,
+         application_id BIGINT REFERENCES applications(id) ON DELETE SET NULL,
+         subject VARCHAR(255) NOT NULL,
+         content TEXT NOT NULL,
+         is_read BOOLEAN NOT NULL DEFAULT false,
+         read_at TIMESTAMPTZ,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+       )`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS onboarding_tasks (
+         id BIGSERIAL PRIMARY KEY,
+         application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+         recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,
+         title VARCHAR(255) NOT NULL,
+         description TEXT,
+         due_date DATE,
+         status VARCHAR(30) NOT NULL DEFAULT 'pending',
+         completed_at TIMESTAMPTZ,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT chk_onboarding_tasks_status CHECK (status IN ('pending', 'in_progress', 'completed'))
+       )`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS employees (
+         id BIGSERIAL PRIMARY KEY,
+         candidate_id BIGINT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+         recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,
+         application_id BIGINT UNIQUE REFERENCES applications(id) ON DELETE SET NULL,
+         employee_code VARCHAR(50) UNIQUE,
+         full_name VARCHAR(255) NOT NULL,
+         email VARCHAR(255) NOT NULL,
+         phone VARCHAR(20),
+         job_title VARCHAR(255),
+         department VARCHAR(120),
+         employment_type VARCHAR(100),
+         start_date DATE,
+         status VARCHAR(30) NOT NULL DEFAULT 'active',
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT chk_employees_status CHECK (status IN ('active', 'inactive'))
+       )`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS attendance_records (
+         id BIGSERIAL PRIMARY KEY,
+         employee_id BIGINT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+         work_date DATE NOT NULL,
+         check_in TIME,
+         check_out TIME,
+         status VARCHAR(30) NOT NULL DEFAULT 'present',
+         notes TEXT,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT uq_attendance_employee_date UNIQUE (employee_id, work_date),
+         CONSTRAINT chk_attendance_status CHECK (status IN ('present', 'remote', 'late', 'absent'))
+       )`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS leave_requests (
+         id BIGSERIAL PRIMARY KEY,
+         employee_id BIGINT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+         leave_type VARCHAR(50) NOT NULL DEFAULT 'annual',
+         start_date DATE NOT NULL,
+         end_date DATE NOT NULL,
+         reason TEXT,
+         status VARCHAR(30) NOT NULL DEFAULT 'pending',
+         reviewed_by BIGINT REFERENCES recruiters(id) ON DELETE SET NULL,
+         reviewed_at TIMESTAMPTZ,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT chk_leave_request_status CHECK (status IN ('pending', 'approved', 'rejected')),
+         CONSTRAINT chk_leave_request_dates CHECK (end_date >= start_date)
+       )`
+    );
+
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_application_files_application_id ON application_files(application_id);
+       CREATE INDEX IF NOT EXISTS idx_application_notes_application_id ON application_notes(application_id);
+       CREATE INDEX IF NOT EXISTS idx_application_events_application_created ON application_events(application_id, created_at DESC);
+       CREATE INDEX IF NOT EXISTS idx_messages_receiver_candidate_id ON messages(receiver_candidate_id);
+       CREATE INDEX IF NOT EXISTS idx_messages_sender_recruiter_id ON messages(sender_recruiter_id);
+       CREATE INDEX IF NOT EXISTS idx_messages_receiver_read_created ON messages(receiver_candidate_id, is_read, created_at DESC);
+       CREATE INDEX IF NOT EXISTS idx_messages_application_id ON messages(application_id);
+       CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_application_id ON onboarding_tasks(application_id);
+       CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_recruiter_status ON onboarding_tasks(recruiter_id, status);
+       CREATE INDEX IF NOT EXISTS idx_employees_recruiter_status ON employees(recruiter_id, status);
+       CREATE INDEX IF NOT EXISTS idx_employees_candidate_id ON employees(candidate_id);
+       CREATE INDEX IF NOT EXISTS idx_attendance_employee_date ON attendance_records(employee_id, work_date DESC);
+       CREATE INDEX IF NOT EXISTS idx_leave_requests_employee_status ON leave_requests(employee_id, status);`
+    );
+  } finally {
+    client.release();
+  }
+};

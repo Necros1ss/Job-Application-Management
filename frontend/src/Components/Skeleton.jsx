@@ -1,11 +1,11 @@
 const SkeletonLine = ({ className = "" }) => (
-  <div className={`rounded-full bg-gray-100 ${className}`} />
+  <div className={`rounded-full bg-[#e5e5e5] ${className}`} />
 );
 
 export const SkeletonCard = () => (
-  <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse">
+  <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-5 shadow-[0_0_0_1px_rgba(10,10,10,0.08)] animate-pulse">
     <div className="flex items-start justify-between mb-5">
-      <div className="w-14 h-14 bg-gray-100 rounded-xl" />
+      <div className="w-14 h-14 bg-[#f2f2f2] rounded-[10px] border border-[#e5e5e5]" />
       <SkeletonLine className="w-20 h-6" />
     </div>
     <SkeletonLine className="w-3/4 h-5 mb-3" />
@@ -15,7 +15,7 @@ export const SkeletonCard = () => (
       <SkeletonLine className="w-5/6 h-3" />
       <SkeletonLine className="w-2/3 h-3" />
     </div>
-    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+    <div className="flex items-center justify-between pt-4 border-t border-[#e5e5e5]">
       <SkeletonLine className="w-24 h-3" />
       <SkeletonLine className="w-20 h-4" />
     </div>
@@ -23,9 +23,9 @@ export const SkeletonCard = () => (
 );
 
 export const SkeletonRow = () => (
-  <div className="grid grid-cols-5 gap-4 px-6 py-5 border-b border-gray-50 animate-pulse">
+  <div className="grid grid-cols-5 gap-4 px-6 py-5 border-b border-[#e5e5e5] animate-pulse">
     <div className="col-span-2 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-lg bg-gray-100" />
+      <div className="w-12 h-12 rounded-[10px] bg-[#f2f2f2] border border-[#e5e5e5]" />
       <div className="space-y-2 flex-1">
         <SkeletonLine className="w-2/3 h-4" />
         <SkeletonLine className="w-1/3 h-3" />
@@ -47,8 +47,8 @@ export const SkeletonRow = () => (
 );
 
 export const SkeletonDashboardCard = ({ dark = false }) => (
-  <div className={`rounded-2xl p-6 shadow-sm animate-pulse ${dark ? "bg-emerald-800" : "bg-white border border-gray-100"}`}>
-    <SkeletonLine className={`w-24 h-3 mb-5 ${dark ? "bg-emerald-700" : "bg-gray-100"}`} />
-    <SkeletonLine className={`w-20 h-12 ${dark ? "bg-emerald-700" : "bg-gray-100"}`} />
+  <div className={`rounded-[14px] p-5 animate-pulse ${dark ? "bg-black" : "bg-white border border-[#e5e5e5] shadow-[0_0_0_1px_rgba(10,10,10,0.08)]"}`}>
+    <SkeletonLine className={`w-24 h-3 mb-5 ${dark ? "bg-white/25" : "bg-[#e5e5e5]"}`} />
+    <SkeletonLine className={`w-20 h-12 ${dark ? "bg-white/25" : "bg-[#e5e5e5]"}`} />
   </div>
 );

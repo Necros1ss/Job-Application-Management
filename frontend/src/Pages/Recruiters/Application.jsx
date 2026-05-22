@@ -3,6 +3,7 @@ import ApplicationDetail from './ApplicationDetail';
 import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api';
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import { SkeletonRow } from "../../Components/Skeleton";
+import Pagination from "../../Components/Pagination";
 import { showError, showSuccess } from '../../utils/toast';
 
 const PIPELINE_STAGES = [

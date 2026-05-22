@@ -1,24 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowRight, FaBriefcase, FaCheck, FaUserTie } from "react-icons/fa";
+import LanguageSwitcher from "../../Components/LanguageSwitcher";
+import { useI18n } from "../../lib/i18n";
 
 const SelectRole = () => {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState("candidate");
 
   const options = [
     {
       role: "candidate",
-      title: "Candidate",
-      headline: "Find work and track every application.",
-      description: "Search jobs, apply with a cover letter, read recruiter messages, and follow onboarding tasks.",
+      title: t("auth.candidate"),
+      headline: t("auth.candidateHeadline"),
+      description: t("auth.candidateDesc"),
       icon: FaUserTie,
     },
     {
       role: "recruiter",
-      title: "Recruiter",
-      headline: "Hire talent and manage the pipeline.",
-      description: "Publish roles, review candidates, schedule interviews, send offers, and start onboarding.",
+      title: t("auth.recruiter"),
+      headline: t("auth.recruiterHeadline"),
+      description: t("auth.recruiterDesc"),
       icon: FaBriefcase,
     },
   ];
@@ -32,14 +35,14 @@ const SelectRole = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-8 text-[#0a0a0a]">
+    <div className="min-h-screen blueprint-grid-bg px-4 py-8 text-[#0a0a0a]">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)] lg:grid-cols-[0.95fr_1.05fr]">
-        <aside className="hidden border-r border-[#e5e5e5] bg-[#f2f2f2] p-10 lg:flex lg:flex-col lg:justify-between">
+        <aside className="blueprint-hero-panel hidden rounded-none border-0 border-r border-[#e5e5e5] p-10 lg:flex lg:flex-col lg:justify-between">
           <Link to="/" className="w-fit rounded-full px-3 py-2 text-sm font-medium text-[#737373] hover:bg-white hover:text-black">
-            Job Tracker
+            {t("app.name")}
           </Link>
 
-          <div>
+          <div className="relative z-10">
             <p className="text-xs font-medium uppercase text-[#737373]">Workspace setup</p>
             <h1 className="mt-3 max-w-md text-[40px] font-semibold leading-none text-black">
               One HR workspace, two focused starting points.
@@ -95,11 +98,14 @@ const SelectRole = () => {
             <div className="mb-8">
               <p className="text-xs font-medium uppercase text-[#737373]">Create account</p>
               <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">
-                Join as a recruiter or candidate
+                {t("auth.roleTitle")}
               </h2>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[#737373]">
-                Choose the account type that matches what you want to do first. You can continue into the signup form with the role already selected.
+                {t("auth.roleSubtitle")}
               </p>
+            </div>
+            <div className="mb-6">
+              <LanguageSwitcher />
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -114,7 +120,7 @@ const SelectRole = () => {
                     className={`group rounded-[14px] border p-5 text-left transition ${
                       isSelected
                         ? "border-black bg-black text-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)]"
-                        : "border-[#e5e5e5] bg-white text-[#0a0a0a] hover:bg-[#f2f2f2]"
+                        : "border-[#e5e5e5] bg-white text-[#0a0a0a] hover:-translate-y-0.5 hover:border-[#cfcfcf] hover:bg-[#f2f2f2]"
                     }`}
                   >
                     <div className="mb-8 flex items-start justify-between">
@@ -145,13 +151,13 @@ const SelectRole = () => {
                 onClick={handleContinue}
                 className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-black px-12 py-2.5 text-sm font-semibold text-white hover:bg-[#0a0a0a]"
               >
-                Create Account <FaArrowRight size={12} />
+                {t("auth.createAccount")} <FaArrowRight size={12} />
               </button>
 
               <p className="text-sm text-[#737373]">
-                Already have an account?{" "}
+                {t("auth.haveAccount")}{" "}
                 <Link to="/login" className="font-medium text-black underline hover:no-underline">
-                  Log In
+                  {t("auth.login")}
                 </Link>
               </p>
             </div>

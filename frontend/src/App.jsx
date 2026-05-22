@@ -29,11 +29,13 @@ import ResetPassword from "./Pages/Auth/ResetPassword";
 import JobDetail from "./Pages/Jobs/JobDetail";
 import Company from "./Pages/Info/Company";
 import NotFound from "./Pages/NotFound";
+import { I18nProvider } from "./lib/i18n";
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <I18nProvider>
+      <Router>
+        <Routes>
         <Route index element={<Landing />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SelectRole />} />
@@ -73,8 +75,9 @@ function App() {
           <Route path="employees" element={<Employees />} />
         </Route>
         <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+    </I18nProvider>
   );
 }
 

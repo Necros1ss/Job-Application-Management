@@ -7,27 +7,26 @@ import { showError } from "../../utils/toast";
 
 const StatCard = ({ title, value, subtitle, icon: Icon, color = "emerald" }) => {
   const colorMap = {
-    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
-    blue: "bg-blue-50 text-blue-600 border-blue-100",
-    orange: "bg-orange-50 text-orange-600 border-orange-100",
-    purple: "bg-purple-50 text-purple-600 border-purple-100",
+    emerald: "bg-black text-white border-black",
+    blue: "bg-[#f2f2f2] text-black border-[#e5e5e5]",
+    orange: "bg-[#f2f2f2] text-black border-[#e5e5e5]",
+    purple: "bg-[#f2f2f2] text-black border-[#e5e5e5]",
   };
   const activeColor = colorMap[color] || colorMap.emerald;
 
   return (
-    <div className={`p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow ${activeColor.split(" ").map(c => c.startsWith("bg-") ? "bg-white" : c).join(" ")}`}
-      style={{ backgroundColor: "white" }}
-    >
+    <div className="blueprint-card p-5">
       <div className="flex items-start justify-between mb-4">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</p>
+        <p className="text-xs font-medium text-[#737373] uppercase">{title}</p>
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeColor}`}>
           <Icon size={20} />
         </div>
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="text-4xl font-extrabold text-gray-900">{value ?? "—"}</span>
-        {subtitle && <span className="text-xs font-medium text-gray-400">{subtitle}</span>}
+        <span className="blueprint-metric text-4xl font-semibold text-black">{value ?? "—"}</span>
+        {subtitle && <span className="text-xs font-medium text-[#737373]">{subtitle}</span>}
       </div>
+      <div className="mt-5 h-px blueprint-divider" />
     </div>
   );
 };
@@ -208,7 +207,7 @@ const RecruiterDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen blueprint-grid-bg">
         <TopBarRecruiter userName="" userEmail="" />
         <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
@@ -225,7 +224,7 @@ const RecruiterDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen blueprint-grid-bg">
       <TopBarRecruiter userName={userName} 
                        userEmail={userEmail}
                        searchValue={searchTerm}
@@ -234,12 +233,42 @@ const RecruiterDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         {/* --- HEADER --- */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Recruiter Dashboard</h1>
-            <p className="text-gray-500">
-              Welcome back, {userName || "there"}. Here's what's happening today.
-            </p>
+        <div className="blueprint-hero-panel mb-8 p-5">
+          <div className="relative z-10 grid gap-5 lg:grid-cols-[1fr_360px]">
+            <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-5">
+              <p className="blueprint-kicker">Recruiter console</p>
+              <h1 className="mt-2 text-[34px] font-semibold leading-none text-black">Recruiter Dashboard</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#737373]">
+                Welcome back, {userName || "there"}. Monitor jobs, candidates, interviews, and offers with a denser operational view.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["Jobs", "Candidates", "Interviews", "Offers"].map((item) => (
+                  <span key={item} className="rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-3 py-1 text-xs font-medium text-[#0a0a0a]">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-medium uppercase text-[#737373]">Hiring pulse</p>
+                <span className="font-mono text-xs text-[#737373]">Today</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ["Active", stats.activeJobs],
+                  ["Pending", stats.pending],
+                  ["Interviews", stats.interviews],
+                  ["Offers", stats.offers],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-[10px] border border-[#e5e5e5] bg-[#f2f2f2] p-3">
+                    <p className="text-xs font-medium text-[#737373]">{label}</p>
+                    <p className="blueprint-metric mt-2 text-2xl font-semibold text-black">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -306,7 +335,7 @@ const RecruiterDashboard = () => {
             </div>
 
             {showAppStats && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-5">
+              <div className="blueprint-card p-5 mb-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-bold text-gray-800">Application Status Overview</h3>
                   <span className="text-xs text-gray-500">{applicationStatusStats.total} total</span>
@@ -367,7 +396,7 @@ const RecruiterDashboard = () => {
             )}
 
             {recentApplications.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+              <div className="blueprint-card p-10 text-center">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <FaUsers size={24} className="text-gray-400" />
                 </div>
@@ -375,7 +404,7 @@ const RecruiterDashboard = () => {
                 <p className="text-sm text-gray-500">Candidates will appear here when they apply to your jobs.</p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="blueprint-card overflow-hidden">
                 {recentApplications.map((app, idx) => (
                   <div
                     key={app.id}
@@ -409,13 +438,13 @@ const RecruiterDashboard = () => {
 
           {/* RIGHT: Funnel, Activity, Active Jobs Summary */}
           <div className="w-full lg:w-80 xl:w-96 space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="blueprint-card p-5">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Recruitment Funnel</h2>
                   <p className="text-xs text-gray-500 mt-1">Pipeline conversion snapshot</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-[10px] border border-[#e5e5e5] bg-[#f2f2f2] text-black flex items-center justify-center">
                   <FaChartLine size={18} />
                 </div>
               </div>
@@ -427,9 +456,9 @@ const RecruiterDashboard = () => {
                       <span className="text-sm font-semibold text-gray-700">{item.label}</span>
                       <span className="text-sm font-bold text-gray-900">{item.value}</span>
                     </div>
-                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2.5 bg-[#e5e5e5] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-emerald-500 rounded-full transition-all"
+                        className="h-full bg-black rounded-full transition-all"
                         style={{ width: `${Math.min(item.percent, 100)}%` }}
                       />
                     </div>
@@ -439,13 +468,13 @@ const RecruiterDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="blueprint-card p-5">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
                   <p className="text-xs text-gray-500 mt-1">Latest candidate workflow updates</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-[10px] border border-[#e5e5e5] bg-[#f2f2f2] text-black flex items-center justify-center">
                   <FaHistory size={18} />
                 </div>
               </div>
@@ -482,7 +511,7 @@ const RecruiterDashboard = () => {
               </div>
 
               {jobs.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+                <div className="blueprint-card p-8 text-center">
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FaBriefcase size={24} className="text-gray-400" />
                   </div>
@@ -502,7 +531,7 @@ const RecruiterDashboard = () => {
                     return (
                       <div
                         key={job.id}
-                        className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-sm transition-shadow cursor-pointer"
+                        className="blueprint-card p-4 cursor-pointer"
                         onClick={() => navigate("/recruiter/job")}
                       >
                         <div className="flex items-start justify-between gap-3">

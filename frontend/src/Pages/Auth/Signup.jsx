@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaBriefcase, FaCheck, FaEye, FaEyeSlash, FaUserTie } from "react-icons/fa";
 import { authApi, tokenStorage } from "../../lib/api";
 import { showError } from "../../utils/toast";
+import LanguageSwitcher from "../../Components/LanguageSwitcher";
+import { useI18n } from "../../lib/i18n";
 
 const roleOptions = [
   {
@@ -20,6 +22,7 @@ const roleOptions = [
 ];
 
 const Signup = () => {
+  const { t } = useI18n();
   const location = useLocation();
   const initialRole = location.state?.role === "recruiter" ? "recruiter" : "candidate";
   const [userRole, setUserRole] = useState(initialRole);
@@ -95,14 +98,14 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-8 text-[#0a0a0a]">
+    <div className="min-h-screen blueprint-grid-bg px-4 py-8 text-[#0a0a0a]">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)] lg:grid-cols-[0.95fr_1.05fr]">
-        <aside className="hidden border-r border-[#e5e5e5] bg-[#f2f2f2] p-10 lg:flex lg:flex-col lg:justify-between">
+        <aside className="blueprint-hero-panel hidden rounded-none border-0 border-r border-[#e5e5e5] p-10 lg:flex lg:flex-col lg:justify-between">
           <Link to="/" className="inline-flex w-fit items-center rounded-full px-3 py-2 text-sm font-medium text-[#737373] hover:bg-white hover:text-black">
-            Job Tracker
+            {t("app.name")}
           </Link>
 
-          <div>
+          <div className="relative z-10">
             <p className="text-xs font-medium uppercase text-[#737373]">Create workspace</p>
             <h1 className="mt-3 max-w-md text-[40px] font-semibold leading-none text-black">
               Choose the account that matches your workflow.
@@ -120,7 +123,7 @@ const Signup = () => {
                     }`}
                   >
                     <Icon className="mb-5" />
-                    <p className="text-sm font-medium">{title}</p>
+                    <p className="text-sm font-medium">{role === "candidate" ? t("auth.candidate") : t("auth.recruiter")}</p>
                   </div>
                 ))}
               </div>
@@ -138,11 +141,14 @@ const Signup = () => {
             <div className="mb-8">
               <p className="text-xs font-medium uppercase text-[#737373]">Create account</p>
               <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">
-                {userRole === "candidate" ? "Start applying with Job Tracker" : "Start hiring with Job Tracker"}
+                {userRole === "candidate" ? t("auth.signupCandidateTitle") : t("auth.signupRecruiterTitle")}
               </h2>
               <p className="mt-3 text-sm leading-6 text-[#737373]">
-                Select your account type, then create the workspace profile you need.
+                {t("auth.signupSubtitle")}
               </p>
+            </div>
+            <div className="mb-6">
+              <LanguageSwitcher />
             </div>
 
             <div className="mb-6 grid gap-3 sm:grid-cols-2">
@@ -161,7 +167,7 @@ const Signup = () => {
                     className={`rounded-[14px] border p-4 text-left transition ${
                       isSelected
                         ? "border-black bg-black text-white"
-                        : "border-[#e5e5e5] bg-white text-[#0a0a0a] hover:bg-[#f2f2f2]"
+                        : "border-[#e5e5e5] bg-white text-[#0a0a0a] hover:-translate-y-0.5 hover:border-[#cfcfcf] hover:bg-[#f2f2f2]"
                     }`}
                   >
                     <div className="mb-4 flex items-center justify-between">
@@ -170,9 +176,9 @@ const Signup = () => {
                         {isSelected && <FaCheck size={10} />}
                       </span>
                     </div>
-                    <p className="text-sm font-medium">{title}</p>
+                    <p className="text-sm font-medium">{role === "candidate" ? t("auth.candidate") : t("auth.recruiter")}</p>
                     <p className={`mt-1 text-xs leading-5 ${isSelected ? "text-white/70" : "text-[#737373]"}`}>
-                      {description}
+                      {role === "candidate" ? t("auth.candidateDesc") : t("auth.recruiterDesc")}
                     </p>
                   </button>
                 );
@@ -182,7 +188,7 @@ const Signup = () => {
           <form onSubmit={handleSignup} className="space-y-5">
             <div>
               <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                {userRole === "candidate" ? "Name" : "Company Name"}
+                {userRole === "candidate" ? t("auth.name") : t("auth.companyName")}
               </label>
               <input
                 type="text"
@@ -200,7 +206,7 @@ const Signup = () => {
             </div>
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                Email
+                {t("auth.email")}
               </label>
               <input
                 type="email"
@@ -218,7 +224,7 @@ const Signup = () => {
             </div>
             <div>
               <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                Password
+                {t("auth.password")}
               </label>
               <div className="relative">
                 <input
@@ -254,12 +260,12 @@ const Signup = () => {
                 disabled={isSubmitting}
                 className="mb-2 flex w-full justify-center rounded-[10px] bg-black px-12 py-2.5 text-sm font-semibold text-white hover:bg-[#0a0a0a] disabled:opacity-60"
               >
-                {isSubmitting ? "Creating account..." : "Create Account"}
+                {isSubmitting ? "Creating account..." : t("auth.createAccount")}
               </button>
               <p className="text-sm text-[#737373]">
-                Already have an account?{" "}
+                {t("auth.haveAccount")}{" "}
                 <Link to="/login" className="font-medium text-black underline hover:no-underline">
-                  Login
+                  {t("auth.login")}
                 </Link>
               </p>
             </div>
