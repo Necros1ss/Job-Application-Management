@@ -10,7 +10,6 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import LanguageSwitcher from "../Components/LanguageSwitcher";
-import { useI18n } from "../lib/i18n";
 
 const modules = [
   {
@@ -75,7 +74,7 @@ const AnimatedMetric = ({ value, suffix = "", start }) => {
 };
 
 const Landing = () => {
-  const { t } = useI18n();
+  // i18n removed - using English literals directly
   const metricsRef = useRef(null);
   const [metricsVisible, setMetricsVisible] = useState(false);
 
@@ -101,24 +100,24 @@ const Landing = () => {
     <div className="min-h-screen blueprint-grid-bg text-[#0a0a0a]">
       <header className="sticky inset-x-0 top-0 z-50 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-10">
-          <Link to="/" className="text-lg font-semibold text-black">
-            {t("app.name")}
+            <Link to="/" className="text-lg font-semibold text-black">
+            Job Tracker
           </Link>
-          <nav className="hidden items-center gap-7 text-sm font-medium text-[#737373] md:flex">
-            <a href="#modules" className="hover:text-black">{t("nav.modules")}</a>
-            <a href="#workflow" className="hover:text-black">{t("nav.workflow")}</a>
-            <a href="#why" className="hover:text-black">{t("nav.whyUs")}</a>
+            <nav className="hidden items-center gap-7 text-sm font-medium text-[#737373] md:flex">
+            <a href="#modules" className="hover:text-black">Modules</a>
+            <a href="#workflow" className="hover:text-black">Workflow</a>
+            <a href="#why" className="hover:text-black">Why Us</a>
           </nav>
           <div className="flex items-center gap-3">
             <LanguageSwitcher compact />
-            <Link to="/login" className="rounded-full px-3 py-2 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]">
-              {t("auth.login")}
+              <Link to="/login" className="rounded-full px-3 py-2 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]">
+              Log in
             </Link>
             <Link
               to="/signup"
               className="rounded-[10px] bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-[#0a0a0a]"
             >
-              {t("auth.startFree")}
+              Start Free
             </Link>
           </div>
         </div>
@@ -132,26 +131,26 @@ const Landing = () => {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#10c22b] opacity-40" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#10c22b]" />
               </span>
-              {t("landing.badge")}
+              Open, self-hosted hiring and HR workflow
             </div>
             <h1 className="max-w-3xl text-[44px] font-semibold leading-none text-black sm:text-[48px]">
-              {t("landing.title")}
+              Job Tracker HRMS for precise hiring operations.
             </h1>
             <p className="mt-6 max-w-2xl text-[18px] leading-[1.33] text-[#0a0a0a]">
-              {t("landing.subtitle")}
+              A practical hiring workspace inspired by open-source HR systems: recruitment, interviews, onboarding, employee records, attendance, and leave in one calm dashboard.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/signup"
                 className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-black px-12 py-2 text-sm font-semibold text-white hover:bg-[#0a0a0a]"
               >
-                {t("auth.createWorkspace")} <FaArrowRight />
+                Create workspace <FaArrowRight />
               </Link>
               <Link
                 to="/login"
                 className="inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]"
               >
-                {t("auth.login")}
+                Log in
               </Link>
             </div>
           </div>

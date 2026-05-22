@@ -5,7 +5,6 @@ import { authApi, tokenStorage } from "../../lib/api";
 import { showError } from "../../utils/toast";
 import { validateEmail } from "../../utils/validation";
 import LanguageSwitcher from "../../Components/LanguageSwitcher";
-import { useI18n } from "../../lib/i18n";
 
 const roleOptions = [
   {
@@ -23,7 +22,6 @@ const roleOptions = [
 ];
 
 const Signup = () => {
-  const { t } = useI18n();
   const location = useLocation();
   const initialRole = location.state?.role === "recruiter" ? "recruiter" : "candidate";
   const [userRole, setUserRole] = useState(initialRole);
@@ -95,7 +93,7 @@ const Signup = () => {
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)] lg:grid-cols-[0.95fr_1.05fr]">
         <aside className="blueprint-hero-panel hidden rounded-none border-0 border-r border-[#e5e5e5] p-10 lg:flex lg:flex-col lg:justify-between">
           <Link to="/" className="inline-flex w-fit items-center rounded-full px-3 py-2 text-sm font-medium text-[#737373] hover:bg-white hover:text-black">
-            {t("app.name")}
+            Job Tracker
           </Link>
 
           <div className="relative z-10">
@@ -116,7 +114,7 @@ const Signup = () => {
                     }`}
                   >
                     <Icon className="mb-5" />
-                    <p className="text-sm font-medium">{role === "candidate" ? t("auth.candidate") : t("auth.recruiter")}</p>
+                    <p className="text-sm font-medium">{role === "candidate" ? "Candidate" : "Recruiter"}</p>
                   </div>
                 ))}
               </div>
@@ -134,10 +132,10 @@ const Signup = () => {
             <div className="mb-8">
               <p className="text-xs font-medium uppercase text-[#737373]">Create account</p>
               <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">
-                {userRole === "candidate" ? t("auth.signupCandidateTitle") : t("auth.signupRecruiterTitle")}
+                {userRole === "candidate" ? "Start applying with Job Tracker" : "Start hiring with Job Tracker"}
               </h2>
               <p className="mt-3 text-sm leading-6 text-[#737373]">
-                {t("auth.signupSubtitle")}
+                Select your account type, then create the workspace profile you need.
               </p>
             </div>
             <div className="mb-6">
@@ -171,7 +169,7 @@ const Signup = () => {
                     </div>
                     <p className="text-sm font-medium">{role === "candidate" ? t("auth.candidate") : t("auth.recruiter")}</p>
                     <p className={`mt-1 text-xs leading-5 ${isSelected ? "text-white/70" : "text-[#737373]"}`}>
-                      {role === "candidate" ? t("auth.candidateDesc") : t("auth.recruiterDesc")}
+                      {role === "candidate" ? "Search jobs, apply with a cover letter, read recruiter messages, and follow onboarding tasks." : "Publish roles, review candidates, schedule interviews, send offers, and start onboarding."}
                     </p>
                   </button>
                 );
@@ -181,7 +179,7 @@ const Signup = () => {
           <form onSubmit={handleSignup} className="space-y-5">
             <div>
               <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                {userRole === "candidate" ? t("auth.name") : t("auth.companyName")}
+                {userRole === "candidate" ? "Name" : "Company Name"}
               </label>
               <input
                 type="text"
@@ -199,7 +197,7 @@ const Signup = () => {
             </div>
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                {t("auth.email")}
+                Email
               </label>
               <input
                 type="email"
@@ -217,7 +215,7 @@ const Signup = () => {
             </div>
             <div>
               <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                {t("auth.password")}
+                Password
               </label>
               <div className="relative">
                 <input
@@ -253,12 +251,12 @@ const Signup = () => {
                 disabled={isSubmitting}
                 className="mb-2 flex w-full justify-center rounded-[10px] bg-black px-12 py-2.5 text-sm font-semibold text-white hover:bg-[#0a0a0a] disabled:opacity-60"
               >
-                {isSubmitting ? "Creating account..." : t("auth.createAccount")}
+                {isSubmitting ? "Creating account..." : "Create Account"}
               </button>
               <p className="text-sm text-[#737373]">
-                {t("auth.haveAccount")}{" "}
+                Already have an account? {" "}
                 <Link to="/login" className="font-medium text-black underline hover:no-underline">
-                  {t("auth.login")}
+                  Log in
                 </Link>
               </p>
             </div>

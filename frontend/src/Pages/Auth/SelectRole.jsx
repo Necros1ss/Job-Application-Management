@@ -2,26 +2,25 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaArrowRight, FaBriefcase, FaCheck, FaUserTie } from "react-icons/fa";
 import LanguageSwitcher from "../../Components/LanguageSwitcher";
-import { useI18n } from "../../lib/i18n";
 
 const SelectRole = () => {
-  const { t } = useI18n();
+  // i18n removed - using English literals directly
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState("candidate");
 
   const options = [
     {
       role: "candidate",
-      title: t("auth.candidate"),
-      headline: t("auth.candidateHeadline"),
-      description: t("auth.candidateDesc"),
+      title: "Candidate",
+      headline: "Find work and track every application.",
+      description: "Search jobs, apply with a cover letter, read recruiter messages, and follow onboarding tasks.",
       icon: FaUserTie,
     },
     {
       role: "recruiter",
-      title: t("auth.recruiter"),
-      headline: t("auth.recruiterHeadline"),
-      description: t("auth.recruiterDesc"),
+      title: "Recruiter",
+      headline: "Hire talent and manage the pipeline.",
+      description: "Post roles, review candidates, schedule interviews, send offers, and start onboarding.",
       icon: FaBriefcase,
     },
   ];
@@ -101,10 +100,10 @@ const SelectRole = () => {
             <div className="mb-8">
               <p className="text-xs font-medium uppercase text-[#737373]">Create account</p>
               <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">
-                {t("auth.roleTitle")}
+                Join as a recruiter or candidate
               </h2>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[#737373]">
-                {t("auth.roleSubtitle")}
+                Choose the account type that matches what you want to do first. You can continue into the signup form with the role already selected.
               </p>
             </div>
             <div className="mb-6">
@@ -154,13 +153,13 @@ const SelectRole = () => {
                 onClick={handleContinue}
                 className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-black px-12 py-2.5 text-sm font-semibold text-white hover:bg-[#0a0a0a]"
               >
-                {t("auth.createAccount")} <FaArrowRight size={12} />
+                Create Account <FaArrowRight size={12} />
               </button>
 
               <p className="text-sm text-[#737373]">
-                {t("auth.haveAccount")}{" "}
+                Already have an account? {" "}
                 <Link to="/login" className="font-medium text-black underline hover:no-underline">
-                  {t("auth.login")}
+                  Log in
                 </Link>
               </p>
             </div>

@@ -90,7 +90,12 @@ app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan("dev"));
-app.use("/api", generalLimiter);
+// Apply general API rate limiter only in production to avoid blocking local development
+if (process.env.NODE_ENV === "production") {
+  app.use("/api", generalLimiter);
+} else {
+  console.log("[Server] Rate limiter disabled for non-production environment");
+}
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });

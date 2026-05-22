@@ -38,6 +38,8 @@ const TopBarDashboard = ({
     let mounted = true;
     const refreshUnreadCount = async () => {
       try {
+        // Skip polling when tab is not visible to reduce background requests
+        if (document.visibilityState !== 'visible') return;
         const payload = await messagesApi.unreadCount();
         if (mounted) {
           setUnreadCount(payload?.unreadCount || 0);
@@ -50,7 +52,8 @@ const TopBarDashboard = ({
     };
 
     refreshUnreadCount();
-    const intervalId = window.setInterval(refreshUnreadCount, 15000);
+    // Lower frequency to 60s to avoid triggering rate limits
+    const intervalId = window.setInterval(refreshUnreadCount, 60000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         refreshUnreadCount();

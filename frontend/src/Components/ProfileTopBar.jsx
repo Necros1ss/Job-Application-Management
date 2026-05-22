@@ -28,6 +28,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
     let mounted = true;
     const refreshUnreadCount = async () => {
       try {
+        if (document.visibilityState !== 'visible') return;
         const payload = await messagesApi.unreadCount();
         if (mounted) {
           setUnreadCount(payload?.unreadCount || 0);
@@ -40,7 +41,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
     };
 
     refreshUnreadCount();
-    const intervalId = window.setInterval(refreshUnreadCount, 15000);
+    const intervalId = window.setInterval(refreshUnreadCount, 60000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         refreshUnreadCount();

@@ -162,8 +162,8 @@ const EmployeePortal = () => {
       return (
         <EmptyState
           icon={FaBriefcase}
-          title="Ban chua duoc onboard"
-          description="Vui long lien he HR hoac recruiter de kich hoat employee portal."
+          title="Account not activated"
+          description="Please contact Human Resources or your recruiter to activate the employee portal."
         />
       );
     }

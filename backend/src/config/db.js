@@ -153,7 +153,7 @@ export const ensurePhaseSchema = async () => {
          ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS requirements TEXT;
          ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS status VARCHAR(20);
 
-        ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_file_path VARCHAR(255);
+         ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_file_path VARCHAR(255);
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS cover_letter TEXT;
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS rating INTEGER;
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
