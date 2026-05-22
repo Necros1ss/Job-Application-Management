@@ -35,6 +35,9 @@ CREATE TABLE candidates (
     phone VARCHAR(20),
     dob DATE,
     address TEXT,
+    skills TEXT[] DEFAULT '{}',
+    experience VARCHAR(100),
+    job_type VARCHAR(50),
     CONSTRAINT fk_candidate_user
       FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -81,6 +84,8 @@ CREATE TABLE applications (
     job_post_id BIGINT NOT NULL,
     applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     cv_file_path VARCHAR(255),
+    cover_letter TEXT,
+    rating INTEGER,
     status application_status NOT NULL DEFAULT 'applied',
     rejection_reason TEXT,
     rejection_email_body TEXT,
@@ -152,6 +157,118 @@ CREATE TABLE messages (
       FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE SET NULL
 );
 
+CREATE TABLE application_notes (
+    id BIGSERIAL PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    recruiter_id BIGINT NOT NULL,
+    note TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_application_notes_application
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_application_notes_recruiter
+      FOREIGN KEY (recruiter_id) REFERENCES recruiters(id) ON DELETE CASCADE
+);
+
+CREATE TABLE application_events (
+    id BIGSERIAL PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    actor_user_id BIGINT,
+    event_type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_application_events_application
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_application_events_actor
+      FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE onboarding_tasks (
+    id BIGSERIAL PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    recruiter_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date DATE,
+    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_onboarding_tasks_application
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_onboarding_tasks_recruiter
+      FOREIGN KEY (recruiter_id) REFERENCES recruiters(id) ON DELETE CASCADE,
+    CONSTRAINT chk_onboarding_tasks_status
+      CHECK (status IN ('pending', 'in_progress', 'completed'))
+);
+
+CREATE TABLE employees (
+    id BIGSERIAL PRIMARY KEY,
+    candidate_id BIGINT NOT NULL,
+    recruiter_id BIGINT NOT NULL,
+    application_id BIGINT UNIQUE,
+    employee_code VARCHAR(50) UNIQUE,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    job_title VARCHAR(255),
+    department VARCHAR(120),
+    employment_type VARCHAR(100),
+    start_date DATE,
+    status VARCHAR(30) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_employees_candidate
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
+    CONSTRAINT fk_employees_recruiter
+      FOREIGN KEY (recruiter_id) REFERENCES recruiters(id) ON DELETE CASCADE,
+    CONSTRAINT fk_employees_application
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE SET NULL,
+    CONSTRAINT chk_employees_status
+      CHECK (status IN ('active', 'inactive'))
+);
+
+CREATE TABLE attendance_records (
+    id BIGSERIAL PRIMARY KEY,
+    employee_id BIGINT NOT NULL,
+    work_date DATE NOT NULL,
+    check_in TIME,
+    check_out TIME,
+    status VARCHAR(30) NOT NULL DEFAULT 'present',
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_attendance_records_employee
+      FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+    CONSTRAINT uq_attendance_employee_date UNIQUE (employee_id, work_date),
+    CONSTRAINT chk_attendance_status
+      CHECK (status IN ('present', 'remote', 'late', 'absent'))
+);
+
+CREATE TABLE leave_requests (
+    id BIGSERIAL PRIMARY KEY,
+    employee_id BIGINT NOT NULL,
+    leave_type VARCHAR(50) NOT NULL DEFAULT 'annual',
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    reason TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    reviewed_by BIGINT,
+    reviewed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_leave_requests_employee
+      FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+    CONSTRAINT fk_leave_requests_reviewer
+      FOREIGN KEY (reviewed_by) REFERENCES recruiters(id) ON DELETE SET NULL,
+    CONSTRAINT chk_leave_request_status
+      CHECK (status IN ('pending', 'approved', 'rejected')),
+    CONSTRAINT chk_leave_request_dates
+      CHECK (end_date >= start_date)
+);
+
 CREATE TABLE IF NOT EXISTS application_files (
     id BIGINT PRIMARY KEY,
     application_id BIGINT NOT NULL,
@@ -176,3 +293,11 @@ CREATE INDEX idx_messages_receiver_candidate_id ON messages(receiver_candidate_i
 CREATE INDEX idx_messages_sender_recruiter_id ON messages(sender_recruiter_id);
 CREATE INDEX idx_messages_receiver_read_created ON messages(receiver_candidate_id, is_read, created_at DESC);
 CREATE INDEX idx_messages_application_id ON messages(application_id);
+CREATE INDEX idx_application_notes_application_id ON application_notes(application_id);
+CREATE INDEX idx_application_events_application_created ON application_events(application_id, created_at DESC);
+CREATE INDEX idx_onboarding_tasks_application_id ON onboarding_tasks(application_id);
+CREATE INDEX idx_onboarding_tasks_recruiter_status ON onboarding_tasks(recruiter_id, status);
+CREATE INDEX idx_employees_recruiter_status ON employees(recruiter_id, status);
+CREATE INDEX idx_employees_candidate_id ON employees(candidate_id);
+CREATE INDEX idx_attendance_employee_date ON attendance_records(employee_id, work_date DESC);
+CREATE INDEX idx_leave_requests_employee_status ON leave_requests(employee_id, status);

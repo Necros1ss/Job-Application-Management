@@ -1,23 +1,24 @@
 import { useState, useEffect } from "react";
 import { FaPlus, FaList, FaThLarge, FaTrashAlt } from "react-icons/fa";
 import { FaSearch } from "react-icons/fa";
-import { applicationsApi, savedJobsApi, usersApi } from "../../lib/api"; // Đảm bảo đã import usersApi
+import { applicationsApi, savedJobsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonRow } from "../../Components/Skeleton";
-import { Link, useNavigate } from "react-router-dom"; 
+import { Link, useLocation, useNavigate } from "react-router-dom"; 
 import { showError, showSuccess } from "../../utils/toast";
+import { formatDate } from "../../utils/format";
+import {
+  getApplicationDisplayStatus,
+  getApplicationStatusLabel,
+  isInterviewStatus,
+  isOfferStatus,
+} from "../../utils/applicationStatus";
 
-const formatDate = (date) => {
-  if (!date) return "";
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
-};
-
-const Applications = () => {
+const Applications = ({ initialTab = "all" }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [jobs, setJobs] = useState([]);
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [checkedJobIds, setCheckedJobIds] = useState([]);
   const [isCardView, setIsCardView] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +41,9 @@ const Applications = () => {
       setUserEmail(profile.email || "");
       setErrorMessage("");
     } catch (error) {
-      setErrorMessage(error.message || "Failed to load applications");
+      const message = error.message || "Failed to load applications";
+      setErrorMessage(message);
+      showError(message);
     } finally {
       setIsLoading(false);
     }
@@ -52,6 +55,7 @@ const Applications = () => {
       const data = await savedJobsApi.list();
       setSavedJobs(data);
     } catch (error) {
+      showError(error.message || "Failed to load saved jobs");
     } finally {
       setSavedJobsLoading(false);
     }
@@ -116,8 +120,7 @@ const Applications = () => {
   const jobsToDisplay = activeTab === "saved" ? savedJobs : jobs;
 
   const visibleJobs = jobsToDisplay.filter((job) => {
-      const normalizedStatus = job.status?.toLowerCase();
-      const displayStatus = normalizedStatus === 'scheduled_interview' ? 'interview' : normalizedStatus;
+      const displayStatus = getApplicationDisplayStatus(job.status);
       const matchesTab = activeTab === "all" || activeTab === "saved" || displayStatus === activeTab;    
       const matchesSearch =
       normalizedSearch.length === 0 || 
@@ -128,16 +131,16 @@ const Applications = () => {
   });
 
   // Tính số lượng ứng tuyển đang ở vòng phỏng vấn
-  const interviewCount = jobs.filter(j => ['interview', 'scheduled_interview', 'reviewed'].includes(j.status?.toLowerCase())).length;
+  const interviewCount = jobs.filter((job) => isInterviewStatus(job.status)).length;
 
   // Helper tạo màu cho Status Badge
   const getBadgeStyle = (status) => {
-    const s = status?.toLowerCase();
-    if (s === 'interview' || s === 'scheduled_interview' || s === 'reviewed') return 'bg-blue-100 text-blue-700';
-    if (s === 'applied') return 'bg-emerald-100 text-[#188155]';
-    if (s === 'offered') return 'bg-[#188155] text-white';
-    if (s === 'rejected') return 'bg-gray-200 text-gray-500';
-    if (s === 'closed') return 'bg-red-50 text-red-500';
+    const displayStatus = getApplicationDisplayStatus(status);
+    if (isInterviewStatus(status)) return 'bg-blue-100 text-blue-700';
+    if (displayStatus === 'applied') return 'bg-emerald-100 text-[#188155]';
+    if (isOfferStatus(status)) return 'bg-[#188155] text-white';
+    if (displayStatus === 'rejected') return 'bg-gray-200 text-gray-500';
+    if (displayStatus === 'closed') return 'bg-red-50 text-red-500';
     return 'bg-gray-100 text-gray-600';
   };
 
@@ -206,20 +209,20 @@ const Applications = () => {
           </div>
         </div>
 
-        {isLoading && isCardView && (
+        {(isLoading || savedJobsLoading) && isCardView && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {Array(4).fill(0).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         )}
 
-        {isLoading && !isCardView && (
+        {(isLoading || savedJobsLoading) && !isCardView && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-12">
             {Array(5).fill(0).map((_, i) => <SkeletonRow key={i} />)}
           </div>
         )}
 
         {/* ================== GRID VIEW (CARDS) ================== */}
-        {!isLoading && isCardView ? (
+        {!isLoading && !savedJobsLoading && isCardView ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           
           {visibleJobs.map((job) => (
@@ -237,7 +240,7 @@ const Applications = () => {
                   LOGO
                 </div>
                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${getBadgeStyle(job.status)}`}>
-                    {job.status === 'scheduled_interview' ? 'INTERVIEW' : (job.status || "APPLIED")}
+                  {getApplicationStatusLabel(job.status)}
                 </span>
               </div>
 
@@ -251,7 +254,7 @@ const Applications = () => {
               <div className="flex justify-between items-end mt-auto pt-4 border-t border-gray-50">
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Applied On</p>
-                  <p className="text-xs font-semibold text-gray-600">{formatDate(job.applicationDate)}</p>
+                  <p className="text-xs font-semibold text-gray-600">{formatDate(job.applicationDate).toUpperCase()}</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <button 
@@ -285,7 +288,7 @@ const Applications = () => {
         ) : null}
 
         {/* ================== LIST VIEW (TABLE) ================== */}
-        {!isLoading && !isCardView ? (
+        {!isLoading && !savedJobsLoading && !isCardView ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -315,10 +318,10 @@ const Applications = () => {
                       <td className="px-6 py-4 text-gray-600">{job.companyName}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${getBadgeStyle(job.status)}`}>
-                          {job.status === 'scheduled_interview' ? 'INTERVIEW' : (job.status || "APPLIED")}
+                          {getApplicationStatusLabel(job.status)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-500 font-medium">{formatDate(job.applicationDate)}</td>
+                      <td className="px-6 py-4 text-gray-500 font-medium">{formatDate(job.applicationDate).toUpperCase()}</td>
                     </tr>
                   ))}
                 </tbody>

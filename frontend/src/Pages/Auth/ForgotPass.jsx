@@ -2,19 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FaEnvelope, FaCheck, FaArrowLeft } from "react-icons/fa";
 import { authApi } from "../../lib/api";
+import { validateEmail } from "../../utils/validation";
 
 const ForgotPass = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  const validateEmail = (value) => {
-    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!value) return "Email is required.";
-    if (!pattern.test(value)) return "Please enter a valid email address.";
-    return "";
-  };
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);

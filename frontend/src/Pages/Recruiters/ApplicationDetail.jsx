@@ -60,6 +60,12 @@ const ApplicationDetail = ({ onBack, candidate }) => {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [rating, setRating] = useState(null);
+  const [notes, setNotes] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [newNote, setNewNote] = useState("");
+  const [isSavingRating, setIsSavingRating] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({
     interviewDateTime: '',
     interviewerName: '',
@@ -105,6 +111,9 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         const response = await applicationsApi.getForRecruiter(candidate.id);
         if (isMounted) {
           setDetail(response || null);
+          setRating(response?.rating ?? null);
+          setNotes(Array.isArray(response?.notes) ? response.notes : []);
+          setEvents(Array.isArray(response?.events) ? response.events : []);
         }
       } catch (loadError) {
         if (isMounted) {
@@ -167,6 +176,15 @@ const ApplicationDetail = ({ onBack, candidate }) => {
   const canPreviewCv = Boolean(source?.id && source?.cvFileName);
   const currentStatusMeta = STATUS_OPTIONS.find((o) => o.value === candidateStatus) || STATUS_OPTIONS[0];
 
+  const refreshWorkflow = async () => {
+    if (!source?.id) return;
+    const refreshed = await applicationsApi.getForRecruiter(source.id);
+    setDetail(refreshed || null);
+    setRating(refreshed?.rating ?? null);
+    setNotes(Array.isArray(refreshed?.notes) ? refreshed.notes : []);
+    setEvents(Array.isArray(refreshed?.events) ? refreshed.events : []);
+  };
+
   const candidateHeader = useMemo(() => ({
     name: candidateName,
     jobTitle: candidateJobTitle,
@@ -187,6 +205,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
       const response = await runner();
       const nextStatus = response?.status || optimisticStatus;
       setDetail((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+      await refreshWorkflow();
       showSuccess(successMessage);
       return response;
     } catch (err) {
@@ -225,6 +244,40 @@ const ApplicationDetail = ({ onBack, candidate }) => {
       nextStatus,
       'Status updated successfully'
     );
+  };
+
+  const handleRatingChange = async (nextRating) => {
+    if (!source?.id) return;
+
+    try {
+      setIsSavingRating(true);
+      const updated = await applicationsApi.updateRating(source.id, nextRating);
+      setRating(updated.rating);
+      showSuccess("Rating updated");
+      await refreshWorkflow();
+    } catch (err) {
+      showError(err.message || "Failed to update rating");
+    } finally {
+      setIsSavingRating(false);
+    }
+  };
+
+  const handleAddNote = async () => {
+    const note = newNote.trim();
+    if (!source?.id || !note) return;
+
+    try {
+      setIsSavingNote(true);
+      const created = await applicationsApi.addNote(source.id, { note });
+      setNotes((current) => [created, ...current]);
+      setNewNote("");
+      showSuccess("Note saved");
+      await refreshWorkflow();
+    } catch (err) {
+      showError(err.message || "Failed to save note");
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   const handlePreviewCv = async () => {
@@ -290,6 +343,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         applicationId: source.id,
       });
       setShowMessageModal(false);
+      await refreshWorkflow();
       showSuccess('Đã gửi thư đến candidate');
     } catch (err) {
       showError(err.message || 'Failed to send message');
@@ -321,6 +375,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
     );
 
     setShowScheduleModal(false);
+    await refreshWorkflow();
     setScheduleForm({
       interviewDateTime: '',
       interviewerName: '',
@@ -345,6 +400,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
     );
 
     setShowRejectModal(false);
+    await refreshWorkflow();
   };
 
   const handleOfferSubmit = async (event) => {
@@ -365,6 +421,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
 
       setShowOfferModal(false);
       setDetail((prev) => (prev ? { ...prev, status: 'accepted' } : prev));
+      await refreshWorkflow();
       showSuccess('Đã gửi offer và cập nhật trạng thái');
     } catch (err) {
       showError(err.message || 'Failed to send offer');
@@ -409,41 +466,72 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         )}
 
         <div className="flex gap-6">
-          <div className="flex-[3] bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden min-h-[600px]">
-            <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-700">CV: {cvFileName}</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleDownloadCv}
-                  disabled={!canPreviewCv || isBusy}
-                  className="text-sm text-emerald-600 hover:underline font-medium disabled:text-gray-400 disabled:no-underline"
-                >
-                  Download
-                </button>
+          <div className="flex-[3] flex flex-col gap-4">
+            <div className="bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden min-h-[600px]">
+              <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-700">CV: {cvFileName}</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDownloadCv}
+                    disabled={!canPreviewCv || isBusy}
+                    className="text-sm text-emerald-600 hover:underline font-medium disabled:text-gray-400 disabled:no-underline"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 bg-gray-100 flex items-center justify-center m-4 rounded-xl border border-dashed border-gray-300 overflow-hidden">
+                {previewUrl ? (
+                  <iframe title="CV Preview" src={previewUrl} className="w-full h-full bg-white" />
+                ) : (
+                  <div className="text-center px-6">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FaEye size={24} className="text-gray-400" />
+                    </div>
+                    {previewError ? (
+                      <p className="text-sm text-red-500">{previewError}</p>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handlePreviewCv}
+                          disabled={!canPreviewCv || previewLoading}
+                          className="px-4 py-2 rounded-xl border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-sm font-medium disabled:text-gray-400 disabled:border-gray-200 disabled:hover:bg-transparent"
+                        >
+                          {previewLoading ? 'Loading...' : 'Click to Preview CV'}
+                        </button>
+                        {!canPreviewCv && <p className="mt-3 text-sm text-gray-400">No CV file attached to this application.</p>}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex-1 bg-gray-100 flex items-center justify-center m-4 rounded-xl border border-dashed border-gray-300 overflow-hidden">
-              {previewUrl ? (
-                <iframe title="CV Preview" src={previewUrl} className="w-full h-full bg-white" />
+
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h3 className="font-bold text-gray-800 mb-3">Cover Letter</h3>
+              {source?.coverLetter ? (
+                <p className="text-sm text-gray-600 leading-7 whitespace-pre-wrap">{source.coverLetter}</p>
               ) : (
-                <div className="text-center px-6">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FaEye size={24} className="text-gray-400" />
-                  </div>
-                  {previewError ? (
-                    <p className="text-sm text-red-500">{previewError}</p>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handlePreviewCv}
-                        disabled={!canPreviewCv || previewLoading}
-                        className="px-4 py-2 rounded-xl border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-sm font-medium disabled:text-gray-400 disabled:border-gray-200 disabled:hover:bg-transparent"
-                      >
-                        {previewLoading ? 'Loading...' : 'Click to Preview CV'}
-                      </button>
-                      {!canPreviewCv && <p className="mt-3 text-sm text-gray-400">No CV file attached to this application.</p>}
-                    </>
-                  )}
+                <p className="text-sm text-gray-400">No cover letter was included with this application.</p>
+              )}
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-gray-200">
+              <h3 className="font-bold text-gray-800 mb-4">Timeline</h3>
+              {events.length === 0 ? (
+                <p className="text-sm text-gray-500">No activity yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {events.map((event) => (
+                    <div key={event.id} className="flex gap-3">
+                      <div className="mt-1 w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{event.title}</p>
+                        {event.description && <p className="text-sm text-gray-500 mt-1">{event.description}</p>}
+                        <p className="text-xs text-gray-400 mt-1">{formatMessageTime(event.createdAt)}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -483,6 +571,32 @@ const ApplicationDetail = ({ onBack, candidate }) => {
                 </select>
                 {isUpdatingStatus && <p className="text-xs text-gray-400 mt-1">Updating...</p>}
               </div>
+
+              <div className="mt-5 pt-5 border-t border-gray-100">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Recruiter Rating</label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={isSavingRating}
+                      onClick={() => handleRatingChange(value)}
+                      className={`w-9 h-9 rounded-lg border text-sm font-bold ${
+                        rating >= value
+                          ? "bg-amber-100 text-amber-700 border-amber-200"
+                          : "bg-white text-gray-400 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                  {rating && (
+                    <button type="button" onClick={() => handleRatingChange(null)} className="text-xs text-gray-400 hover:text-red-500">
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-gray-200">
@@ -513,6 +627,14 @@ const ApplicationDetail = ({ onBack, candidate }) => {
                   Schedule Interview
                 </button>
                 <button
+                  onClick={openMessageModal}
+                  disabled={isBusy}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 bg-slate-50 text-slate-700 rounded-xl font-medium text-sm hover:bg-slate-100 transition-colors disabled:opacity-60"
+                >
+                  <FaEnvelope size={16} />
+                  Send Message
+                </button>
+                <button
                   onClick={() => setShowRejectModal(true)}
                   disabled={isBusy}
                   className="w-full flex items-center gap-3 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl font-medium text-sm hover:bg-red-100 transition-colors disabled:opacity-60"
@@ -525,16 +647,34 @@ const ApplicationDetail = ({ onBack, candidate }) => {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 flex-1">
+            <div className="bg-white p-6 rounded-2xl border border-gray-200">
               <h3 className="font-bold text-gray-800 mb-4">Internal Notes</h3>
               <textarea
-                rows="5"
+                rows="4"
+                value={newNote}
+                onChange={(event) => setNewNote(event.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none resize-none text-sm"
-                placeholder="Add private notes about this candidate (not visible to candidate)..."
+                placeholder="Add a private note about this candidate..."
               />
-              <button className="mt-3 w-full px-4 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-medium text-sm transition-colors">
-                Save Notes
+              <button
+                type="button"
+                onClick={handleAddNote}
+                disabled={isSavingNote || !newNote.trim()}
+                className="mt-3 w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-sm transition-colors disabled:bg-gray-300"
+              >
+                {isSavingNote ? "Saving..." : "Save Note"}
               </button>
+              <div className="mt-4 space-y-3">
+                {notes.map((note) => (
+                  <div key={note.id} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.note}</p>
+                    <p className="text-xs text-gray-400 mt-2">{formatMessageTime(note.createdAt)}</p>
+                  </div>
+                ))}
+                {notes.length === 0 && (
+                  <p className="text-sm text-gray-400">No internal notes yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

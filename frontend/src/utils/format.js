@@ -14,6 +14,45 @@ export const formatMessageTime = (value) => {
   return date.toLocaleDateString("en-US");
 };
 
+export const formatDate = (value, options = { month: "short", day: "numeric", year: "numeric" }, fallback = "") => {
+  if (!value) return fallback;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  return date.toLocaleDateString("en-US", options);
+};
+
+export const formatDateTime = (value, fallback = "") => {
+  if (!value) return fallback;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+export const formatInterviewDateTime = (value, fallback = "Not scheduled") => {
+  if (!value) return fallback;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export const calculateAge = (birthDateValue) => {
   if (!birthDateValue) return ''; // Trả về chuỗi rỗng hoặc 0 tùy logic app của bạn
 

@@ -73,7 +73,6 @@ const AdminUsers = () => {
             <option value="">All roles</option>
             <option value="candidate">Candidate</option>
             <option value="recruiter">Recruiter</option>
-            <option value="admin">Admin</option>
           </select>
           <select value={filters.locked} onChange={(e) => setFilters((prev) => ({ ...prev, locked: e.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 outline-none">
             <option value="">Any lock state</option>

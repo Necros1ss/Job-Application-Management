@@ -12,10 +12,10 @@
     "preview:frontend": "vite preview --config frontend/vite.config.js",
     "start:backend": "node backend/src/server.js",
     "install:all": "npm install",
-    "db:up": "docker compose -f docker_compose.yml up -d db",
-    "db:down": "docker compose -f docker_compose.yml down",
-    "db:reset": "docker compose -f docker_compose.yml down -v && docker compose -f docker_compose.yml up -d db",
-    "db:logs": "docker compose -f docker_compose.yml logs -f db"
+    "db:up": "docker compose -f docker-compose.yml up -d db",
+    "db:down": "docker compose -f docker-compose.yml down",
+    "db:reset": "docker compose -f docker-compose.yml down -v && docker compose -f docker-compose.yml up -d db",
+    "db:logs": "docker compose -f docker-compose.yml logs -f db"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

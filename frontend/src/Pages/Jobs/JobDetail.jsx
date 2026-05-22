@@ -11,6 +11,7 @@ import {
 import { applyFromJob, usersApi, jobPostsApi, savedJobsApi, applicationsApi, tokenStorage } from "../../lib/api";
 import FormApply from "./FormApply";
 import { formatMessageTime } from '../../utils/format';
+import { showError, showSuccess } from "../../utils/toast";
 
 const JobDetail = () => {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ const JobDetail = () => {
         }
       }
     } catch (error) {
-      console.error("Save failed:", error);
+      showError(error.message || "Failed to update saved job");
     } finally {
       setSavingJobIds((prev) => {
         const next = new Set(prev);
@@ -140,7 +141,9 @@ const JobDetail = () => {
         setUserName(response.name);
         setUserEmail(response.email);
         setJobs(await jobPostsApi.list());
-      } catch (error) {}
+      } catch (error) {
+        showError(error.message || "Failed to load profile");
+      }
     };
     fetchUserData();
   }, []);
@@ -150,7 +153,9 @@ const JobDetail = () => {
       try {
         const data = await jobPostsApi.getById(id); 
         setJobDetail(data); 
-      } catch (error) {}
+      } catch (error) {
+        showError(error.message || "Failed to load job detail");
+      }
     };
     fetchJobDetail();
   }, [id]);
@@ -165,7 +170,7 @@ const JobDetail = () => {
       );
       setIsApplied(alreadyApplied);
     } catch (error) {
-      console.error("Failed to check application status:", error);
+      showError(error.message || "Failed to check application status");
       setIsApplied(false);
     }
   };
@@ -203,7 +208,7 @@ const JobDetail = () => {
         setSavedJobIds(nextSavedIds);
         setSavedJobIdMap(nextSavedMap);
       } catch (error) {
-        console.error("Failed to load saved jobs:", error);
+        showError(error.message || "Failed to load saved jobs");
       }
     };
 
@@ -241,10 +246,10 @@ const JobDetail = () => {
         ...prev,
         deadline: nextDeadline,
       }));
-      alert("Job status saved.");
+      showSuccess("Job status saved.");
     } catch (error) {
       setRecruiterStatus(currentRecruiterStatus);
-      alert(error.message || "Failed to update job status");
+      showError(error.message || "Failed to update job status");
     } finally {
       setIsUpdatingStatus(false);
     }

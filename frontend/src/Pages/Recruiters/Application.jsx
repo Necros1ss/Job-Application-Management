@@ -3,65 +3,21 @@ import ApplicationDetail from './ApplicationDetail';
 import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api';
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import { SkeletonRow } from "../../Components/Skeleton";
+import Pagination from "../../Components/Pagination";
+import { showError, showSuccess } from '../../utils/toast';
 
-const stageMetaByStatus = {
-  accepted: {
-    stage: 'OFFER STAGE',
-    stageColor: 'text-emerald-700 bg-emerald-100',
-    stageDot: 'bg-emerald-500',
-  },
-  reviewed: {
-    stage: '2ND INTERVIEW',
-    stageColor: 'text-blue-700 bg-blue-100',
-    stageDot: 'bg-blue-500',
-  },
-  scheduled_interview: {
-    stage: 'SCHEDULED INTERVIEW',
-    stageColor: 'text-purple-700 bg-purple-100',
-    stageDot: 'bg-purple-500',
-  },
-  applied: {
-    stage: 'CV SCREENING',
-    stageColor: 'text-emerald-700 bg-emerald-100',
-    stageDot: 'bg-emerald-500',
-  },
-  rejected: {
-    stage: 'REJECTED',
-    stageColor: 'text-red-700 bg-red-100',
-    stageDot: 'bg-red-500',
-  },
-};
+const PIPELINE_STAGES = [
+  { id: "applied", label: "Applied", stage: "CV SCREENING", badge: "bg-slate-100 text-slate-700", dot: "bg-slate-500" },
+  { id: "reviewed", label: "Reviewed", stage: "UNDER REVIEW", badge: "bg-blue-100 text-blue-700", dot: "bg-blue-500" },
+  { id: "scheduled_interview", label: "Interview", stage: "INTERVIEW", badge: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
+  { id: "accepted", label: "Offer", stage: "OFFER", badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+  { id: "rejected", label: "Rejected", stage: "REJECTED", badge: "bg-red-100 text-red-700", dot: "bg-red-500" },
+];
 
-const actionByStatus = {
-  accepted: {
-    primaryAction: 'Finalize Hire ->',
-    secondaryAction: 'View Dossier',
-  },
-  reviewed: {
-    primaryAction: 'Pass to Final ->',
-    secondaryAction: 'Interview Prep',
-  },
-  scheduled_interview: {
-    primaryAction: 'Reschedule',
-    secondaryAction: 'Interview Details',
-  },
-  applied: {
-    primaryAction: 'Book Screen',
-    secondaryAction: 'Quick View',
-  },
-  rejected: {
-    primaryAction: '-',
-    secondaryAction: 'View Reason',
-  },
-};
-
-const scoreByStatus = {
-  accepted: 94,
-  reviewed: 82,
-  scheduled_interview: 86,
-  applied: 78,
-  rejected: 45,
-};
+const stageMetaByStatus = PIPELINE_STAGES.reduce((acc, stage) => {
+  acc[stage.id] = stage;
+  return acc;
+}, {});
 
 const PAGE_SIZE = 10;
 
@@ -81,12 +37,8 @@ const toDisplayRow = (row) => {
   const normalizedStatus = (row.status || '').toLowerCase();
   const stageMeta = stageMetaByStatus[normalizedStatus] || {
     stage: toTitleCase(normalizedStatus || 'applied'),
-    stageColor: 'text-gray-700 bg-gray-100',
-    stageDot: 'bg-gray-500',
-  };
-  const actions = actionByStatus[normalizedStatus] || {
-    primaryAction: 'Review ->',
-    secondaryAction: 'Quick View',
+    badge: 'text-gray-700 bg-gray-100',
+    dot: 'bg-gray-500',
   };
 
   return {
@@ -97,17 +49,19 @@ const toDisplayRow = (row) => {
     name: row.candidateName || 'Unknown Candidate',
     email: row.candidateEmail || '',
     phone: row.candidatePhone || '',
+    rating: row.rating,
+    coverLetter: row.coverLetter || '',
+    noteCount: row.noteCount || 0,
     ref: `APP-${String(row.id).padStart(5, '0')}`,
     jobTitle: row.jobTitle || 'Unknown Position',
     department: row.companyName || 'Unknown Company',
     stage: stageMeta.stage,
-    stageColor: stageMeta.stageColor,
-    stageDot: stageMeta.stageDot,
+    stageLabel: stageMeta.label || stageMeta.stage,
+    stageColor: stageMeta.badge,
+    stageDot: stageMeta.dot,
     subtext: formatAppliedDate(row.applicationDate),
-    matchScore: scoreByStatus[normalizedStatus] || 70,
+    matchScore: row.rating ? row.rating * 20 : 70,
     avatar: `https://api.dicebear.com/8.x/notionists/svg?seed=${encodeURIComponent(row.candidateName || row.id)}`,
-    primaryAction: actions.primaryAction,
-    secondaryAction: actions.secondaryAction,
   };
 };
 
@@ -125,6 +79,8 @@ const Application = () => {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("list");
+  const [updatingApplicationId, setUpdatingApplicationId] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -169,6 +125,7 @@ const Application = () => {
           setApplications([]);
           setJobOptions([]);
           setError(loadError.message || 'Failed to load applications');
+          showError(loadError.message || 'Failed to load applications');
         }
       } finally {
         if (isMounted) {
@@ -203,6 +160,35 @@ const Application = () => {
     () => filteredApplications.map(toDisplayRow),
     [filteredApplications]
   );
+
+  const applicationsByStage = useMemo(() => {
+    const grouped = Object.fromEntries(PIPELINE_STAGES.map((stage) => [stage.id, []]));
+    displayApplications.forEach((app) => {
+      const key = grouped[app.status] ? app.status : "applied";
+      grouped[key].push(app);
+    });
+    return grouped;
+  }, [displayApplications]);
+
+  const updateApplicationStatus = async (applicationId, status) => {
+    try {
+      setUpdatingApplicationId(applicationId);
+      const updated = await applicationsApi.updateStatus(applicationId, status);
+      setApplications((current) =>
+        current.map((item) =>
+          item.id === applicationId ? { ...item, status: updated.status || status } : item
+        )
+      );
+      setError("");
+      showSuccess("Application status updated");
+    } catch (error) {
+      const message = error.message || "Failed to update application status";
+      setError(message);
+      showError(message);
+    } finally {
+      setUpdatingApplicationId(null);
+    }
+  };
 
   const metrics = useMemo(() => {
     const pendingReview = filteredApplications.filter((item) => item.status === 'applied').length;
@@ -296,14 +282,78 @@ const Application = () => {
                 ))}
               </select>
             </div>
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 px-4 py-2 rounded-lg cursor-pointer">
-              Funnel Stage: <span className="text-emerald-700">All Stages</span>
-              <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-            </div>
+          </div>
+          <div className="flex items-center bg-white border border-gray-200 p-1 rounded-lg shadow-sm">
+            {["list", "pipeline"].map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setViewMode(mode)}
+                className={`px-4 py-2 rounded-md text-sm font-semibold capitalize transition-colors ${
+                  viewMode === mode ? "bg-emerald-600 text-white" : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {mode === "list" ? "List" : "Pipeline"}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Data Table */}
+        {viewMode === "pipeline" && !loading && !error ? (
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+            {PIPELINE_STAGES.map((stage) => (
+              <div key={stage.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm min-h-[360px]">
+                <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${stage.dot}`} />
+                    <h2 className="font-bold text-gray-900">{stage.label}</h2>
+                  </div>
+                  <span className="text-xs font-bold text-gray-400">{applicationsByStage[stage.id].length}</span>
+                </div>
+                <div className="p-3 space-y-3">
+                  {applicationsByStage[stage.id].map((app) => (
+                    <div key={app.id} className="rounded-xl border border-gray-100 bg-gray-50/60 p-4 hover:bg-white hover:shadow-sm transition">
+                      <button type="button" onClick={() => setSelectedApplication(app)} className="text-left w-full">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-bold text-gray-900">{app.name}</p>
+                            <p className="text-sm text-gray-500 mt-1">{app.jobTitle}</p>
+                          </div>
+                          {app.noteCount > 0 && (
+                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                              {app.noteCount} notes
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">{app.subtext}</p>
+                      </button>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-amber-600">
+                          {app.rating ? `${app.rating}/5` : "No rating"}
+                        </span>
+                        <select
+                          value={app.status}
+                          disabled={updatingApplicationId === app.id}
+                          onChange={(event) => updateApplicationStatus(app.id, event.target.value)}
+                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700"
+                        >
+                          {PIPELINE_STAGES.map((option) => (
+                            <option key={option.id} value={option.id}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                  {applicationsByStage[stage.id].length === 0 && (
+                    <div className="rounded-xl border border-dashed border-gray-200 p-4 text-center text-sm text-gray-400">
+                      No candidates
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {loading ? (
             <div>
@@ -374,17 +424,20 @@ const Application = () => {
                         onClick={() => setSelectedApplication(app)} // Kích hoạt sự kiện mở chi tiết
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                       >
-                        {app.secondaryAction}
+                        View Details
                       </button>
-                      {app.primaryAction !== '-' ? (
-                        <button className="px-4 py-2 text-sm font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-sm transition-colors">
-                          {app.primaryAction}
-                        </button>
-                      ) : (
-                        <button className="px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                          {app.primaryAction}
-                        </button>
-                      )}
+                      <select
+                        value={app.status}
+                        disabled={updatingApplicationId === app.id}
+                        onChange={(event) => updateApplicationStatus(app.id, event.target.value)}
+                        className="px-3 py-2 text-sm font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-sm transition-colors outline-none disabled:bg-gray-300"
+                      >
+                        {PIPELINE_STAGES.map((option) => (
+                          <option key={option.id} value={option.id} className="text-gray-800 bg-white">
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </td>
                 </tr>
@@ -413,6 +466,7 @@ const Application = () => {
             />
           </div>
         </div>
+        )}
       </div>
     </div>
   );

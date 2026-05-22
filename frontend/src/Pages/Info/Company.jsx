@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FaBuilding, FaMapMarkerAlt, FaGlobe, FaBriefcase, FaRegEnvelope, FaPhoneAlt } from "react-icons/fa";
 import TopBar from "../../Components/TopBar";
 import { jobPostsApi, usersApi } from "../../lib/api";
+import { showError } from "../../utils/toast";
 
 const defaultCompanyLogo = "https://api.dicebear.com/8.x/initials/svg?seed=Company&backgroundColor=e0f2fe&textColor=0369a1";
 
@@ -22,7 +23,9 @@ const Company = () => {
         const response = await usersApi.me();
         setUserName(response.name);
         setUserEmail(response.email);
-      } catch (error) {}
+      } catch (error) {
+        showError(error.message || "Failed to load profile");
+      }
     };
 
     fetchUserData();
@@ -35,7 +38,11 @@ const Company = () => {
         const data = await jobPostsApi.getById(id);
         setJobDetail(data); 
       } 
-      catch (error) {} 
+      catch (error) {
+        showError(error.message || "Failed to load company information");
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchJobDetail();

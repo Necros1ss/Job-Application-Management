@@ -88,7 +88,9 @@ const Jobsearch = () => {
         const profile = await usersApi.me();
         setUserName(profile.name || "");
         setUserEmail(profile.email || "");
-      } catch (_) {}
+      } catch (error) {
+        showError(error.message || "Failed to load profile");
+      }
     };
     loadProfile();
     setRecentSearches(getRecentSearches());
@@ -137,7 +139,9 @@ const Jobsearch = () => {
         setSavedJobIdMap(nextSavedMap);
         setErrorMessage("");
       } catch (error) {
-        setErrorMessage(error.message || "Failed to load jobs");
+        const message = error.message || "Failed to load jobs";
+        setErrorMessage(message);
+        showError(message);
       } finally {
         setIsLoading(false);
       }

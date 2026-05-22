@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FaEye, FaEyeSlash, FaLock, FaTrashAlt } from "react-icons/fa";
-import { tokenStorage } from "../lib/api";
+import { accountApi } from "../lib/api";
 import DeleteAccountModal from "../Components/DeleteAccountModal";
 import { showError, showSuccess } from "../utils/toast";
 
@@ -43,23 +43,11 @@ const Settings = () => {
 
     setIsSubmitting(true);
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/auth/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${tokenStorage.getToken()}`,
-        },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      }).then(async (res) => {
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.message || "Failed to change password");
-        }
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        showSuccess("Password changed successfully!");
-      });
+      await accountApi.changePassword({ currentPassword, newPassword });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      showSuccess("Password changed successfully!");
     } catch (err) {
       showError(err.message || "Failed to change password");
     } finally {

@@ -4,41 +4,29 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/", requireAuth, async (req, res) => {
-  if (req.user.role !== "candidate") {
-    return res.json([]);
-  }
-
-  const upcomingOnly = String(req.query.upcoming || "").toLowerCase() === "true";
-
-  try {
-    const result = await pool.query(
-      `SELECT i.id,
-              i.application_id,
-              i.interview_datetime,
-              i.mode,
-              i.meet_link,
-              i.location,
-              i.notes,
-              i.interviewer_name,
-              jp.id AS job_post_id,
-              jp.title AS job_title,
-              r.company_name
-       FROM interviews i
-       INNER JOIN applications a ON a.id = i.application_id
-       INNER JOIN job_posts jp ON jp.id = a.job_post_id
-       LEFT JOIN recruiters r ON r.id = jp.recruiter_id
-       WHERE a.candidate_id = $1
-         AND ($2::boolean = false OR i.interview_datetime >= NOW())
-       ORDER BY i.interview_datetime ASC`,
-      [req.user.id, upcomingOnly]
-    );
-
-    return res.json(result.rows);
-  } catch (error) {
-    return res.status(500).json({ message: "Failed to load interviews", detail: error.message });
-  }
-});
+const createApplicationEvent = async (
+  client,
+  { applicationId, actorUserId, eventType, title, description = "", metadata = {} }
+) => {
+  await client.query(
+    `INSERT INTO application_events (
+       application_id,
+       actor_user_id,
+       event_type,
+       title,
+       description,
+       metadata
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+    [
+      applicationId,
+      actorUserId,
+      eventType,
+      title,
+      description,
+      JSON.stringify(metadata),
+    ]
+  );
+};
 
 router.get("/recruiter", requireAuth, async (req, res) => {
   if (req.user.role !== "recruiter") {
@@ -78,6 +66,40 @@ router.get("/recruiter", requireAuth, async (req, res) => {
     return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ message: "Failed to load recruiter interviews", detail: error.message });
+  }
+});
+
+router.get("/candidate", requireAuth, async (req, res) => {
+  if (req.user.role !== "candidate") {
+    return res.status(403).json({ message: "Only candidate accounts can view their interviews" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT i.id,
+              i.application_id,
+              i.interview_datetime,
+              i.mode,
+              i.meet_link,
+              i.location,
+              i.notes,
+              i.interviewer_name,
+              jp.id AS job_post_id,
+              jp.title AS job_title,
+              r.company_name
+       FROM interviews i
+       INNER JOIN applications a ON a.id = i.application_id
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       INNER JOIN recruiters r ON r.id = jp.recruiter_id
+       WHERE a.candidate_id = $1
+         AND i.interview_datetime >= NOW()
+       ORDER BY i.interview_datetime ASC`,
+      [req.user.id]
+    );
+
+    return res.json(result.rows);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to load interviews", detail: error.message });
   }
 });
 
@@ -180,6 +202,19 @@ router.post("/", requireAuth, async (req, res) => {
        WHERE id = $1`,
       [applicationId]
     );
+
+    await createApplicationEvent(client, {
+      applicationId,
+      actorUserId: req.user.id,
+      eventType: "interview_scheduled",
+      title: "Interview scheduled",
+      description: notes,
+      metadata: {
+        interviewId: interviewResult.rows[0]?.id,
+        interviewDateTime,
+        mode,
+      },
+    });
 
     await client.query("COMMIT");
 

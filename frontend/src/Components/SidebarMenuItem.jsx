@@ -1,8 +1,7 @@
-import { BsBriefcaseFill, BsFillPersonFill, BsPeople } from "react-icons/bs";
+import { BsBriefcaseFill, BsPeople } from "react-icons/bs";
 import { AiFillFolderOpen } from "react-icons/ai";
 import { RiLayoutMasonryFill } from "react-icons/ri";
-import { RiBarChart2Fill, RiShieldUserFill } from "react-icons/ri";
-import { FaCalendar } from "react-icons/fa";
+import { FaCalendar, FaClipboardList, FaEnvelope, FaUserTie, FaUserShield } from "react-icons/fa";
 
 const candidateMenu = [
   {
@@ -19,15 +18,27 @@ const candidateMenu = [
   },
   {
     id: 2,
-    label: "Job Search",
+    label: "Job Post",
     icon: <BsBriefcaseFill />,
     path: "job",
   },
   {
     id: 3,
-    label: "Profile",
-    icon: <BsFillPersonFill />,
-    path: "profile",
+    label: "Messages",
+    icon: <FaEnvelope />,
+    path: "messages",
+  },
+  {
+    id: 4,
+    label: "Onboarding",
+    icon: <FaClipboardList />,
+    path: "onboarding",
+  },
+  {
+    id: 5,
+    label: "Employee",
+    icon: <FaUserTie />,
+    path: "employee",
   },
 ];
 
@@ -58,23 +69,29 @@ const recruiterMenu = [
   },
   {
     id: 4,
-    label: "Profile",
-    icon: <BsFillPersonFill />,
-    path: "profile",
-  }
+    label: "Onboarding",
+    icon: <FaClipboardList />,
+    path: "onboarding",
+  },
+  {
+    id: 5,
+    label: "Employees",
+    icon: <FaUserTie />,
+    path: "employees",
+  },
 ];
 
 const adminMenu = [
   {
     id: 0,
-    label: "Overview",
-    icon: <RiBarChart2Fill />,
+    label: "Dashboard",
+    icon: <RiLayoutMasonryFill />,
     path: "dashboard",
   },
   {
     id: 1,
     label: "Users",
-    icon: <RiShieldUserFill />,
+    icon: <FaUserShield />,
     path: "users",
   },
   {

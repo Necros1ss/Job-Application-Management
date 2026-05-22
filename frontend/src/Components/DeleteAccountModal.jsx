@@ -1,26 +1,14 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { tokenStorage } from "../lib/api";
+import { accountApi, authApi, tokenStorage } from "../lib/api";
 
 const DeleteAccountModal = ({ setDeleteAccountModal }) => {
   const navigate = useNavigate();
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/users/me`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${tokenStorage.getToken()}`,
-          },
-        }
-      );
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to delete account");
-      }
+      await accountApi.deleteMe();
+      await authApi.logout().catch(() => undefined);
       tokenStorage.clearSession();
       setDeleteAccountModal(false);
       navigate("/login");

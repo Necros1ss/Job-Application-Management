@@ -5,6 +5,7 @@ import Layout from "./Layout";
 import Login from "./Pages/Auth/Login";
 import SelectRole from "./Pages/Auth/SelectRole";
 import Signup from "./Pages/Auth/Signup";
+import Landing from "./Pages/Landing";
 import Dashboard from "./Pages/Candidates/Dashboard";
 import Applications from "./Pages/Candidates/Applications";
 import Jobsearch from "./Pages/Candidates/Jobsearch";
@@ -15,17 +16,30 @@ import RecruiterDashboard from "./Pages/Recruiters/RecruiterDashboard";
 import JobPost from "./Pages/Recruiters/JobPost";
 import Application from "./Pages/Recruiters/Application";
 import InterviewList from "./Pages/Recruiters/InterviewList";
+import RecruiterOnboarding from "./Pages/Recruiters/Onboarding";
+import Employees from "./Pages/Recruiters/Employees";
+import ApplicationDetail from "./Pages/Recruiters/ApplicationDetail";
+import CreateJob from "./Pages/Recruiters/CreateJob";
+import EditJob from "./Pages/Recruiters/EditJob";
+import Messages from "./Pages/Candidates/Messages";
+import CandidateOnboarding from "./Pages/Candidates/Onboarding";
+import EmployeePortal from "./Pages/Candidates/EmployeePortal";
 import ForgotPass from "./Pages/Auth/ForgotPass";
 import ResetPassword from "./Pages/Auth/ResetPassword";
 import JobDetail from "./Pages/Jobs/JobDetail";
 import Company from "./Pages/Info/Company";
+import AdminDashboard from "./Pages/Admin/AdminDashboard";
+import AdminUsers from "./Pages/Admin/AdminUsers";
+import AdminJobs from "./Pages/Admin/AdminJobs";
 import NotFound from "./Pages/NotFound";
+import { I18nProvider } from "./lib/i18n";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route index element={<Login />} />
+    <I18nProvider>
+      <Router>
+        <Routes>
+        <Route index element={<Landing />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SelectRole />} />
         <Route path="signup/create" element={<Signup />} />
@@ -43,6 +57,10 @@ function App() {
           <Route path="applications" element={<Applications />} />
           <Route path="job" element={<Jobsearch />} />
           <Route path="profile" element={<CandidateProfile />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="onboarding" element={<CandidateOnboarding />} />
+          <Route path="employee" element={<EmployeePortal />} />
+          <Route path="saved-jobs" element={<Applications initialTab="saved" />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="/recruiter" element={<DashboardLayout allowedRole="recruiter" />}>
@@ -51,12 +69,24 @@ function App() {
           <Route path="profile" element={<RecruiterProfile />} />
           <Route path="settings" element={<Settings />} />
           <Route path="job" element={<JobPost />} />
+          <Route path="job/create" element={<CreateJob />} />
+          <Route path="job/:id/edit" element={<EditJob />} />
           <Route path="application" element={<Application/>} />
+          <Route path="application/:id" element={<ApplicationDetail />} />
           <Route path="interviews" element={<InterviewList />} />
+          <Route path="onboarding" element={<RecruiterOnboarding />} />
+          <Route path="employees" element={<Employees />} />
+        </Route>
+        <Route path="/admin" element={<DashboardLayout allowedRole="admin" />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="jobs" element={<AdminJobs />} />
         </Route>
         <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+    </I18nProvider>
   );
 }
 

@@ -3,8 +3,15 @@ import { Link } from "react-router-dom";
 import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
-import { FaUserCircle, FaSearch, FaBookOpen, FaVideo, FaMapMarkerAlt } from "react-icons/fa";
-import { formatMessageTime  } from '../../utils/format';
+import { FaUserCircle, FaSearch, FaBookOpen, FaMapMarkerAlt, FaVideo } from "react-icons/fa";
+import { formatInterviewDateTime, formatMessageTime  } from '../../utils/format';
+import { showError } from "../../utils/toast";
+import {
+  getApplicationDisplayStatus,
+  getApplicationStatusLabel,
+  isInterviewStatus,
+  isOfferStatus,
+} from "../../utils/applicationStatus";
 
 const Dashboard = () => {
   const [userName, setUserName] = useState("");
@@ -21,7 +28,7 @@ const Dashboard = () => {
         const [profile, applications, myInterviews] = await Promise.all([
           usersApi.me(),
           applicationsApi.list(),
-          interviewsApi.myInterviews(),
+          interviewsApi.listForCandidate(),
         ]);
 
         setJobs(applications);
@@ -30,7 +37,9 @@ const Dashboard = () => {
         setUserEmail(profile.email || "");
         setErrorMessage("");
       } catch (error) {
-        setErrorMessage(error.message || "Failed to load dashboard data");
+        const message = error.message || "Failed to load dashboard data";
+        setErrorMessage(message);
+        showError(message);
       } finally {
         setIsLoading(false);
       }
@@ -46,11 +55,8 @@ const Dashboard = () => {
   }, {});
 
   const totalApplications = jobs.length;
-  const totalInterviews = (jobStatusCount.interview || 0) + (jobStatusCount.scheduled_interview || 0);
-  const totalOffers = jobs.filter((job) => {
-    const normalized = (job.status || '').toLowerCase();
-    return normalized === 'offered' || normalized === 'accepted';
-  }).length;
+  const totalInterviews = interviews.length;
+  const totalOffers = jobs.filter((job) => isOfferStatus(job.status)).length;
 
   const getGreeting = () => {
     const currentHour = new Date().getHours();
@@ -60,38 +66,21 @@ const Dashboard = () => {
   };
 
   const renderStatusBadge = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'interview':
-      case 'interviewing':
-      case 'scheduled_interview':
-        return <span className="px-3 py-1 bg-[#e6f4ea] text-[#188155] text-[11px] font-bold tracking-wider uppercase rounded-full">Interviewing</span>;
-      case 'applied':
-        return <span className="px-3 py-1 bg-[#e8f0fe] text-[#1967d2] text-[11px] font-bold tracking-wider uppercase rounded-full">Applied</span>;
-      case 'closed':
-        return <span className="px-3 py-1 bg-[#fce8e6] text-[#c5221f] text-[11px] font-bold tracking-wider uppercase rounded-full">Closed</span>;
-      default:
-        return <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[11px] font-bold tracking-wider uppercase rounded-full">{status || 'Null'}</span>;
+    const displayStatus = getApplicationDisplayStatus(status);
+
+    if (isInterviewStatus(status)) {
+      return <span className="px-3 py-1 bg-[#e6f4ea] text-[#188155] text-[11px] font-bold tracking-wider uppercase rounded-full">{getApplicationStatusLabel(status)}</span>;
     }
-  };
 
-  const formatInterviewDateTime = (value) => {
-    if (!value) return "Not scheduled";
+    if (displayStatus === 'applied') {
+      return <span className="px-3 py-1 bg-[#e8f0fe] text-[#1967d2] text-[11px] font-bold tracking-wider uppercase rounded-full">Applied</span>;
+    }
 
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "Not scheduled";
+    if (displayStatus === 'closed') {
+      return <span className="px-3 py-1 bg-[#fce8e6] text-[#c5221f] text-[11px] font-bold tracking-wider uppercase rounded-full">Closed</span>;
+    }
 
-    const weekday = date.toLocaleDateString("vi-VN", { weekday: "long" });
-    const formattedDate = date.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const formattedTime = date.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    return `${weekday}, ${formattedDate} lúc ${formattedTime}`;
+    return <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[11px] font-bold tracking-wider uppercase rounded-full">{getApplicationStatusLabel(status)}</span>;
   };
 
   const renderInterviewModeBadge = (mode) => {
@@ -112,14 +101,55 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen blueprint-grid-bg">
       <TopBarDashboard userName={userName} userEmail={userEmail} />
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         {/* --- HEADER --- */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {getGreeting()}, {(userName || "").split(" ")[0] || "User"}
-        </h1>
-        <p className="text-gray-500">Here is what's happening with your job search today.</p>
+        <div className="blueprint-hero-panel mb-6 p-5">
+          <div className="relative z-10 grid gap-5 lg:grid-cols-[1fr_360px]">
+            <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-5">
+              <p className="blueprint-kicker">Candidate console</p>
+              <h1 className="mt-2 text-[34px] font-semibold leading-none text-black">
+                {getGreeting()}, {(userName || "").split(" ")[0] || "User"}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#737373]">
+                Track applications, interview windows, and profile actions from one precise workspace.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["Applications", "Interviews", "Profile", "Messages"].map((item) => (
+                  <span key={item} className="rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-3 py-1 text-xs font-medium text-[#0a0a0a]">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-medium uppercase text-[#737373]">Progress scan</p>
+                <span className="font-mono text-xs text-[#737373]">Live</span>
+              </div>
+              <div className="space-y-3">
+                {[
+                  ["Applied", totalApplications],
+                  ["Interviews", totalInterviews],
+                  ["Offers", totalOffers],
+                ].map(([label, value], index) => (
+                  <div key={label} className="grid grid-cols-[90px_1fr_36px] items-center gap-3">
+                    <span className="text-xs font-medium text-[#737373]">{label}</span>
+                    <div className="h-2 overflow-hidden rounded-full bg-[#e5e5e5]">
+                      <div
+                        className="h-full rounded-full bg-black"
+                        style={{ width: `${Math.min(100, 28 + Number(value || 0) * 12 + index * 8)}%` }}
+                      />
+                    </div>
+                    <span className="blueprint-metric text-right text-sm font-semibold text-black">{value || 0}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
         
         {errorMessage && (
           <p className="text-red-500 text-sm mt-3 bg-red-50 p-3 rounded-lg border border-red-100" role="alert">
@@ -139,28 +169,31 @@ const Dashboard = () => {
         <>
         
         {/* Card 1: Applied */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Applied</p>
+        <div className="blueprint-card p-5 flex flex-col justify-between">
+          <p className="text-xs font-medium text-[#737373] uppercase mb-2">Applied</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-bold text-[#116843]">{totalApplications || "??"}</span>
+            <span className="blueprint-metric text-5xl font-semibold text-black">{totalApplications || "0"}</span>
           </div>
+          <div className="mt-5 h-px blueprint-divider" />
         </div>
 
         {/* Card 2: Interviews */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Interviews</p>
+        <div className="blueprint-card p-5 flex flex-col justify-between">
+          <p className="text-xs font-medium text-[#737373] uppercase mb-2">Interviews</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-bold text-gray-900">{totalInterviews || '0'}</span>
+            <span className="blueprint-metric text-5xl font-semibold text-black">{totalInterviews || '0'}</span>
           </div>
+          <div className="mt-5 h-px blueprint-divider" />
         </div>
 
         {/* Card 3: Offers (Dark Green) */}
-        <div className="bg-[#116843] p-6 rounded-2xl shadow-sm flex flex-col justify-between text-white">
-          <p className="text-xs font-bold text-emerald-100 uppercase tracking-wider mb-2">Offers</p>
+        <div className="bg-black p-5 rounded-[14px] shadow-sm flex flex-col justify-between text-white">
+          <p className="text-xs font-medium text-white/60 uppercase mb-2">Offers</p>
           <div className="flex items-baseline gap-3">
-            <span className="text-5xl font-bold">{totalOffers}</span>
-            {totalOffers > 0 && <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded tracking-wider">NEW</span>}
+            <span className="blueprint-metric text-5xl font-semibold">{totalOffers}</span>
+            {totalOffers > 0 && <span className="text-[10px] font-medium bg-white text-black px-2 py-0.5 rounded-full">NEW</span>}
           </div>
+          <div className="mt-5 h-px bg-white/25" />
         </div>
 
         </>
@@ -184,7 +217,7 @@ const Dashboard = () => {
               </div>
             ) : jobs.length > 0 ? (
               jobs.slice(0, 3).map((job) => (
-                <div key={job.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+                <div key={job.id} className="blueprint-card p-5 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     {/* Logo công ty */}
                     <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 p-1 flex items-center justify-center overflow-hidden shrink-0">
@@ -228,8 +261,12 @@ const Dashboard = () => {
             <h2 className="text-xl font-bold text-gray-900">Upcoming Interviews</h2>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-            {interviews.length > 0 ? (
+          <div className="blueprint-card p-5 mb-8">
+            {isLoading ? (
+              <div className="space-y-4">
+                {Array(2).fill(0).map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            ) : interviews.length > 0 ? (
               <div className="space-y-5">
                 {interviews.slice(0, 3).map((interview) => {
                   const isOnline = (interview.mode || "").toLowerCase() === "online";
@@ -279,7 +316,7 @@ const Dashboard = () => {
           <div className="space-y-4">
             
             {/* Card 1: Complete Profile */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-[#188155]">
+            <div className="blueprint-card border-l-4 border-l-black p-5">
               <div className="w-8 h-8 text-[#188155] mb-3">
                 <FaUserCircle className="w-full h-full" />
               </div>
@@ -291,7 +328,7 @@ const Dashboard = () => {
             </div>
 
             {/* Card 2: Find Jobs */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-[#188155]">
+            <div className="blueprint-card border-l-4 border-l-black p-5">
               <div className="w-8 h-8 text-[#188155] mb-3">
                 <FaSearch className="w-full h-full" />
               </div>
@@ -303,7 +340,7 @@ const Dashboard = () => {
             </div>
 
             {/* Card 3: Interview Resources */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-gray-700">
+            <div className="blueprint-card border-l-4 border-l-[#737373] p-5">
               <div className="w-8 h-8 text-gray-700 mb-3">
                 <FaBookOpen className="w-full h-full" />
               </div>

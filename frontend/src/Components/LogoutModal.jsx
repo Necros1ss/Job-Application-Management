@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { tokenStorage } from "../lib/api";
+import { authApi, tokenStorage } from "../lib/api";
 
 const LogoutModal = ({ setOpenLogoutModal }) => {
   const navigate = useNavigate();
@@ -9,7 +9,13 @@ const LogoutModal = ({ setOpenLogoutModal }) => {
     setOpenLogoutModal(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Clear local state even if the server cookie is already gone.
+    }
+
     tokenStorage.clearSession();
     setOpenLogoutModal(false);
     navigate("/login");

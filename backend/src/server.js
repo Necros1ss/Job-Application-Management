@@ -6,7 +6,14 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import path from "path";
 import { fileURLToPath } from "url";
-import { ensureAdminUserColumns, ensureApplicationRejectionColumns, ensureApplicationStatusEnum, ensureJobModerationColumns, testDbConnection } from "./config/db.js";
+import {
+  ensureAdminUserColumns,
+  ensureApplicationRejectionColumns,
+  ensureApplicationStatusEnum,
+  ensureJobModerationColumns,
+  ensurePhaseSchema,
+  testDbConnection,
+} from "./config/db.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
 import userRoutes from "./routes/users.js";
@@ -15,6 +22,8 @@ import jobPostRoutes from "./routes/jobPosts.js";
 import savedJobsRoutes from "./routes/savedJobs.js";
 import messageRoutes from "./routes/messages.js";
 import interviewRoutes from "./routes/interviews.js";
+import onboardingRoutes from "./routes/onboarding.js";
+import employeeRoutes from "./routes/employees.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,6 +75,7 @@ const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 app.use(helmet());
 app.use(
   cors({
+    credentials: true,
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.has(origin) || localhostPattern.test(origin)) {
         callback(null, true);
@@ -95,6 +105,8 @@ app.use("/api/job-posts", jobPostRoutes);
 app.use("/api/saved-jobs", savedJobsRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/interviews", interviewRoutes);
+app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/employees", employeeRoutes);
 
 app.use((err, _req, res, _next) => {
   if (process.env.NODE_ENV !== "test") {
@@ -131,6 +143,7 @@ const startServer = async () => {
   await ensureJobModerationColumns();
   await ensureApplicationStatusEnum();
   await ensureApplicationRejectionColumns();
+  await ensurePhaseSchema();
   app.listen(port, () => {
     console.log(`API server running on http://localhost:${port}`);
   });

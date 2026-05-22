@@ -2,27 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import ApplicationDetail from "./ApplicationDetail";
 import { interviewsApi, usersApi } from "../../lib/api";
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
+import { formatInterviewDateTime } from "../../utils/format";
 
 const FILTERS = [
   { value: "all", label: "All" },
   { value: "upcoming", label: "Upcoming" },
   { value: "past", label: "Past" },
 ];
-
-const formatInterviewDateTime = (value) => {
-  if (!value) return "Not scheduled";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not scheduled";
-
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
 
 const getModeBadge = (mode) => {
   const normalizedMode = (mode || "").toLowerCase();

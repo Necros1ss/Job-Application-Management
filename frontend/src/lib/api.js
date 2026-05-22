@@ -3,35 +3,120 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
 const TOKEN_KEY = "token";
 const ROLE_KEY = "userRole";
 
-const getToken = () => localStorage.getItem(TOKEN_KEY);
-const getRole = () => localStorage.getItem(ROLE_KEY);
+const getStorage = () => sessionStorage;
+
+const base64UrlDecode = (value) => {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return atob(padded);
+};
+
+const getTokenPayload = (token) => {
+  if (!token || typeof token !== "string") {
+    return null;
+  }
+
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    return JSON.parse(base64UrlDecode(parts[1]));
+  } catch {
+    return null;
+  }
+};
+
+const isTokenExpired = (token) => {
+  const payload = getTokenPayload(token);
+  if (!payload?.exp) {
+    return false;
+  }
+
+  return Date.now() >= payload.exp * 1000;
+};
+
+const getToken = () => getStorage().getItem(TOKEN_KEY);
+const getRole = () => getStorage().getItem(ROLE_KEY);
 
 const setToken = (token) => {
   if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
+    getStorage().setItem(TOKEN_KEY, token);
   }
 };
 
 const setRole = (role) => {
   if (role) {
-    localStorage.setItem(ROLE_KEY, role);
+    getStorage().setItem(ROLE_KEY, role);
   }
 };
 
 const clearToken = () => {
-  localStorage.removeItem(TOKEN_KEY);
+  getStorage().removeItem(TOKEN_KEY);
 };
 
 const clearRole = () => {
-  localStorage.removeItem(ROLE_KEY);
+  getStorage().removeItem(ROLE_KEY);
+};
+
+const clearSession = () => {
+  clearToken();
+  clearRole();
+};
+
+const authFetch = async (path, options = {}) => {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    credentials: "include",
+    headers: {
+      ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Request failed";
+    try {
+      const payload = await response.json();
+      errorMessage = payload?.detail ? `${payload.message || errorMessage}: ${payload.detail}` : payload.message || errorMessage;
+    } catch {
+      errorMessage = response.statusText || errorMessage;
+    }
+
+    throw new Error(errorMessage);
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+};
+
+const refreshSession = async () => {
+  const payload = await authFetch("/auth/refresh", { method: "POST" });
+  const authData = payload?.data || payload;
+
+  if (authData?.token) {
+    setToken(authData.token);
+  }
+
+  if (authData?.user?.role) {
+    setRole(authData.user.role);
+  }
+
+  return authData;
 };
 
 const request = async (path, options = {}) => {
+  const { tryRefresh = true, ...requestOptions } = options;
   const token = getToken();
-  const isFormData = options.body instanceof FormData;
+
+  const isFormData = requestOptions.body instanceof FormData;
   const headers = {
     ...(isFormData ? {} : { "Content-Type": "application/json" }),
-    ...(options.headers || {}),
+    ...(requestOptions.headers || {}),
   };
 
   if (token) {
@@ -39,8 +124,9 @@ const request = async (path, options = {}) => {
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...requestOptions,
     headers,
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -57,6 +143,16 @@ const request = async (path, options = {}) => {
       }
     } catch {
       errorMessage = response.statusText || errorMessage;
+    }
+
+    if (response.status === 401 && tryRefresh) {
+      try {
+        await refreshSession();
+        return request(path, { ...requestOptions, tryRefresh: false });
+      } catch {
+        clearSession();
+        errorMessage = "Session expired. Please log in again.";
+      }
     }
 
     throw new Error(errorMessage);
@@ -77,8 +173,10 @@ const request = async (path, options = {}) => {
 
 const requestBlob = async (path, options = {}) => {
   const token = getToken();
+  const { tryRefresh = true, ...requestOptions } = options;
+
   const headers = {
-    ...(options.headers || {}),
+    ...(requestOptions.headers || {}),
   };
 
   if (token) {
@@ -86,8 +184,9 @@ const requestBlob = async (path, options = {}) => {
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...requestOptions,
     headers,
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -103,6 +202,16 @@ const requestBlob = async (path, options = {}) => {
       errorMessage = response.statusText || errorMessage;
     }
 
+    if (response.status === 401 && tryRefresh) {
+      try {
+        await refreshSession();
+        return requestBlob(path, { ...requestOptions, tryRefresh: false });
+      } catch {
+        clearSession();
+        errorMessage = "Session expired. Please log in again.";
+      }
+    }
+
     throw new Error(errorMessage);
   }
 
@@ -113,22 +222,40 @@ export const authApi = {
   signup: (payload) =>
     request("/auth/signup", {
       method: "POST",
+      tryRefresh: false,
       body: JSON.stringify(payload),
     }),
   login: (payload) =>
     request("/auth/login", {
       method: "POST",
+      tryRefresh: false,
       body: JSON.stringify(payload),
     }),
+  refresh: () => refreshSession(),
+  logout: () => authFetch("/auth/logout", { method: "POST" }),
   forgotPassword: (payload) =>
     request("/auth/forgot-password", {
       method: "POST",
+      tryRefresh: false,
       body: JSON.stringify(payload),
     }),
   resetPassword: (payload) =>
     request("/auth/reset-password", {
       method: "POST",
+      tryRefresh: false,
       body: JSON.stringify(payload),
+    }),
+};
+
+export const accountApi = {
+  changePassword: (payload) =>
+    request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  deleteMe: () =>
+    request("/users/me", {
+      method: "DELETE",
     }),
 };
 
@@ -159,6 +286,7 @@ export const applicationsApi = {
 
     return request(`/applications/recruiter?${params.toString()}`);
   },
+  listRecruiterActivity: () => request("/applications/recruiter/activity"),
   getForRecruiter: (id) => request(`/applications/recruiter/${id}`),
   getRecruiterCvFile: (id) => requestBlob(`/applications/recruiter/${id}/cv`),
   update: (id, payload) =>
@@ -170,6 +298,25 @@ export const applicationsApi = {
     request(`/applications/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
+    }),
+  updateRating: (id, rating) =>
+    request(`/applications/${id}/rating`, {
+      method: "PATCH",
+      body: JSON.stringify({ rating }),
+    }),
+  addNote: (id, payload) =>
+    request(`/applications/${id}/notes`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateNote: (id, noteId, payload) =>
+    request(`/applications/${id}/notes/${noteId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteNote: (id, noteId) =>
+    request(`/applications/${id}/notes/${noteId}`, {
+      method: "DELETE",
     }),
   reject: (id, payload) =>
     request(`/applications/${id}/reject`, {
@@ -188,10 +335,7 @@ export const applicationsApi = {
 };
 
 export const interviewsApi = {
-  myInterviews: ({ upcoming = false } = {}) => {
-    const query = upcoming ? "?upcoming=true" : "";
-    return request(`/interviews${query}`);
-  },
+  listForCandidate: () => request("/interviews/candidate"),
   listForRecruiter: ({ upcoming = false } = {}) => {
     const query = upcoming ? "?upcoming=true" : "";
     return request(`/interviews/recruiter${query}`);
@@ -200,6 +344,59 @@ export const interviewsApi = {
     request("/interviews", {
       method: "POST",
       body: JSON.stringify(payload),
+    }),
+};
+
+export const onboardingApi = {
+  listForRecruiter: () => request("/onboarding/recruiter"),
+  listForCandidate: () => request("/onboarding/candidate"),
+  listAcceptedApplications: () => request("/onboarding/accepted-applications"),
+  createTask: (payload) =>
+    request("/onboarding/tasks", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateTaskStatus: (id, status) =>
+    request(`/onboarding/tasks/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  deleteTask: (id) =>
+    request(`/onboarding/tasks/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+export const employeesApi = {
+  listForRecruiter: () => request("/employees/recruiter"),
+  getMine: () => request("/employees/me"),
+  listAcceptedApplications: () => request("/employees/accepted-applications"),
+  convertCandidate: (payload) =>
+    request("/employees/convert", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateEmployee: (id, payload) =>
+    request(`/employees/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  listAttendance: () => request("/employees/attendance"),
+  recordAttendance: (payload) =>
+    request("/employees/attendance", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  listLeaveRequests: () => request("/employees/leave-requests"),
+  submitLeaveRequest: (payload) =>
+    request("/employees/leave-requests", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  reviewLeaveRequest: (id, status) =>
+    request(`/employees/leave-requests/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
     }),
 };
 
@@ -304,10 +501,8 @@ export const tokenStorage = {
   setRole,
   clearToken,
   clearRole,
-  clearSession: () => {
-    clearToken();
-    clearRole();
-  },
+  isTokenExpired,
+  clearSession,
 };
 
 const buildQueryString = (params = {}) => {

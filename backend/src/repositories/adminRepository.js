@@ -35,6 +35,13 @@ const buildUserFilters = ({ search, role, locked, deleted }) => {
 export const listUsers = async ({ page, limit, search, role, locked, deleted }) => {
   const { where, params } = buildUserFilters({ search, role, locked, deleted });
   const offset = (page - 1) * limit;
+  const excludeAdminClause = role === "admin" ? "" : "u.role <> 'admin'";
+  let finalWhere = "";
+  if (where.length > 0) {
+    finalWhere = `WHERE ${excludeAdminClause ? excludeAdminClause + " AND " : ""}${where.join(" AND ")}`;
+  } else if (excludeAdminClause) {
+    finalWhere = `WHERE ${excludeAdminClause}`;
+  }
 
   const query = `
     SELECT
@@ -52,7 +59,7 @@ export const listUsers = async ({ page, limit, search, role, locked, deleted }) 
     FROM users u
     LEFT JOIN candidates c ON c.id = u.id
     LEFT JOIN recruiters r ON r.id = u.id
-    ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
+    ${finalWhere}
     ORDER BY u.created_at DESC, u.id DESC
     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
 
@@ -63,7 +70,7 @@ export const listUsers = async ({ page, limit, search, role, locked, deleted }) 
      FROM users u
      LEFT JOIN candidates c ON c.id = u.id
      LEFT JOIN recruiters r ON r.id = u.id
-     ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}`,
+     ${finalWhere}`,
     params
   );
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { SidebarMenuItem } from "./SidebarMenuItem";
-import { RiLogoutCircleRFill, RiSettings5Fill } from "react-icons/ri";
+import { RiLogoutCircleRFill } from "react-icons/ri";
 import { BsLayoutSidebarInset } from "react-icons/bs";
 import { Link, useLocation } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
@@ -51,7 +51,7 @@ const SideBar = ({ role = "candidate" }) => {
       <nav
         className={`px-5 py-3 fixed z-50 w-full lg:hidden transition-all duration-300 ${
           openSidebar ? "-translate-y-full" : "translate-x-0"
-        } bg-[#19211D] text-white`}
+        } border-b border-[#e5e5e5] bg-white text-[#0a0a0a]`}
       >
         <div className="flex gap-3 items-center">
           <button
@@ -75,11 +75,11 @@ const SideBar = ({ role = "candidate" }) => {
       <div
         className={`fixed h-full top-0 left-0 bottom-0 z-40 w-56 py-4 lg:py-6 transition-transform
           ${openSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-          bg-[#19211D]`}
+          border-r border-[#e5e5e5] bg-white`}
       >
-        <div className="rounded-[20px] overflow-y-auto px-4 bg-[#19211D] text-white h-full">
+        <div className="h-full overflow-y-auto rounded-[14px] bg-white px-4 text-[#0a0a0a]">
           <div className="flex items-center justify-between pl-6">
-            <p className="font-bold text-white">Job Tracker</p>
+            <p className="font-semibold text-black">Job Tracker</p>
             <button
               className="text-xl lg:hidden"
               title="Minimize Sidebar"
@@ -95,11 +95,11 @@ const SideBar = ({ role = "candidate" }) => {
               return (
                 <li key={item.id} onClick={toggleMenu}>
                   <Link
-                    to={`/${role}/${item.path}`}
-                    className={`flex items-center gap-2 py-2.5 pl-5 rounded-xl cursor-pointer transition-all duration-200 ${
+                    to={item.path}
+                    className={`flex cursor-pointer items-center gap-2 rounded-[10px] py-2.5 pl-5 transition-all duration-200 ${
                       active
-                        ? "bg-white/15 text-white font-semibold"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                        ? "bg-black text-white font-medium"
+                        : "text-[#737373] hover:bg-[#f2f2f2] hover:text-[#0a0a0a]"
                     }`}
                   >
                     <span className="text-xl">{item.icon}</span>
@@ -111,23 +111,11 @@ const SideBar = ({ role = "candidate" }) => {
           </ul>
         </div>
 
-        <div className="absolute bottom-1 left-4 right-4 bg-[#19211D] rounded-xl">
-          <ul className="py-3 text-white space-y-1">
-            <li>
-              <Link
-                to={`/${role}/settings`}
-                className="flex items-center gap-2 py-2 pl-5 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-white/10"
-                onClick={toggleMenu}
-              >
-                <span className="text-xl">
-                  <RiSettings5Fill />
-                </span>
-                <div className="text-sm">Settings</div>
-              </Link>
-            </li>
+        <div className="absolute bottom-1 left-4 right-4 rounded-[10px] bg-white">
+          <ul className="space-y-1 py-3 text-[#0a0a0a]">
             <li>
               <div
-                className="flex items-center gap-2 py-2 pl-5 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-white/10"
+                className="flex cursor-pointer items-center gap-2 rounded-[10px] py-2 pl-5 text-[#737373] transition-colors duration-200 hover:bg-[#f2f2f2] hover:text-[#0a0a0a]"
                 onClick={() => {
                   toggleMenu();
                   toggleLogoutModal();

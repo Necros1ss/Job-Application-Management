@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   MdOutlineEdit,
   MdAdd,
@@ -9,7 +9,7 @@ import {
 } from "react-icons/md";
 import { usersApi } from "../../lib/api";
 import ProfileTopBar from "../../Components/ProfileTopBar";
-import { calculateAge } from '../../utils/format';
+import { calculateAge, formatDate } from '../../utils/format';
 import { showError, showSuccess } from "../../utils/toast";
 
 const Profile = () => {
@@ -34,29 +34,19 @@ const Profile = () => {
   const [resume, setResume] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-
-  const formatDate = (value) => {
-    if (!value) return "Not updated";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "Not updated";
-    return parsed.toLocaleDateString("en-US");
-  };
+  const didLoadProfile = useRef(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const response = await usersApi.me();
-        setUserName(response.name);
-        setUserEmail(response.email);
-      } catch (error) {}
-    };
-    fetchUserData();
-  }, []);
-  
-  useEffect(() => {
+    if (didLoadProfile.current) {
+      return;
+    }
+    didLoadProfile.current = true;
+
     const loadProfile = async () => {
       try {
         const profile = await usersApi.me();
+        setUserName(profile.name || "");
+        setUserEmail(profile.email || "");
         setName(profile.name || "");
         setEmail(profile.email || "");
         setPhone(profile.phone || "");
@@ -67,7 +57,9 @@ const Profile = () => {
         setSkills(Array.isArray(profile.skills) ? profile.skills : []);
         setProfileError("");
       } catch (error) {
-        setProfileError(error.message || "Failed to load profile");
+        const message = error.message || "Failed to load profile";
+        setProfileError(message);
+        showError(message);
       }
     };
 
@@ -230,7 +222,7 @@ const Profile = () => {
                   <p className="text-gray-600 text-lg leading-relaxed max-w-2xl">
                     <span className="font-medium mr-2">Date of Birth:</span>
                     {dob ? (
-                      <span className="text-gray-900 font-semibold">{formatDate(dob)}</span>
+                      <span className="text-gray-900 font-semibold">{formatDate(dob, undefined, "Not updated")}</span>
                     ) : (
                       <span className="text-gray-400 italic">Not specified</span>
                     )}
