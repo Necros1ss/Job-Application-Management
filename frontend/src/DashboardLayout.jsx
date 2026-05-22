@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import SideBar from "./Components/SideBar";
 import { Navigate, Outlet } from "react-router-dom";
 import { initializeSession, tokenStorage } from "./lib/api";
+import PageLoader from "./Components/PageLoader";
 
 const DashboardLayout = ({ allowedRole }) => {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -38,7 +39,7 @@ const DashboardLayout = ({ allowedRole }) => {
   }, []);
 
   if (isCheckingSession) {
-    return null;
+    return <PageLoader />;
   }
 
   if (!session.token) {

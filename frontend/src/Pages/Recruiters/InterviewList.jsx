@@ -1,8 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+/* eslint-disable react/prop-types */
+import { useEffect, useMemo, useState } from "react";
 import { FaPen, FaPlus, FaSearch, FaTimes } from "react-icons/fa";
 import ApplicationDetail from "./ApplicationDetail";
 import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
+import EmptyState from "../../Components/EmptyState";
+import { SkeletonRow } from "../../Components/Skeleton";
 import { useI18n } from "../../lib/i18n";
 import { showError, showSuccess } from "../../utils/toast";
 
@@ -556,9 +559,9 @@ const InterviewList = () => {
 
         <div className="blueprint-card overflow-hidden p-0">
           {isLoading ? (
-            <div className="space-y-3 px-6 py-8">
+            <div>
               {[1, 2, 3, 4].map((item) => (
-                <div key={item} className="h-14 animate-pulse rounded-[10px] bg-[#f2f2f2]" />
+                <SkeletonRow key={item} />
               ))}
             </div>
           ) : (
@@ -632,19 +635,14 @@ const InterviewList = () => {
 
                   {filteredInterviews.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-14 text-center">
-                        <div className="mx-auto max-w-sm">
-                          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
-                            <FaPlus />
-                          </div>
-                          <p className="font-semibold text-[#0a0a0a]">{t("interviews.emptyTitle")}</p>
-                          <p className="mt-1 text-sm text-[#737373]">
-                            {t("interviews.emptyDescription")}
-                          </p>
-                          <button type="button" onClick={openCreateModal} className="blueprint-primary mt-5">
-                            {t("interviews.schedule")}
-                          </button>
-                        </div>
+                      <td colSpan={6}>
+                        <EmptyState
+                          icon={FaPlus}
+                          title={t("interviews.emptyTitle")}
+                          description={t("interviews.emptyDescription")}
+                          actionLabel={t("interviews.schedule")}
+                          onAction={openCreateModal}
+                        />
                       </td>
                     </tr>
                   )}

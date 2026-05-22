@@ -5,6 +5,7 @@ import {
   deleteNote,
   downloadCv,
   getActivity,
+  getAnalytics,
   getForRecruiter,
   listForCandidate,
   listForRecruiter,
@@ -24,6 +25,7 @@ const router = express.Router();
 router.get("/", requireAuth, listForCandidate);
 router.get("/recruiter", requireAuth, listForRecruiter);
 router.get("/recruiter/activity", requireAuth, getActivity);
+router.get("/recruiter/analytics", requireAuth, getAnalytics);
 router.get("/recruiter/:id", requireAuth, getForRecruiter);
 router.get("/recruiter/:id/cv", requireAuth, downloadCv);
 

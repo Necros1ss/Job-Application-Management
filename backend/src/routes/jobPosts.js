@@ -12,6 +12,88 @@ const getPagination = (query) => {
   return { page, limit, offset };
 };
 
+const EMPLOYMENT_TYPES = new Set(["full-time", "part-time", "contract", "internship"]);
+const EXPERIENCE_LEVELS = new Set(["0-1 years", "1-3 years", "3-5 years", "5+ years"]);
+const SORT_SQL = {
+  newest: "jp.created_at DESC, jp.id DESC",
+  oldest: "jp.created_at ASC, jp.id ASC",
+  deadline: "jp.deadline ASC NULLS LAST, jp.created_at DESC, jp.id DESC",
+};
+
+const parseOptionalNumber = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
+const getJobPostFilters = (query) => {
+  const search = (query.search || "").toString().trim();
+  const location = (query.location || "").toString().trim();
+  const employmentType = (query.employment_type || "").toString().trim().toLowerCase();
+  const experience = (query.experience || "").toString().trim();
+  const salaryMin = parseOptionalNumber(query.salary_min);
+  const salaryMax = parseOptionalNumber(query.salary_max);
+  const sort = SORT_SQL[query.sort] ? query.sort : "newest";
+
+  return {
+    search,
+    location,
+    employmentType: EMPLOYMENT_TYPES.has(employmentType) ? employmentType : "",
+    experience: EXPERIENCE_LEVELS.has(experience) ? experience : "",
+    salaryMin,
+    salaryMax,
+    sort,
+  };
+};
+
+const buildJobPostWhere = ({ search, location, employmentType, experience, salaryMin, salaryMax }) => {
+  const clauses = ["COALESCE(jp.status::text, 'active') = 'active'"];
+  const params = [];
+  const salaryNumberSql = "COALESCE(NULLIF(replace(substring(COALESCE(jp.salary, '') from '[0-9][0-9,]*'), ',', ''), '')::numeric, 0)";
+
+  if (search) {
+    params.push(search);
+    const index = params.length;
+    clauses.push(
+      `(to_tsvector('english', COALESCE(jp.title, '') || ' ' || COALESCE(jp.description, '')) @@ plainto_tsquery('english', $${index})
+        OR COALESCE(r.company_name, '') ILIKE '%' || $${index} || '%')`
+    );
+  }
+
+  if (location) {
+    params.push(location);
+    clauses.push(`COALESCE(jp.location, '') ILIKE '%' || $${params.length} || '%'`);
+  }
+
+  if (employmentType) {
+    params.push(employmentType);
+    clauses.push(`LOWER(COALESCE(jp.employment_type, '')) = $${params.length}`);
+  }
+
+  if (experience) {
+    params.push(experience);
+    clauses.push(`COALESCE(jp.experience, '') = $${params.length}`);
+  }
+
+  if (salaryMin !== null) {
+    params.push(salaryMin);
+    clauses.push(`${salaryNumberSql} >= $${params.length}`);
+  }
+
+  if (salaryMax !== null) {
+    params.push(salaryMax);
+    clauses.push(`${salaryNumberSql} <= $${params.length}`);
+  }
+
+  return {
+    whereSql: `WHERE ${clauses.join(" AND ")}`,
+    params,
+  };
+};
+
 const mapRow = (row) => ({
   id: row.id,
   recruiterId: row.recruiter_id,
@@ -35,20 +117,17 @@ const mapRow = (row) => ({
 });
 
 router.get("/", requireAuth, async (req, res) => {
-  const search = (req.query.search || "").toString().trim();
-  const searchLike = `%${search}%`;
   const { page, limit, offset } = getPagination(req.query);
+  const filters = getJobPostFilters(req.query);
+  const { whereSql, params } = buildJobPostWhere(filters);
 
   try {
     const countResult = await pool.query(
       `SELECT COUNT(*)::int AS total
        FROM job_posts jp
        LEFT JOIN recruiters r ON r.id = jp.recruiter_id
-       WHERE ($1 = ''
-         OR jp.title ILIKE $2
-         OR COALESCE(r.company_name, '') ILIKE $2
-         OR COALESCE(jp.location, '') ILIKE $2)`,
-      [search, searchLike]
+       ${whereSql}`,
+      params
     );
 
     const total = Number(countResult.rows[0]?.total || 0);
@@ -75,13 +154,10 @@ router.get("/", requireAuth, async (req, res) => {
           r.email
        FROM job_posts jp
        LEFT JOIN recruiters r ON r.id = jp.recruiter_id
-       WHERE ($1 = ''
-         OR jp.title ILIKE $2
-         OR COALESCE(r.company_name, '') ILIKE $2
-         OR COALESCE(jp.location, '') ILIKE $2)
-       ORDER BY jp.created_at DESC, jp.id DESC
-       LIMIT $3 OFFSET $4`,
-      [search, searchLike, limit, offset]
+       ${whereSql}
+       ORDER BY ${SORT_SQL[filters.sort]}
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
     return res.json({

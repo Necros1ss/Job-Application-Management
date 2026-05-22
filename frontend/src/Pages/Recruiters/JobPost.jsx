@@ -1,13 +1,15 @@
-import React, { useEffect, useState, useMemo } from "react";
+/* eslint-disable react/prop-types */
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaSearch, FaPlus, FaChevronDown, FaChevronUp, FaEdit, FaTrashAlt,
-  FaEye, FaFilter, FaArrowsAltV, FaTimes, FaCheck
+  FaEye, FaFilter, FaArrowsAltV, FaTimes
 } from "react-icons/fa";
 import { jobPostsApi, usersApi } from "../../lib/api";
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import CreateJob from "./CreateJob";
 import EditJob from "./EditJob";
+import EmptyState from "../../Components/EmptyState";
 
 const toStatus = (deadline) => {
   if (!deadline) return "active";
@@ -40,12 +42,6 @@ const getStatusStyle = (deadline) => {
   const status = toStatus(deadline);
   if (status === "active") return "bg-emerald-50 text-emerald-700 border border-emerald-100";
   return "bg-red-50 text-red-600 border border-red-100";
-};
-
-const getMatchScoreStyle = (score) => {
-  if (score >= 80) return "bg-emerald-100 text-emerald-700";
-  if (score >= 60) return "bg-yellow-100 text-yellow-700";
-  return "bg-red-100 text-red-600";
 };
 
 const JobPost = () => {
@@ -274,27 +270,17 @@ const JobPost = () => {
               Loading jobs...
             </div>
           ) : filteredAndSorted.length === 0 ? (
-            <div className="p-14 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FaSearch size={24} className="text-gray-400" />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-1">
-                {searchTerm || statusFilter !== "all" ? "No matching jobs" : "No jobs yet"}
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {searchTerm || statusFilter !== "all"
-                  ? "Try adjusting your search or filters"
-                  : "Create your first job posting to get started"}
-              </p>
-              {!searchTerm && statusFilter === "all" && (
-                <button
-                  onClick={() => setIsCreateOpen(true)}
-                  className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700"
-                >
-                  Create Job
-                </button>
-              )}
-            </div>
+            <EmptyState
+              icon={FaSearch}
+              title={searchTerm || statusFilter !== "all" ? "No matching jobs" : "No jobs yet"}
+              description={
+                searchTerm || statusFilter !== "all"
+                  ? "Try adjusting your search or filters."
+                  : "Create your first job posting to start collecting candidates."
+              }
+              actionLabel={!searchTerm && statusFilter === "all" ? "Create Job" : undefined}
+              onAction={!searchTerm && statusFilter === "all" ? () => setIsCreateOpen(true) : undefined}
+            />
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -446,7 +432,7 @@ const JobPost = () => {
             </div>
             <h3 className="text-xl font-bold text-gray-900 text-center mb-2">Delete Job</h3>
             <p className="text-gray-500 text-center mb-6">
-              Are you sure you want to delete <strong>"{deleteConfirm.title}"</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>&quot;{deleteConfirm.title}&quot;</strong>? This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button

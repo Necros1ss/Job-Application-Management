@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ApplicationDetail from './ApplicationDetail';
 import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api';
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import { SkeletonRow } from "../../Components/Skeleton";
+import EmptyState from "../../Components/EmptyState";
 import Pagination from "../../Components/Pagination";
 import { showError, showSuccess } from '../../utils/toast';
+import { FaUsers } from "react-icons/fa";
 
 const PIPELINE_STAGES = [
   { id: "applied", label: "Applied", stage: "CV SCREENING", badge: "bg-slate-100 text-slate-700", dot: "bg-slate-500" },
@@ -204,15 +206,6 @@ const Application = () => {
     };
   }, [filteredApplications]);
 
-  const selectedJobLabel = useMemo(() => {
-    if (selectedJobId === 'all') {
-      return 'All Jobs';
-    }
-
-    const selected = jobOptions.find((job) => String(job.id) === String(selectedJobId));
-    return selected?.title || 'Unknown Position';
-  }, [jobOptions, selectedJobId]);
-
   // Nếu có ứng viên được chọn, render trang Chi tiết (ApplicationDetail)
   if (selectedApplication) {
     return (
@@ -300,6 +293,17 @@ const Application = () => {
         </div>
 
         {viewMode === "pipeline" && !loading && !error ? (
+          displayApplications.length === 0 ? (
+            <div className="blueprint-card p-0">
+              <EmptyState
+                icon={FaUsers}
+                title="No applications found"
+                description="Applications will appear here once candidates apply to your job posts."
+                actionLabel="Manage Jobs"
+                onAction={() => setSelectedJobId("all")}
+              />
+            </div>
+          ) : (
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
             {PIPELINE_STAGES.map((stage) => (
               <div key={stage.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm min-h-[360px]">
@@ -353,6 +357,7 @@ const Application = () => {
               </div>
             ))}
           </div>
+          )
         ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {loading ? (
@@ -445,8 +450,14 @@ const Application = () => {
 
               {displayApplications.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
-                    No applications found for your job posts yet.
+                  <td colSpan={5}>
+                    <EmptyState
+                      icon={FaUsers}
+                      title="No applications found"
+                      description="Applications will appear here once candidates apply to your job posts."
+                      actionLabel={selectedJobId !== "all" ? "Show All Jobs" : undefined}
+                      onAction={selectedJobId !== "all" ? () => setSelectedJobId("all") : undefined}
+                    />
                   </td>
                 </tr>
               )}

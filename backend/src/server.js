@@ -24,6 +24,7 @@ import messageRoutes from "./routes/messages.js";
 import interviewRoutes from "./routes/interviews.js";
 import onboardingRoutes from "./routes/onboarding.js";
 import employeeRoutes from "./routes/employees.js";
+import notificationRoutes from "./routes/notifications.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -109,6 +110,7 @@ app.use("/api/job-posts", jobPostRoutes);
 app.use("/api/saved-jobs", savedJobsRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/interviews", interviewRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/employees", employeeRoutes);
 

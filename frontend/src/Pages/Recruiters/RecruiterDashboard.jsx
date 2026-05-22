@@ -1,15 +1,41 @@
-import { useEffect, useState, useMemo } from "react";
+/* eslint-disable react/prop-types */
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FaBriefcase, FaUsers, FaCalendar, FaCheckCircle, FaChartLine, FaHistory } from "react-icons/fa";
+import {
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+} from "chart.js";
+import { Bar, Doughnut, Line, getElementsAtEvent } from "react-chartjs-2";
 import { jobPostsApi, applicationsApi, usersApi } from "../../lib/api";
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
+import { SkeletonDashboardCard } from "../../Components/Skeleton";
 import { showError } from "../../utils/toast";
 import {
   getApplicationDisplayStatus,
-  getApplicationStatusLabel,
   isInterviewStatus,
   isOfferStatus,
 } from "../../utils/applicationStatus";
+
+ChartJS.register(
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip
+);
 
 const StatCard = ({ title, value, subtitle, icon: Icon, color = "emerald" }) => {
   const colorMap = {
@@ -50,8 +76,60 @@ const formatTime = (dateStr) => {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
+const STATUS_CHART_META = [
+  { key: "applied", label: "Applied", color: "#3b82f6" },
+  { key: "reviewed", label: "Reviewed", color: "#eab308" },
+  { key: "scheduled_interview", label: "Interview", color: "#f97316" },
+  { key: "accepted", label: "Accepted", color: "#22c55e" },
+  { key: "rejected", label: "Rejected", color: "#ef4444" },
+];
+
+const DATE_RANGES = [
+  { key: "week", label: "This Week", days: 7 },
+  { key: "month", label: "This Month", days: 30 },
+  { key: "quarter", label: "Last 3 Months", days: 90 },
+];
+
+const EMPTY_ANALYTICS = {
+  applicationsByStatus: {
+    applied: 0,
+    reviewed: 0,
+    scheduled_interview: 0,
+    accepted: 0,
+    rejected: 0,
+  },
+  applicationsByWeek: [],
+  applicationsByJob: [],
+  conversionRate: 0,
+  avgTimeToHire: 0,
+  interviewsThisWeek: 0,
+};
+
+const toDateInputValue = (date) => date.toISOString().slice(0, 10);
+
+const getDateRangeParams = (rangeKey) => {
+  const range = DATE_RANGES.find((item) => item.key === rangeKey) || DATE_RANGES[1];
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - (range.days - 1));
+
+  return {
+    startDate: toDateInputValue(startDate),
+    endDate: toDateInputValue(endDate),
+  };
+};
+
+const KpiCard = ({ label, value, caption }) => (
+  <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-sm">
+    <p className="text-xs font-medium uppercase text-[#737373]">{label}</p>
+    <p className="blueprint-metric mt-3 text-3xl font-semibold text-black">{value}</p>
+    <p className="mt-2 text-xs text-[#737373]">{caption}</p>
+  </div>
+);
+
 const RecruiterDashboard = () => {
   const navigate = useNavigate();
+  const topJobsChartRef = useRef(null);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [showAppStats, setShowAppStats] = useState(false);
@@ -60,6 +138,9 @@ const RecruiterDashboard = () => {
   const [applications, setApplications] = useState([]);
   const [activity, setActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsRange, setAnalyticsRange] = useState("month");
+  const [analytics, setAnalytics] = useState(EMPTY_ANALYTICS);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -89,6 +170,34 @@ const RecruiterDashboard = () => {
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadAnalytics = async () => {
+      try {
+        setAnalyticsLoading(true);
+        const payload = await applicationsApi.getRecruiterAnalytics(getDateRangeParams(analyticsRange));
+        if (mounted) {
+          setAnalytics({ ...EMPTY_ANALYTICS, ...payload });
+        }
+      } catch (err) {
+        if (mounted) {
+          showError(err.message || "Failed to load analytics");
+        }
+      } finally {
+        if (mounted) {
+          setAnalyticsLoading(false);
+        }
+      }
+    };
+
+    loadAnalytics();
+
+    return () => {
+      mounted = false;
+    };
+  }, [analyticsRange]);
 
   const stats = useMemo(() => {
     const totalJobs = jobs.length;
@@ -139,6 +248,138 @@ const RecruiterDashboard = () => {
       .sort((a, b) => new Date(b.applicationDate) - new Date(a.applicationDate))
       .slice(0, 5);
   }, [applications]);
+
+  const chartTotals = useMemo(() => {
+    return STATUS_CHART_META.reduce(
+      (total, item) => total + Number(analytics.applicationsByStatus?.[item.key] || 0),
+      0
+    );
+  }, [analytics.applicationsByStatus]);
+
+  const funnelChartData = useMemo(() => ({
+    labels: STATUS_CHART_META.map((item) => item.label),
+    datasets: [
+      {
+        data: STATUS_CHART_META.map((item) => Number(analytics.applicationsByStatus?.[item.key] || 0)),
+        backgroundColor: STATUS_CHART_META.map((item) => item.color),
+        borderColor: "#ffffff",
+        borderWidth: 3,
+        hoverOffset: 6,
+      },
+    ],
+  }), [analytics.applicationsByStatus]);
+
+  const funnelChartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: "62%",
+    plugins: {
+      legend: {
+        position: "right",
+        labels: {
+          boxWidth: 12,
+          boxHeight: 12,
+          color: "#0a0a0a",
+          font: { size: 12, weight: "600" },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const value = Number(context.raw || 0);
+            const percentage = chartTotals > 0 ? Math.round((value / chartTotals) * 100) : 0;
+            return `${context.label}: ${value} (${percentage}%)`;
+          },
+        },
+      },
+    },
+  }), [chartTotals]);
+
+  const weeklyChartData = useMemo(() => ({
+    labels: analytics.applicationsByWeek.map((item) => item.week),
+    datasets: [
+      {
+        label: "Applications",
+        data: analytics.applicationsByWeek.map((item) => Number(item.count || 0)),
+        borderColor: "#0a0a0a",
+        backgroundColor: "rgba(10, 10, 10, 0.08)",
+        pointBackgroundColor: "#0a0a0a",
+        pointBorderColor: "#ffffff",
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        fill: true,
+        tension: 0.42,
+      },
+    ],
+  }), [analytics.applicationsByWeek]);
+
+  const weeklyChartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { mode: "index", intersect: false },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: "#737373", font: { size: 11 } },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: "#737373", precision: 0 },
+        grid: { color: "#e5e5e5" },
+      },
+    },
+  }), []);
+
+  const topJobsChartData = useMemo(() => ({
+    labels: analytics.applicationsByJob.map((item) => item.title),
+    datasets: [
+      {
+        label: "Applications",
+        data: analytics.applicationsByJob.map((item) => Number(item.count || 0)),
+        backgroundColor: "#0a0a0a",
+        borderRadius: 8,
+        barThickness: 18,
+      },
+    ],
+  }), [analytics.applicationsByJob]);
+
+  const topJobsChartOptions = useMemo(() => ({
+    indexAxis: "y",
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (context) => `${context.raw} applications` } },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: { color: "#737373", precision: 0 },
+        grid: { color: "#e5e5e5" },
+      },
+      y: {
+        ticks: { color: "#0a0a0a", font: { size: 11, weight: "600" } },
+        grid: { display: false },
+      },
+    },
+  }), []);
+
+  const handleTopJobsClick = (event) => {
+    const chart = topJobsChartRef.current;
+    if (!chart) return;
+
+    const elements = getElementsAtEvent(chart, event);
+    const firstElement = elements[0];
+    if (!firstElement) return;
+
+    const selectedJob = analytics.applicationsByJob[firstElement.index];
+    if (selectedJob?.id) {
+      navigate(`/recruiter/application?jobPostId=${selectedJob.id}`);
+    }
+  };
 
   const applicationStatusStats = useMemo(() => {
     const counts = {
@@ -217,10 +458,7 @@ const RecruiterDashboard = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white p-6 rounded-2xl border animate-pulse">
-                <div className="w-20 h-4 bg-gray-100 rounded mb-3" />
-                <div className="w-12 h-8 bg-gray-100 rounded" />
-              </div>
+              <SkeletonDashboardCard key={i} />
             ))}
           </div>
         </div>
@@ -314,6 +552,108 @@ const RecruiterDashboard = () => {
             icon={FaCalendar}
             color="orange"
           />
+        </div>
+
+        {/* --- ANALYTICS --- */}
+        <div className="mb-10">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="blueprint-kicker">Analytics</p>
+              <h2 className="mt-1 text-2xl font-semibold text-black">Hiring performance</h2>
+            </div>
+            <div className="inline-flex rounded-[10px] border border-[#e5e5e5] bg-white p-1 shadow-sm">
+              {DATE_RANGES.map((range) => (
+                <button
+                  key={range.key}
+                  type="button"
+                  onClick={() => setAnalyticsRange(range.key)}
+                  className={`rounded-[8px] px-3 py-2 text-xs font-semibold transition ${
+                    analyticsRange === range.key
+                      ? "bg-black text-white"
+                      : "text-[#737373] hover:bg-[#f2f2f2] hover:text-black"
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-5 grid grid-cols-1 gap-5 md:grid-cols-3">
+            <KpiCard
+              label="Conversion Rate"
+              value={analyticsLoading ? "..." : `${analytics.conversionRate}%`}
+              caption="Applied to accepted"
+            />
+            <KpiCard
+              label="Avg Time to Hire"
+              value={analyticsLoading ? "..." : `${analytics.avgTimeToHire} days`}
+              caption="Apply date to accepted event"
+            />
+            <KpiCard
+              label="Interviews This Week"
+              value={analyticsLoading ? "..." : analytics.interviewsThisWeek}
+              caption="Scheduled in current week"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <div className="blueprint-card p-5">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Application Funnel</h3>
+                  <p className="mt-1 text-xs text-[#737373]">Status distribution with hover percentages</p>
+                </div>
+                <span className="rounded-full bg-[#f2f2f2] px-3 py-1 text-xs font-semibold text-[#737373]">
+                  {chartTotals} total
+                </span>
+              </div>
+              <div className="h-[280px]">
+                {analyticsLoading ? (
+                  <div className="h-full animate-pulse rounded-[10px] bg-[#f2f2f2]" />
+                ) : (
+                  <Doughnut data={funnelChartData} options={funnelChartOptions} />
+                )}
+              </div>
+            </div>
+
+            <div className="blueprint-card p-5">
+              <div className="mb-5">
+                <h3 className="text-lg font-bold text-gray-900">Applications Over Time</h3>
+                <p className="mt-1 text-xs text-[#737373]">Weekly application volume across the latest 8 weeks</p>
+              </div>
+              <div className="h-[280px]">
+                {analyticsLoading ? (
+                  <div className="h-full animate-pulse rounded-[10px] bg-[#f2f2f2]" />
+                ) : (
+                  <Line data={weeklyChartData} options={weeklyChartOptions} />
+                )}
+              </div>
+            </div>
+
+            <div className="blueprint-card p-5 xl:col-span-2">
+              <div className="mb-5">
+                <h3 className="text-lg font-bold text-gray-900">Top Jobs</h3>
+                <p className="mt-1 text-xs text-[#737373]">Click a bar to open applications filtered by job</p>
+              </div>
+              <div className="h-[280px]">
+                {analyticsLoading ? (
+                  <div className="h-full animate-pulse rounded-[10px] bg-[#f2f2f2]" />
+                ) : analytics.applicationsByJob.length === 0 ? (
+                  <div className="flex h-full items-center justify-center rounded-[10px] border border-[#e5e5e5] text-sm text-[#737373]">
+                    No application volume yet.
+                  </div>
+                ) : (
+                  <Bar
+                    ref={topJobsChartRef}
+                    data={topJobsChartData}
+                    options={topJobsChartOptions}
+                    onClick={handleTopJobsClick}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* --- MAIN LAYOUT --- */}

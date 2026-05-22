@@ -138,6 +138,133 @@ export const findActivity = async ({ recruiterId }) => {
   return result.rows;
 };
 
+const buildAnalyticsDateFilter = ({ startDate, endDate }, alias = "a") => {
+  const clauses = [];
+  const params = [];
+
+  if (startDate) {
+    params.push(startDate);
+    clauses.push(`${alias}.applied_at >= $${params.length}::date`);
+  }
+
+  if (endDate) {
+    params.push(endDate);
+    clauses.push(`${alias}.applied_at < ($${params.length}::date + INTERVAL '1 day')`);
+  }
+
+  return { clauses, params };
+};
+
+export const findRecruiterAnalytics = async ({ recruiterId, startDate, endDate }) => {
+  const dateFilter = buildAnalyticsDateFilter({ startDate, endDate });
+  const baseParams = [recruiterId, ...dateFilter.params];
+  const baseClauses = [
+    "jp.recruiter_id = $1",
+    ...dateFilter.clauses.map((clause) =>
+      clause.replace(/\$(\d+)/g, (_, index) => `$${Number(index) + 1}`)
+    ),
+  ];
+  const baseWhere = `WHERE ${baseClauses.join(" AND ")}`;
+  const weekEnd = endDate || new Date().toISOString().slice(0, 10);
+
+  const statusResult = await pool.query(
+    `SELECT a.status, COUNT(*)::int AS count
+     FROM applications a
+     INNER JOIN job_posts jp ON jp.id = a.job_post_id
+     ${baseWhere}
+     GROUP BY a.status`,
+    baseParams
+  );
+
+  const weekResult = await pool.query(
+    `WITH weeks AS (
+       SELECT generate_series(
+         date_trunc('week', $2::date) - INTERVAL '7 weeks',
+         date_trunc('week', $2::date),
+         INTERVAL '1 week'
+       )::date AS week_start
+     )
+     SELECT
+       'Week ' || ROW_NUMBER() OVER (ORDER BY weeks.week_start) AS week,
+       weeks.week_start,
+       COUNT(a.id)::int AS count
+     FROM weeks
+     LEFT JOIN applications a
+       ON date_trunc('week', a.applied_at)::date = weeks.week_start
+      AND EXISTS (
+        SELECT 1
+        FROM job_posts jp
+        WHERE jp.id = a.job_post_id
+          AND jp.recruiter_id = $1
+      )
+     GROUP BY weeks.week_start
+     ORDER BY weeks.week_start`,
+    [recruiterId, weekEnd]
+  );
+
+  const jobResult = await pool.query(
+    `SELECT jp.id, jp.title, COUNT(a.id)::int AS count
+     FROM applications a
+     INNER JOIN job_posts jp ON jp.id = a.job_post_id
+     ${baseWhere}
+     GROUP BY jp.id, jp.title, jp.created_at
+     ORDER BY COUNT(a.id) DESC, jp.created_at DESC
+     LIMIT 5`,
+    baseParams
+  );
+
+  const kpiResult = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total_applications,
+       COUNT(*) FILTER (WHERE a.status = 'accepted')::int AS accepted_applications
+     FROM applications a
+     INNER JOIN job_posts jp ON jp.id = a.job_post_id
+     ${baseWhere}`,
+    baseParams
+  );
+
+  const timeToHireResult = await pool.query(
+    `SELECT AVG(DATE_PART('day', accepted_event.created_at - a.applied_at))::numeric(10, 1) AS avg_time_to_hire
+     FROM applications a
+     INNER JOIN job_posts jp ON jp.id = a.job_post_id
+     LEFT JOIN LATERAL (
+       SELECT ae.created_at
+       FROM application_events ae
+       WHERE ae.application_id = a.id
+         AND (
+           ae.event_type = 'offer_sent'
+           OR (ae.event_type = 'status_changed' AND ae.metadata->>'to' = 'accepted')
+         )
+       ORDER BY ae.created_at ASC
+       LIMIT 1
+     ) accepted_event ON true
+     ${baseWhere}
+       AND a.status = 'accepted'
+       AND accepted_event.created_at IS NOT NULL`,
+    baseParams
+  );
+
+  const interviewsResult = await pool.query(
+    `SELECT COUNT(*)::int AS interviews_this_week
+     FROM interviews i
+     INNER JOIN applications a ON a.id = i.application_id
+     INNER JOIN job_posts jp ON jp.id = a.job_post_id
+     WHERE jp.recruiter_id = $1
+       AND i.interview_datetime >= date_trunc('week', now())
+       AND i.interview_datetime < date_trunc('week', now()) + INTERVAL '1 week'`,
+    [recruiterId]
+  );
+
+  return {
+    statuses: statusResult.rows,
+    weeks: weekResult.rows,
+    jobs: jobResult.rows,
+    kpis: kpiResult.rows[0] || {},
+    avgTimeToHire: timeToHireResult.rows[0]?.avg_time_to_hire,
+    interviewsThisWeek: interviewsResult.rows[0]?.interviews_this_week || 0,
+  };
+};
+
 export const findById = async ({ applicationId, recruiterId }) => {
   const result = await pool.query(
     `SELECT
@@ -346,7 +473,11 @@ export const updateCandidateApplication = async (client, { applicationId, candid
 
 export const findOwnedApplicationForUpdate = async (client, { applicationId, recruiterId }) => {
   const result = await client.query(
-    `SELECT a.id, a.status
+    `SELECT a.id,
+            a.status,
+            a.candidate_id,
+            a.job_post_id,
+            jp.title AS job_title
      FROM applications a
      INNER JOIN job_posts jp ON jp.id = a.job_post_id
      WHERE a.id = $1

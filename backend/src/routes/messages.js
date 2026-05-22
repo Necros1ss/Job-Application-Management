@@ -1,6 +1,7 @@
 import express from "express";
 import { pool } from "../config/db.js";
 import { requireAuth } from "../middlewares/auth.js";
+import { broadcast } from "../utils/notificationBroadcast.js";
 
 const router = express.Router();
 
@@ -223,6 +224,16 @@ router.post("/", requireAuth, async (req, res) => {
     }
 
     await client.query("COMMIT");
+
+    broadcast(candidateId, "new_message", {
+      id: `message-${result.rows[0].id}`,
+      title: "New message",
+      message: subject.trim(),
+      messageId: result.rows[0].id,
+      applicationId: normalizedApplicationId,
+      jobPostId: normalizedJobPostId,
+      url: "/candidate/messages",
+    });
 
     return res.status(201).json({
       id: result.rows[0].id,

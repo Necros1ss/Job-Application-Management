@@ -1,4 +1,5 @@
 import { listJobs, listUsers, getStats, moderateJob, setUserLockState, softDeleteUser } from "../repositories/adminRepository.js";
+import { broadcast } from "../utils/notificationBroadcast.js";
 
 const assertNotSelf = (actorId, targetId, action) => {
   if (String(actorId) === String(targetId)) {
@@ -21,6 +22,13 @@ export const lockUser = async ({ actorId, userId }) => {
     error.status = 404;
     throw error;
   }
+  broadcast(updated.id, "account_locked", {
+    id: `account-locked-${updated.id}-${Date.now()}`,
+    title: "Account locked",
+    message: "Your account has been locked by an administrator.",
+    url: "/login",
+  });
+
   return updated;
 };
 
@@ -32,6 +40,13 @@ export const unlockUser = async ({ actorId, userId }) => {
     error.status = 404;
     throw error;
   }
+  broadcast(updated.id, "account_unlocked", {
+    id: `account-unlocked-${updated.id}-${Date.now()}`,
+    title: "Account unlocked",
+    message: "Your account has been unlocked by an administrator.",
+    url: updated.role === "recruiter" ? "/recruiter" : "/candidate",
+  });
+
   return updated;
 };
 

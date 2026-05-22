@@ -355,6 +355,7 @@ export const applicationsApi = {
     return request(`/applications/recruiter?${params.toString()}`);
   },
   listRecruiterActivity: () => request("/applications/recruiter/activity"),
+  getRecruiterAnalytics: (params = {}) => request(`/applications/recruiter/analytics${buildQueryString(params)}`),
   getForRecruiter: (id) => request(`/applications/recruiter/${id}`),
   getRecruiterCvFile: (id) => requestBlob(`/applications/recruiter/${id}/cv`),
   update: (id, payload) =>
@@ -485,15 +486,36 @@ export const jobPostsApi = {
     return Array.isArray(response) ? response : response.data || [];
   },
 
-  listPaginated: ({ search = "", page = 1, limit = 10 } = {}) => {
+  listPaginated: ({
+    search = "",
+    location = "",
+    employment_type = "",
+    experience = "",
+    salary_min = "",
+    salary_max = "",
+    sort = "newest",
+    page = 1,
+    limit = 10,
+  } = {}) => {
     const params = new URLSearchParams({
       page: String(page),
       limit: String(limit),
     });
-    const normalizedSearch = search.trim();
-    if (normalizedSearch) {
-      params.set("search", normalizedSearch);
-    }
+    const filterParams = {
+      search: search.trim(),
+      location: location.trim(),
+      employment_type,
+      experience,
+      salary_min,
+      salary_max,
+      sort,
+    };
+
+    Object.entries(filterParams).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, String(value));
+      }
+    });
 
     return request(`/job-posts?${params.toString()}`);
   },

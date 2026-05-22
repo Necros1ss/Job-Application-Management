@@ -1,6 +1,7 @@
 import express from "express";
 import { pool } from "../config/db.js";
 import { requireAuth } from "../middlewares/auth.js";
+import { broadcast } from "../utils/notificationBroadcast.js";
 
 const router = express.Router();
 
@@ -266,6 +267,19 @@ router.post("/", requireAuth, async (req, res) => {
     });
 
     await client.query("COMMIT");
+
+    broadcast(application.candidate_id, "interview_scheduled", {
+      id: `interview-${interviewResult.rows[0]?.id || applicationId}`,
+      title: "Interview scheduled",
+      message: `Interview scheduled for ${application.job_title}.`,
+      applicationId,
+      interviewId: interviewResult.rows[0]?.id,
+      jobPostId: application.job_post_id,
+      jobTitle: application.job_title,
+      interviewDateTime,
+      mode,
+      url: "/candidate/applications",
+    });
 
     return res.status(201).json({
       interview: interviewResult.rows[0],

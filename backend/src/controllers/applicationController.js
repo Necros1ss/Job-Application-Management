@@ -34,6 +34,15 @@ export const getActivity = asyncHandler(async (req, res) => {
   }
 });
 
+export const getAnalytics = asyncHandler(async (req, res) => {
+  try {
+    const result = await applicationService.getAnalytics({ user: req.user, query: req.query });
+    return res.json(result);
+  } catch (error) {
+    return sendError(res, error);
+  }
+});
+
 export const getForRecruiter = asyncHandler(async (req, res) => {
   try {
     const result = await applicationService.getForRecruiter({ user: req.user, applicationId: req.params.id });

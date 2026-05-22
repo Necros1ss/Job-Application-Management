@@ -1,11 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { FaSearch, FaBell, FaEnvelope } from "react-icons/fa";
-import { useLocation } from 'react-router-dom';
-import { messagesApi } from '../lib/api';
-import { formatMessageTime } from '../utils/format';
+/* eslint-disable react/prop-types */
+import { FaSearch, FaEnvelope } from "react-icons/fa";
 import AccountMenu from './AccountMenu';
 import LanguageSwitcher from './LanguageSwitcher';
-import { useI18n } from '../lib/i18n';
+import NotificationBell from './NotificationBell';
 
 const TopBarRecruiter = ({
   userName,
@@ -16,102 +13,6 @@ const TopBarRecruiter = ({
   searchPlaceholder = "Search...",
 }) => {
   const isSearchControlled = typeof onSearchChange === "function";
-  const location = useLocation();
-  const dropdownRef = useRef(null);
-  const { t } = useI18n();
-  
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loadingInbox, setLoadingInbox] = useState(false);
-  const [inboxError, setInboxError] = useState('');
-
-  const firstSegment = location.pathname.split('/')[1];
-  const isCandidate = ['candidate', 'recruiter'].includes(firstSegment) 
-    ? firstSegment === 'candidate' 
-    : true; // Default to candidate
-
-  // Lấy số lượng tin nhắn chưa đọc
-  useEffect(() => {
-    if (!isCandidate) {
-      setUnreadCount(0);
-      return;
-    }
-    let mounted = true;
-    messagesApi.unreadCount()
-      .then(payload => mounted && setUnreadCount(payload?.unreadCount || 0))
-      .catch(() => mounted && setUnreadCount(0));
-    return () => { mounted = false; };
-  }, [isCandidate]);
-
-  // Xử lý Click Outside
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  // Load danh sách tin nhắn
-  const loadInbox = async () => {
-    try {
-      setLoadingInbox(true);
-      setInboxError('');
-      const payload = await messagesApi.inbox({ limit: 8, offset: 0 });
-      setMessages(Array.isArray(payload) ? payload : []);
-    } catch (error) {
-      setMessages([]);
-      setInboxError(error.message || 'Error');
-    } finally {
-      setLoadingInbox(false);
-    }
-  };
-
-  const handleBellClick = async () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) await loadInbox();
-  };
-
-  const handleMarkRead = async (message) => {
-    if (!message || message.isRead) return;
-    try {
-      await messagesApi.markRead(message.id);
-      setMessages(prev => prev.map(item => 
-        item.id === message.id ? { ...item, isRead: true } : item
-      ));
-      setUnreadCount(prev => Math.max(prev - 1, 0));
-    } catch { /* Bỏ qua lỗi để UI phản hồi mượt */ }
-  };
-
-  // 2. Gom nhóm logic hiển thị nội dung dropdown
-  const renderInboxContent = () => {
-    if (loadingInbox) return <div className="px-4 py-8 text-center text-sm text-[#737373]">{t("topbar.loadingMessages")}</div>;
-    if (inboxError) return <div className="px-4 py-8 text-center text-sm text-[#c22b10]">{inboxError}</div>;
-    if (messages.length === 0) return <div className="px-4 py-8 text-center text-sm text-[#737373]">{t("topbar.noMessages")}</div>;
-    
-    return messages.map((message) => (
-      <button
-        key={message.id}
-        type="button"
-        onClick={() => handleMarkRead(message)}
-        className={`w-full border-b border-[#e5e5e5] px-4 py-3 text-left transition-colors hover:bg-[#f2f2f2] ${message.isRead ? 'bg-white' : 'bg-[#f2f2f2]'}`}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <p className={`text-sm ${message.isRead ? 'font-medium text-[#737373]' : 'font-semibold text-[#0a0a0a]'}`}>
-            {message.subject}
-          </p>
-          {!message.isRead && <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-black" />}
-        </div>
-        <p className="mt-1 text-xs text-[#737373]">{t("messages.from")}: {message.senderName || 'Recruiter'}</p>
-        <p className="mt-1 line-clamp-2 text-sm text-[#0a0a0a]">{message.content}</p>
-        <p className="mt-2 text-[11px] text-[#737373]">{formatMessageTime(message.createdAt)}</p>
-      </button>
-    ));
-  };
 
   return (
     <header className="w-full border-b border-[#e5e5e5] bg-white">
@@ -142,33 +43,7 @@ const TopBarRecruiter = ({
             <FaEnvelope size={18} />
           </button>
 
-          <div className="relative" ref={dropdownRef}>
-            <button
-              type="button"
-              onClick={handleBellClick}
-              className="relative p-1.5 transition-colors hover:text-black"
-              aria-label="Notifications"
-            >
-              <FaBell size={18} />
-              {unreadCount > 0 && (
-                <span className="absolute -right-2 -top-1.5 h-[18px] min-w-[18px] rounded-full bg-[#c22b10] px-1 text-center text-[10px] font-semibold leading-[18px] text-white">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </button>
-
-            {isOpen && (
-              <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
-                <div className="border-b border-[#e5e5e5] bg-[#f2f2f2] px-4 py-3">
-                  <p className="text-sm font-medium text-[#0a0a0a]">{t("topbar.messages")}</p>
-                  <p className="text-xs text-[#737373]">{unreadCount} {t("topbar.unread")}</p>
-                </div>
-                <div className="max-h-96 overflow-auto">
-                  {renderInboxContent()}
-                </div>
-              </div>
-            )}
-          </div>
+          <NotificationBell />
 
           <div className="h-8 w-px bg-[#e5e5e5]" />
 

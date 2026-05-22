@@ -1,4 +1,3 @@
-import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import DashboardLayout from "./DashboardLayout";
 import Layout from "./Layout";
@@ -34,13 +33,15 @@ import AdminJobs from "./Pages/Admin/AdminJobs";
 import NotFound from "./Pages/NotFound";
 import { I18nProvider } from "./lib/i18n";
 import AutoTranslate from "./Components/AutoTranslate";
+import ErrorBoundary from "./Components/ErrorBoundary";
 
 function App() {
   return (
-    <I18nProvider>
-      <AutoTranslate />
-      <Router>
-        <Routes>
+    <ErrorBoundary>
+      <I18nProvider>
+        <AutoTranslate />
+        <Router>
+          <Routes>
       <Route index element={<Landing />} />
       <Route path="login" element={<Login />} />
       <Route path="signup" element={<SelectRole />} />
@@ -86,9 +87,10 @@ function App() {
         <Route path="jobs" element={<AdminJobs />} />
       </Route>
       <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </I18nProvider>
+          </Routes>
+        </Router>
+      </I18nProvider>
+    </ErrorBoundary>
   );
 }
 

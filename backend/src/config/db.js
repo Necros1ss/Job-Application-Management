@@ -412,6 +412,12 @@ export const ensurePhaseSchema = async () => {
        CREATE INDEX IF NOT EXISTS idx_attendance_employee_date ON attendance_records(employee_id, work_date DESC);
        CREATE INDEX IF NOT EXISTS idx_leave_requests_employee_status ON leave_requests(employee_id, status);`
     );
+
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_job_posts_search
+       ON job_posts
+       USING gin(to_tsvector('english', title || ' ' || coalesce(description, '')));`
+    );
   } finally {
     client.release();
   }

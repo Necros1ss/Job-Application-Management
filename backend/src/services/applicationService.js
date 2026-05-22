@@ -5,6 +5,7 @@ import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import * as applicationRepository from "../repositories/applicationRepository.js";
+import { broadcast } from "../utils/notificationBroadcast.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -253,6 +254,23 @@ const mapActivityRow = (row) => ({
   jobTitle: row.job_title,
 });
 
+const parseOptionalDate = (value, label) => {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw createHttpError(400, `Invalid ${label}. Use YYYY-MM-DD format`);
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    throw createHttpError(400, `Invalid ${label}. Use YYYY-MM-DD format`);
+  }
+
+  return value;
+};
+
 const ensureRecruiterForCompany = async (client, companyName) => {
   const normalizedCompanyName = companyName.trim();
   const existing = await applicationRepository.findRecruiterByCompanyName(client, { companyName: normalizedCompanyName });
@@ -331,6 +349,56 @@ export const getActivity = async ({ user }) => {
   assertRole(user, "recruiter", "Only recruiter accounts can access activity");
   const rows = await applicationRepository.findActivity({ recruiterId: user.id });
   return rows.map(mapActivityRow);
+};
+
+export const getAnalytics = async ({ user, query }) => {
+  assertRole(user, "recruiter", "Only recruiter accounts can access analytics");
+  const startDate = parseOptionalDate(query.startDate, "startDate");
+  const endDate = parseOptionalDate(query.endDate, "endDate");
+
+  if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+    throw createHttpError(400, "startDate must be before or equal to endDate");
+  }
+
+  const analytics = await applicationRepository.findRecruiterAnalytics({
+    recruiterId: user.id,
+    startDate,
+    endDate,
+  });
+
+  const applicationsByStatus = {
+    applied: 0,
+    reviewed: 0,
+    scheduled_interview: 0,
+    accepted: 0,
+    rejected: 0,
+  };
+
+  analytics.statuses.forEach((row) => {
+    if (Object.prototype.hasOwnProperty.call(applicationsByStatus, row.status)) {
+      applicationsByStatus[row.status] = Number(row.count || 0);
+    }
+  });
+
+  const totalApplications = Number(analytics.kpis.total_applications || 0);
+  const acceptedApplications = Number(analytics.kpis.accepted_applications || 0);
+
+  return {
+    applicationsByStatus,
+    applicationsByWeek: analytics.weeks.map((row) => ({
+      week: row.week,
+      weekStart: row.week_start,
+      count: Number(row.count || 0),
+    })),
+    applicationsByJob: analytics.jobs.map((row) => ({
+      id: row.id,
+      title: row.title,
+      count: Number(row.count || 0),
+    })),
+    conversionRate: totalApplications > 0 ? Math.round((acceptedApplications / totalApplications) * 100) : 0,
+    avgTimeToHire: Number(analytics.avgTimeToHire || 0),
+    interviewsThisWeek: Number(analytics.interviewsThisWeek || 0),
+  };
 };
 
 export const getForRecruiter = async ({ user, applicationId }) => {
@@ -552,7 +620,7 @@ export const updateStatus = async ({ user, applicationId, status }) => {
     throw createHttpError(400, "Invalid status. Must be one of: applied, reviewed, scheduled_interview, accepted, rejected");
   }
 
-  return applicationRepository.withTransaction(async (client) => {
+  const result = await applicationRepository.withTransaction(async (client) => {
     const application = await findOwnedApplicationOrThrow(client, {
       applicationId: id,
       recruiterId: user.id,
@@ -570,8 +638,27 @@ export const updateStatus = async ({ user, applicationId, status }) => {
       metadata: { from: application.status, to: status, changedBy: user.id },
     });
 
-    return { id: updated.id, status: updated.status };
+    return {
+      data: { id: updated.id, status: updated.status },
+      notification: {
+        userId: application.candidate_id,
+        payload: {
+          id: `application-status-${id}-${Date.now()}`,
+          title: "Application status updated",
+          message: `Your application for ${application.job_title || "a job"} moved to ${status}.`,
+          applicationId: id,
+          jobPostId: application.job_post_id,
+          status,
+          previousStatus: application.status,
+          url: "/candidate/applications",
+        },
+      },
+    };
   });
+
+  broadcast(result.notification.userId, "application_status_changed", result.notification.payload);
+
+  return result.data;
 };
 
 export const updateRating = async ({ user, applicationId, rating }) => {
