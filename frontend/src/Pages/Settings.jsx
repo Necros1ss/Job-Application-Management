@@ -1,7 +1,17 @@
-import { useState } from "react";
-import { FaEye, FaEyeSlash, FaLock, FaTrashAlt } from "react-icons/fa";
-import { accountApi } from "../lib/api";
+import { useEffect, useMemo, useState } from "react";
+import {
+  FaBell,
+  FaCheck,
+  FaEye,
+  FaEyeSlash,
+  FaLock,
+  FaShieldAlt,
+  FaTrashAlt,
+  FaUserCircle,
+} from "react-icons/fa";
 import DeleteAccountModal from "../Components/DeleteAccountModal";
+import { accountApi, tokenStorage, usersApi } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 import { showError, showSuccess } from "../utils/toast";
 
 const DEFAULT_PREFERENCES = {
@@ -12,15 +22,18 @@ const DEFAULT_PREFERENCES = {
 };
 
 const SETTINGS_TABS = [
-  { id: "security", label: "Security" },
-  { id: "notifications", label: "Notifications" },
+  { id: "security", labelKey: "settings.security", icon: <FaLock /> },
+  { id: "notifications", labelKey: "settings.notifications", icon: <FaBell /> },
 ];
 
-const Toggle = ({ checked, onChange }) => (
+const Toggle = ({ checked, onChange, disabled = false }) => (
   <button
     type="button"
     onClick={onChange}
-    className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-black" : "bg-[#e5e5e5]"}`}
+    disabled={disabled}
+    className={`relative h-6 w-11 rounded-full transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      checked ? "bg-black" : "bg-[#e5e5e5]"
+    }`}
     aria-pressed={checked}
   >
     <span
@@ -31,9 +44,50 @@ const Toggle = ({ checked, onChange }) => (
   </button>
 );
 
+const SettingsSkeleton = () => (
+  <div className="animate-pulse space-y-6">
+    <div className="blueprint-hero-panel p-6">
+      <div className="h-4 w-32 rounded-full bg-[#e5e5e5]" />
+      <div className="mt-3 h-9 w-64 rounded-full bg-[#e5e5e5]" />
+      <div className="mt-3 h-4 w-96 max-w-full rounded-full bg-[#f2f2f2]" />
+    </div>
+    <div className="grid gap-4 lg:grid-cols-3">
+      {[1, 2, 3].map((item) => (
+        <div key={item} className="blueprint-card h-28 p-5" />
+      ))}
+    </div>
+    <div className="blueprint-card h-80 p-6" />
+  </div>
+);
+
+const PasswordField = ({ label, value, setValue, show, setShow, placeholder }) => (
+  <div>
+    <label className="mb-1.5 block text-sm font-semibold text-[#0a0a0a]">{label}</label>
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        placeholder={placeholder}
+        className="blueprint-input w-full px-3 py-2.5 pr-11"
+      />
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737373] hover:text-[#0a0a0a]"
+        aria-label={show ? "Hide password" : "Show password"}
+      >
+        {show ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+      </button>
+    </div>
+  </div>
+);
+
 const Settings = () => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState("security");
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [profile, setProfile] = useState(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -43,28 +97,37 @@ const Settings = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
-  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   const userRole = tokenStorage.getRole() || localStorage.getItem("userRole") || "";
 
   useEffect(() => {
-    const loadPreferences = async () => {
+    let mounted = true;
+
+    const loadSettings = async () => {
       try {
-        setIsLoadingPreferences(true);
-        const profile = await usersApi.me();
+        setIsLoading(true);
+        const nextProfile = await usersApi.me();
+        if (!mounted) return;
+        setProfile(nextProfile);
         setPreferences({
           ...DEFAULT_PREFERENCES,
-          ...(profile.notificationPreferences || {}),
+          ...(nextProfile.notificationPreferences || {}),
         });
       } catch (error) {
-        showError(error.message || "Failed to load notification preferences");
+        if (mounted) {
+          showError(error.message || "Failed to load account settings");
+        }
       } finally {
-        setIsLoadingPreferences(false);
+        if (mounted) setIsLoading(false);
       }
     };
 
-    loadPreferences();
+    loadSettings();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const notificationOptions = useMemo(
@@ -98,13 +161,17 @@ const Settings = () => {
     [userRole]
   );
 
+  const enabledNotifications = notificationOptions.filter((option) => preferences[option.key]).length;
+  const displayName = profile?.company_name || profile?.full_name || profile?.name || "User Name";
+  const displayEmail = profile?.email || "email@example.com";
+
   const validatePassword = (pwd) => {
     if (pwd.length < 8) return "Password must be at least 8 characters";
     return "";
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     if (!currentPassword) {
       showError("Please enter your current password.");
@@ -154,181 +221,213 @@ const Settings = () => {
     }
   };
 
-  const renderPasswordField = ({ label, value, setValue, show, setShow, placeholder }) => (
-    <div>
-      <label className="mb-1.5 block text-sm font-semibold text-[#0a0a0a]">{label}</label>
-      <div className="relative">
-        <input
-          type={show ? "text" : "password"}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={placeholder}
-          className="blueprint-input w-full pr-11"
-        />
-        <button
-          type="button"
-          onClick={() => setShow(!show)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737373] hover:text-[#0a0a0a]"
-        >
-          {show ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
-    <section className="max-w-3xl">
-      <div className="mb-8">
-        <p className="blueprint-kicker">Account controls</p>
-        <h2 className="mt-1 text-2xl font-semibold text-[#0a0a0a]">Settings</h2>
-        <p className="mt-1 text-[#737373]">Manage your account preferences and security</p>
-      </div>
-
-      <div className="mb-6 inline-flex rounded-full border border-[#e5e5e5] bg-white p-1">
-        {SETTINGS_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              activeTab === tab.id ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2]"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "security" && (
+    <section className="mx-auto max-w-6xl space-y-6">
+      {isLoading ? (
+        <SettingsSkeleton />
+      ) : (
         <>
-          <div className="blueprint-card mb-6 p-6 md:p-8">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-[#0a0a0a]">
-                <FaLock size={20} />
-              </div>
+          <div className="blueprint-hero-panel p-5 md:p-6">
+            <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h3 className="font-semibold text-[#0a0a0a]">Change Password</h3>
-                <p className="text-sm text-[#737373]">Update your password to keep your account secure</p>
+                <p className="blueprint-kicker">{t("settings.kicker")}</p>
+                <h1 className="mt-1 text-3xl font-semibold text-black md:text-4xl">{t("settings.title")}</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#737373]">{t("settings.subtitle")}</p>
+              </div>
+              <div className="blueprint-card flex min-w-0 items-center gap-4 p-4 lg:min-w-[320px]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-black text-lg font-semibold text-white">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-[#0a0a0a]">{displayName}</p>
+                  <p className="truncate text-sm text-[#737373]">{displayEmail}</p>
+                  <span className="mt-2 inline-flex rounded-full bg-[#f2f2f2] px-2.5 py-1 text-xs font-semibold capitalize text-[#0a0a0a]">
+                    {userRole || "account"}
+                  </span>
+                </div>
               </div>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {renderPasswordField({
-                label: "Current Password",
-                value: currentPassword,
-                setValue: setCurrentPassword,
-                show: showCurrent,
-                setShow: setShowCurrent,
-                placeholder: "Enter current password",
-              })}
-              {renderPasswordField({
-                label: "New Password",
-                value: newPassword,
-                setValue: setNewPassword,
-                show: showNew,
-                setShow: setShowNew,
-                placeholder: "At least 8 characters",
-              })}
-              {renderPasswordField({
-                label: "Confirm New Password",
-                value: confirmPassword,
-                setValue: setConfirmPassword,
-                show: showConfirm,
-                setShow: setShowConfirm,
-                placeholder: "Re-enter new password",
-              })}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="blueprint-primary disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSubmitting ? "Updating..." : "Update Password"}
-                </button>
-              </div>
-            </form>
           </div>
 
-          <div className="rounded-[14px] border border-red-200 bg-white p-6 shadow-[var(--shadow-subtle-2)] md:p-8">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-red-50 text-red-600">
-                <FaTrashAlt size={20} />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="blueprint-card p-5">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-black">
+                <FaUserCircle />
               </div>
-              <div>
-                <h3 className="font-semibold text-[#0a0a0a]">Delete Account</h3>
-                <p className="text-sm text-[#737373]">Permanently delete your account and all associated data</p>
-              </div>
+              <p className="text-xs font-semibold uppercase text-[#737373]">Account type</p>
+              <p className="mt-1 text-xl font-semibold capitalize text-black">{userRole || "Unknown"}</p>
             </div>
-            <p className="mb-4 text-sm text-[#737373]">
-              Once you delete your account, there is no going back. Please be certain.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowDeleteAccountModal(true)}
-              className="rounded-[10px] border border-red-200 px-5 py-2.5 font-semibold text-red-700 transition hover:bg-red-50"
-            >
-              Delete my Account
-            </button>
+            <div className="blueprint-card p-5">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-black">
+                <FaShieldAlt />
+              </div>
+              <p className="text-xs font-semibold uppercase text-[#737373]">Security</p>
+              <p className="mt-1 text-xl font-semibold text-black">Password protected</p>
+            </div>
+            <div className="blueprint-card p-5">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-black">
+                <FaBell />
+              </div>
+              <p className="text-xs font-semibold uppercase text-[#737373]">Notifications</p>
+              <p className="mt-1 text-xl font-semibold text-black">
+                {enabledNotifications}/{notificationOptions.length || 0} enabled
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+            <aside className="h-fit rounded-[14px] border border-[#e5e5e5] bg-white p-2 shadow-[var(--shadow-subtle-2)]">
+              {SETTINGS_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex w-full items-center gap-3 rounded-[10px] px-4 py-3 text-left text-sm font-semibold transition ${
+                    activeTab === tab.id ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2] hover:text-[#0a0a0a]"
+                  }`}
+                >
+                  <span className="text-sm">{tab.icon}</span>
+                  {t(tab.labelKey)}
+                </button>
+              ))}
+            </aside>
+
+            <div className="space-y-6">
+              {activeTab === "security" && (
+                <>
+                  <div className="blueprint-card p-5 md:p-6">
+                    <div className="mb-6 flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-[#0a0a0a]">
+                        <FaLock size={18} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-[#0a0a0a]">{t("settings.changePassword")}</h2>
+                        <p className="mt-1 text-sm text-[#737373]">{t("settings.changePasswordDesc")}</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="grid gap-4">
+                      <PasswordField
+                        label={t("settings.currentPassword")}
+                        value={currentPassword}
+                        setValue={setCurrentPassword}
+                        show={showCurrent}
+                        setShow={setShowCurrent}
+                        placeholder="Enter current password"
+                      />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <PasswordField
+                          label={t("settings.newPassword")}
+                          value={newPassword}
+                          setValue={setNewPassword}
+                          show={showNew}
+                          setShow={setShowNew}
+                          placeholder="At least 8 characters"
+                        />
+                        <PasswordField
+                          label={t("settings.confirmPassword")}
+                          value={confirmPassword}
+                          setValue={setConfirmPassword}
+                          show={showConfirm}
+                          setShow={setShowConfirm}
+                          placeholder="Re-enter new password"
+                        />
+                      </div>
+
+                      <div className="mt-2 flex flex-col gap-3 rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3 text-sm text-[#737373]">
+                          <FaCheck className="mt-1 text-black" />
+                          <span>Use at least 8 characters and avoid reusing your current password.</span>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="blueprint-primary shrink-0 px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isSubmitting ? t("settings.updating") : t("settings.updatePassword")}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  <div className="rounded-[14px] border border-red-200 bg-white p-5 shadow-[var(--shadow-subtle-2)] md:p-6">
+                    <div className="mb-4 flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-red-50 text-red-700">
+                        <FaTrashAlt size={18} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-[#0a0a0a]">{t("settings.deleteAccount")}</h2>
+                        <p className="mt-1 text-sm text-[#737373]">{t("settings.deleteAccountDesc")}</p>
+                      </div>
+                    </div>
+                    <div className="rounded-[14px] border border-red-100 bg-red-50 p-4">
+                      <p className="text-sm leading-6 text-red-800">{t("settings.deleteWarning")}</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteAccountModal(true)}
+                        className="mt-4 rounded-[10px] border border-red-200 bg-white px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+                      >
+                        {t("settings.deleteAction")}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === "notifications" && (
+                <div className="blueprint-card p-5 md:p-6">
+                  <div className="mb-6 flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-[#0a0a0a]">
+                      <FaBell size={18} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-[#0a0a0a]">{t("settings.emailNotifications")}</h2>
+                      <p className="mt-1 text-sm text-[#737373]">{t("settings.emailNotificationsDesc")}</p>
+                    </div>
+                  </div>
+
+                  {notificationOptions.length > 0 ? (
+                    <div className="divide-y divide-[#e5e5e5] rounded-[14px] border border-[#e5e5e5]">
+                      {notificationOptions.map((option) => (
+                        <div key={option.key} className="flex items-center justify-between gap-6 p-4">
+                          <div>
+                            <p className="font-semibold text-[#0a0a0a]">{option.label}</p>
+                            <p className="mt-1 text-sm leading-6 text-[#737373]">{option.description}</p>
+                          </div>
+                          <Toggle
+                            checked={Boolean(preferences[option.key])}
+                            disabled={isSavingPreferences}
+                            onChange={() =>
+                              setPreferences((current) => ({
+                                ...current,
+                                [option.key]: !current[option.key],
+                              }))
+                            }
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-[14px] border border-dashed border-[#e5e5e5] p-6 text-center text-sm text-[#737373]">
+                      No notification preferences are available for this role.
+                    </p>
+                  )}
+
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSavePreferences}
+                      disabled={isSavingPreferences}
+                      className="blueprint-primary px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isSavingPreferences ? t("settings.savingNotifications") : t("settings.saveNotifications")}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </>
-      )}
-
-      {activeTab === "notifications" && (
-        <div className="blueprint-card p-6 md:p-8">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-[#0a0a0a]">
-              <FaBell size={18} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-[#0a0a0a]">Email Notifications</h3>
-              <p className="text-sm text-[#737373]">Choose which account events should trigger email updates.</p>
-            </div>
-          </div>
-
-          {isLoadingPreferences ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-16 animate-pulse rounded-[10px] bg-[#f2f2f2]" />
-              ))}
-            </div>
-          ) : notificationOptions.length > 0 ? (
-            <div className="divide-y divide-[#e5e5e5]">
-              {notificationOptions.map((option) => (
-                <div key={option.key} className="flex items-center justify-between gap-6 py-5">
-                  <div>
-                    <p className="font-semibold text-[#0a0a0a]">{option.label}</p>
-                    <p className="mt-1 text-sm text-[#737373]">{option.description}</p>
-                  </div>
-                  <Toggle
-                    checked={Boolean(preferences[option.key])}
-                    onChange={() =>
-                      setPreferences((current) => ({
-                        ...current,
-                        [option.key]: !current[option.key],
-                      }))
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="rounded-[10px] border border-dashed border-[#e5e5e5] p-6 text-center text-sm text-[#737373]">
-              No notification preferences are available for this role.
-            </p>
-          )}
-
-          <div className="mt-6 flex justify-end">
-            <button
-              type="button"
-              onClick={handleSavePreferences}
-              disabled={isSavingPreferences || isLoadingPreferences}
-              className="blueprint-primary disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSavingPreferences ? "Saving..." : "Save Notifications"}
-            </button>
-          </div>
-        </div>
       )}
 
       {showDeleteAccountModal && (

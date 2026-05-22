@@ -4,10 +4,12 @@ import { FaBell } from "react-icons/fa";
 import { messagesApi } from '../lib/api';
 import { formatMessageTime } from '../utils/format';
 import LanguageSwitcher from './LanguageSwitcher';
+import { useI18n } from '../lib/i18n';
 
 const ProfileTopBar = ({ userName, userEmail }) => {
   const location = useLocation();
   const dropdownRef = useRef(null);
+  const { t } = useI18n();
   
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -108,9 +110,9 @@ const ProfileTopBar = ({ userName, userEmail }) => {
 
   // Gom nhóm logic hiển thị nội dung dropdown
   const renderInboxContent = () => {
-    if (loadingInbox) return <div className="px-4 py-8 text-center text-sm text-[#737373]">Loading messages...</div>;
+    if (loadingInbox) return <div className="px-4 py-8 text-center text-sm text-[#737373]">{t("topbar.loadingMessages")}</div>;
     if (inboxError) return <div className="px-4 py-8 text-center text-sm text-[#c22b10]">{inboxError}</div>;
-    if (messages.length === 0) return <div className="px-4 py-8 text-center text-sm text-[#737373]">No messages yet</div>;
+    if (messages.length === 0) return <div className="px-4 py-8 text-center text-sm text-[#737373]">{t("topbar.noMessages")}</div>;
     
     return messages.map((message) => (
       <button
@@ -125,7 +127,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
           </p>
           {!message.isRead && <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-black" />}
         </div>
-        <p className="mt-1 text-xs text-[#737373]">From: {message.senderName || 'Recruiter'}</p>
+        <p className="mt-1 text-xs text-[#737373]">{t("messages.from")}: {message.senderName || 'Recruiter'}</p>
         <p className="mt-1 line-clamp-2 text-sm text-[#0a0a0a]">{message.content}</p>
         <p className="mt-2 text-[11px] text-[#737373]">{formatMessageTime(message.createdAt)}</p>
       </button>
@@ -165,8 +167,8 @@ const ProfileTopBar = ({ userName, userEmail }) => {
             {isOpen && (
               <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
                 <div className="border-b border-[#e5e5e5] bg-[#f2f2f2] px-4 py-3">
-                  <p className="text-sm font-medium text-[#0a0a0a]">Messages</p>
-                  <p className="text-xs text-[#737373]">{unreadCount} Unread</p>
+                  <p className="text-sm font-medium text-[#0a0a0a]">{t("topbar.messages")}</p>
+                  <p className="text-xs text-[#737373]">{unreadCount} {t("topbar.unread")}</p>
                 </div>
                 <div className="max-h-96 overflow-auto">
                   {renderInboxContent()}
@@ -181,7 +183,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
                 <div className="flex items-start justify-between gap-4 border-b border-[#e5e5e5] px-5 py-4">
                   <div>
                     <p className="text-sm font-medium text-[#0a0a0a]">{selectedMessage.subject}</p>
-                    <p className="mt-1 text-xs text-[#737373]">From: {selectedMessage.senderName || 'Recruiter'}</p>
+                    <p className="mt-1 text-xs text-[#737373]">{t("messages.from")}: {selectedMessage.senderName || 'Recruiter'}</p>
                   </div>
                   <button
                     type="button"
@@ -202,7 +204,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
                     onClick={() => setSelectedMessage(null)}
                     className="rounded-[10px] bg-black px-4 py-2 text-sm font-medium text-white hover:bg-[#0a0a0a]"
                   >
-                    Close
+                    {t("common.close")}
                   </button>
                 </div>
               </div>

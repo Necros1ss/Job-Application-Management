@@ -4,9 +4,11 @@ import { RiLogoutCircleRFill } from "react-icons/ri";
 import { BsLayoutSidebarInset } from "react-icons/bs";
 import { Link, useLocation } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
+import { useI18n } from "../lib/i18n";
 
 const SideBar = ({ role = "candidate" }) => {
   const menuItems = SidebarMenuItem(role);
+  const { t } = useI18n();
   const [openSidebar, setOpenSidebar] = useState(false);
   const [pageTitle, setPageTitle] = useState("");
   const [openLogoutModal, setOpenLogoutModal] = useState(false);
@@ -28,7 +30,7 @@ const SideBar = ({ role = "candidate" }) => {
         (item.path === "dashboard" && (currentPath === "" || currentPath === "candidate" || currentPath === "recruiter" || currentPath === "admin"));
     });
     if (currentItem) {
-      setPageTitle(currentItem.label);
+      setPageTitle(t(currentItem.labelKey) || currentItem.label);
     } else {
       setPageTitle(currentPath.charAt(0).toUpperCase() + currentPath.slice(1));
     }
@@ -44,7 +46,7 @@ const SideBar = ({ role = "candidate" }) => {
 
   useEffect(() => {
     findPageTitle();
-  }, [location.pathname, menuItems]);
+  }, [location.pathname, menuItems, t]);
 
   return (
     <div>
@@ -103,7 +105,7 @@ const SideBar = ({ role = "candidate" }) => {
                     }`}
                   >
                     <span className="text-xl">{item.icon}</span>
-                    <span className="text-sm">{item.label}</span>
+                    <span className="text-sm">{t(item.labelKey) || item.label}</span>
                   </Link>
                 </li>
               );
@@ -124,7 +126,7 @@ const SideBar = ({ role = "candidate" }) => {
                 <span className="text-xl">
                   <RiLogoutCircleRFill />
                 </span>
-                <div className="text-sm">Logout</div>
+                <div className="text-sm">{t("menu.logout")}</div>
               </div>
             </li>
           </ul>

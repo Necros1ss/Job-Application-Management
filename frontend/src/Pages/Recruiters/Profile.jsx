@@ -1,122 +1,154 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  MdOutlineEdit,
-  MdCameraAlt,
   MdBusiness,
-  MdLanguage,
-  MdPhone,
-  MdLocationOn,
   MdCategory,
-  MdWork,
-  MdPeople,
-  MdVpnKey,
   MdDescription,
-  MdPerson
+  MdEmail,
+  MdErrorOutline,
+  MdLanguage,
+  MdLocationOn,
+  MdOutlineEdit,
+  MdPeople,
+  MdPhone,
+  MdVpnKey,
 } from "react-icons/md";
-import { usersApi } from "../../lib/api";
 import ProfileTopBar from "../../Components/ProfileTopBar";
+import { usersApi } from "../../lib/api";
 import { showError, showSuccess } from "../../utils/toast";
 
-const Profile = () => {
-  // Trạng thái Edit cho từng section
-  const [editingHero, setEditingHero] = useState(false);
-  const [editingContact, setEditingContact] = useState(false);
-  const [editingOrganization, setEditingOrganization] = useState(false);
+const emptyProfile = {
+  companyName: "",
+  email: "",
+  phone: "",
+  website: "",
+  linkedIn: "",
+  industry: "",
+  companySize: "",
+  taxCode: "",
+  address: "",
+  description: "",
+};
 
-  // States cho TopBar & Cấu hình chung
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
+const FieldCard = ({ icon, label, value, children, editing = false, className = "" }) => (
+  <div className={`rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.04)] ${className}`}>
+    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-[#737373]">
+      <span className="text-[#0a0a0a]">{icon}</span>
+      {label}
+    </div>
+    {editing ? children : <p className="min-h-[24px] break-words font-semibold text-[#0a0a0a]">{value || "Not updated"}</p>}
+  </div>
+);
+
+const ProfileSkeleton = () => (
+  <div className="animate-pulse space-y-6">
+    <div className="blueprint-hero-panel p-6">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center">
+        <div className="h-24 w-24 rounded-[14px] bg-[#e5e5e5]" />
+        <div className="flex-1 space-y-3">
+          <div className="h-8 w-72 rounded-full bg-[#e5e5e5]" />
+          <div className="h-4 w-96 max-w-full rounded-full bg-[#f2f2f2]" />
+          <div className="flex gap-2">
+            <div className="h-8 w-24 rounded-full bg-[#f2f2f2]" />
+            <div className="h-8 w-28 rounded-full bg-[#f2f2f2]" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="grid gap-4 lg:grid-cols-3">
+      {[1, 2, 3].map((item) => (
+        <div key={item} className="blueprint-card h-28 p-5" />
+      ))}
+    </div>
+    <div className="blueprint-card h-80 p-6" />
+  </div>
+);
+
+const RecruiterProfile = () => {
+  const [profile, setProfile] = useState(emptyProfile);
+  const [draft, setDraft] = useState(emptyProfile);
+  const [editingSection, setEditingSection] = useState(null);
   const [profileError, setProfileError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // States cho Recruiter (Cá nhân)
-  const [fullName, setFullName] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
-  
-  // States cho Contact (Liên hệ)
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [website, setWebsite] = useState("");
-  const [linkedIn, setLinkedIn] = useState("");
+  const profileCompleteness = useMemo(() => {
+    const checks = [
+      profile.companyName,
+      profile.email,
+      profile.phone,
+      profile.website,
+      profile.linkedIn,
+      profile.industry,
+      profile.companySize,
+      profile.taxCode,
+      profile.address,
+      profile.description,
+    ];
+    const completed = checks.filter(Boolean).length;
+    return Math.round((completed / checks.length) * 100);
+  }, [profile]);
 
-  // States cho Company/Organization (Tổ chức)
-  const [companyName, setCompanyName] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [companySize, setCompanySize] = useState("");
-  const [taxCode, setTaxCode] = useState("");
-  const [address, setAddress] = useState("");
-  const [description, setDescription] = useState("");
+  const hydrateProfile = (payload) => {
+    const nextProfile = {
+      companyName: payload.company_name || payload.name || "",
+      email: payload.email || "",
+      phone: payload.phone || "",
+      website: payload.website || "",
+      linkedIn: payload.linkedin || "",
+      industry: payload.industry || "",
+      companySize: payload.company_size || "",
+      taxCode: payload.tax_code || "",
+      address: payload.address || payload.location || "",
+      description: payload.description || "",
+    };
+    setProfile(nextProfile);
+    setDraft(nextProfile);
+  };
 
   useEffect(() => {
+    let mounted = true;
+
     const loadProfile = async () => {
       try {
-        const profile = await usersApi.me();
-        
-        // Map dữ liệu từ API vào State
-        setUserName(profile.full_name || profile.company_name || profile.name || "");
-        setUserEmail(profile.email || "");
-        
-        setFullName(profile.full_name || profile.name || "");
-        setJobTitle(profile.job_title || "");
-        
-        setEmail(profile.email || "");
-        setPhone(profile.phone || "");
-        setWebsite(profile.website || "");
-        setLinkedIn(profile.linkedin || "");
-
-        setCompanyName(profile.company_name || profile.name || "");
-        setIndustry(profile.industry || "");
-        setCompanySize(profile.company_size || "");
-        setTaxCode(profile.tax_code || "");
-        setAddress(profile.address || profile.location || "");
-        setDescription(profile.description || "");
-
+        setIsLoading(true);
+        const response = await usersApi.me();
+        if (!mounted) return;
+        hydrateProfile(response);
         setProfileError("");
       } catch (error) {
-        setProfileError(error.message || "Failed to load profile");
+        if (!mounted) return;
+        const message = error.message || "Failed to load profile";
+        setProfileError(message);
+        showError(message);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     };
 
     loadProfile();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const saveProfile = async () => {
-    setIsSaving(true);
     try {
-      const payload = {
-        name: companyName,
-        full_name: fullName,
-        job_title: jobTitle,
-        phone,
-        website,
-        linkedin: linkedIn,
-        company_name: companyName,
-        industry,
-        company_size: companySize,
-        tax_code: taxCode,
-        address,
-        location: address,
-        description: description
-      };
-
-      const updated = await usersApi.updateMe(payload);
-
-      // Cập nhật lại UI sau khi save thành công
-      setUserName(updated.full_name || updated.company_name || updated.name || "");
-      setUserEmail(updated.email || "");
-      setFullName(updated.full_name || updated.name || "");
-      setJobTitle(updated.job_title || "");
-      setEmail(updated.email || "");
-      setPhone(updated.phone || "");
-      setWebsite(updated.website || "");
-      setLinkedIn(updated.linkedin || "");
-      setCompanyName(updated.company_name || updated.name || "");
-      setIndustry(updated.industry || "");
-      setCompanySize(updated.company_size || "");
-      setTaxCode(updated.tax_code || "");
-      setAddress(updated.address || updated.location || "");
-      setDescription(updated.description || "");
-
+      setIsSaving(true);
+      const updated = await usersApi.updateMe({
+        name: draft.companyName,
+        company_name: draft.companyName,
+        phone: draft.phone,
+        website: draft.website,
+        linkedin: draft.linkedIn,
+        industry: draft.industry,
+        company_size: draft.companySize,
+        tax_code: draft.taxCode,
+        address: draft.address,
+        location: draft.address,
+        description: draft.description,
+      });
+      hydrateProfile(updated);
+      setEditingSection(null);
       setProfileError("");
       showSuccess("Profile saved successfully");
     } catch (error) {
@@ -126,278 +158,266 @@ const Profile = () => {
     }
   };
 
-  const handleEditToggle = async (section) => {
-    const sectionStates = {
-      hero: editingHero,
-      contact: editingContact,
-      organization: editingOrganization,
-    };
-
-    // Nếu đang ở trạng thái edit và bấm chuyển -> Save
-    if (sectionStates[section]) {
-      await saveProfile();
-    }
-
-    if (section === "hero") setEditingHero(!editingHero);
-    else if (section === "contact") setEditingContact(!editingContact);
-    else if (section === "organization") setEditingOrganization(!editingOrganization);
+  const startEditing = (section) => {
+    setDraft(profile);
+    setEditingSection(section);
   };
 
-  const ActionButton = ({ isEditing, onClick, label = "Save" }) => (
-    isEditing ? (
-      <button
-        disabled={isSaving}
-        onClick={onClick}
-        className="px-4 py-2 bg-[#0b3b4d] text-white text-sm font-semibold rounded-lg hover:bg-[#072733] transition shadow-sm disabled:opacity-70"
-      >
-        {isSaving ? "Saving..." : label}
-      </button>
+  const cancelEditing = () => {
+    setDraft(profile);
+    setEditingSection(null);
+  };
+
+  const renderSectionAction = (section) =>
+    editingSection === section ? (
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={cancelEditing}
+          className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-[#f2f2f2]"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={saveProfile}
+          disabled={isSaving}
+          className="blueprint-primary px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSaving ? "Saving..." : "Save"}
+        </button>
+      </div>
     ) : (
-      <button 
-        onClick={onClick} 
-        className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-800 transition whitespace-nowrap"
+      <button
+        type="button"
+        onClick={() => startEditing(section)}
+        className="inline-flex items-center gap-2 rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-[#f2f2f2]"
       >
-        <MdOutlineEdit className="text-lg" /> Edit Info
+        <MdOutlineEdit size={18} />
+        Edit
       </button>
-    )
-  );
+    );
 
   return (
-    <div className="bg-[#fbfcfa] min-h-screen px-8 pt-4 pb-8 lg:px-10 lg:pt-5 lg:pb-10">      
-      <ProfileTopBar userName={userName} userEmail={userEmail}  />
-      
-      <div className="w-full px-10 py-6 mx-auto font-sans text-gray-800">        
+    <div className="min-h-screen bg-white px-4 pb-8 sm:px-6 lg:px-8">
+      <ProfileTopBar userName={profile.companyName} userEmail={profile.email} />
+
+      <main className="mx-auto max-w-6xl space-y-6">
         {profileError && (
-          <div className="mb-6 p-4 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium">
-            {profileError}
+          <div className="flex items-start gap-3 rounded-[14px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <MdErrorOutline className="mt-0.5 text-lg" />
+            <span>{profileError}</span>
           </div>
         )}
 
-        {/* ================= HERO PROFILE (RECRUITER INFO) ================= */}
-        <div className="flex justify-center mb-10">
-          <div className="flex flex-col md:flex-row items-center md:items-center justify-center gap-6 max-w-4xl w-full">            
-            
-            {/* Avatar */}
-            <div className="relative w-36 h-36 bg-[#0b3b4d] rounded-2xl flex-shrink-0 flex items-end justify-center overflow-hidden shadow-sm">
-              <img 
-                src={`https://api.dicebear.com/8.x/avataaars/svg?seed=${fullName || "Alex"}&backgroundColor=0b3b4d`} 
-                alt="Avatar" 
-                className="w-32 h-32 object-cover translate-y-2"
-              />
-              <button className="absolute bottom-2 right-2 bg-black/30 text-white p-1.5 rounded-lg backdrop-blur-md hover:bg-black/50 transition">
-                <MdCameraAlt size={16} />
-              </button>
-            </div>
-
-            {/* Thông tin Cá nhân */}
-            <div className="text-center md:text-left mt-2 w-full md:w-auto">
-              <div className="flex items-center justify-center md:justify-start gap-5 w-full">
-                <div className="flex flex-col gap-2 w-full md:w-auto md:max-w-2xl">
-                  {editingHero ? (
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="text-3xl font-bold border-b-2 border-[#0b3b4d] outline-none bg-transparent px-1 pb-1 w-full max-w-md"
-                      placeholder=""
-                    />
-                  ) : (
-                    <h1 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center gap-2">
-                      {fullName || "Recruiter Name"} 
-                      <span className="text-green-500 text-xl" title="Verified Recruiter">✔</span>
+        {isLoading ? (
+          <ProfileSkeleton />
+        ) : (
+          <>
+            <section className="blueprint-hero-panel p-5 md:p-6">
+              <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-5 md:flex-row md:items-center">
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[14px] border border-[#e5e5e5] bg-black text-4xl font-semibold text-white">
+                    {(profile.companyName || profile.email || "R").charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="blueprint-kicker">Recruiter profile</p>
+                    <h1 className="mt-1 text-3xl font-semibold text-black md:text-4xl">
+                      {profile.companyName || "Company name"}
                     </h1>
-                  )}
-
-                  {editingHero ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={jobTitle}
-                        onChange={(e) => setJobTitle(e.target.value)}
-                        className="text-lg bg-white border border-gray-200 rounded-lg px-3 py-1 outline-none focus:border-[#0b3b4d] shadow-sm"
-                        placeholder="Technical Recruiter..."
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-xl font-medium">
-                      {jobTitle || "Job Title not specified"} <span className="mx-2">•</span> {companyName || "Company not specified"}
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[#737373]">
+                      Maintain the company details candidates see across jobs, interviews, and offers.
                     </p>
-                  )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">
+                        {profile.industry || "Industry not set"}
+                      </span>
+                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">
+                        {profile.companySize || "Company size not set"}
+                      </span>
+                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">
+                        {profileCompleteness}% complete
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="hidden md:block md:ml-6 lg:ml-10">
-                  <ActionButton isEditing={editingHero} onClick={() => handleEditToggle("hero")} />
+                <div className="blueprint-card w-full p-4 md:w-64">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-[#0a0a0a]">Company readiness</span>
+                    <span className="blueprint-metric font-semibold">{profileCompleteness}%</span>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f2f2f2]">
+                    <div className="h-full rounded-full bg-black" style={{ width: `${profileCompleteness}%` }} />
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-[#737373]">
+                    Complete recruiter profiles make job posts feel more trustworthy.
+                  </p>
                 </div>
               </div>
-              
-              {/* Nút Edit cho Mobile */}
-              <div className="mt-4 md:hidden flex justify-center">
-                <ActionButton isEditing={editingHero} onClick={() => handleEditToggle("hero")} />
-              </div>
-            </div>
-          </div>
-        </div>
+            </section>
 
-        {/* ================= CÁC PHẦN BÊN DƯỚI ================= */}
-        <div className="flex flex-col gap-6 w-full">
-          
-          {/* ================= CONTACT DETAILS ================= */}
-          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-[#0b3b4d]">Contact Details</h2>
-              <ActionButton isEditing={editingContact} onClick={() => handleEditToggle("contact")} />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Email */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdBusiness /> Account Email</p>
-                <p className="font-semibold text-gray-900">{email || "Not specified"}</p>
-                <p className="text-xs text-gray-400 mt-2">Email is managed by account settings.</p>
-              </div>
-              
-              {/* Phone */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdPhone /> Phone Number</p>
-                {editingContact ? (
-                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="09xx xxx xxx" />
-                ) : (
-                  <p className="font-semibold text-gray-900">{phone || "Not specified"}</p>
-                )}
-              </div>
-              
-              {/* Website */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdLanguage /> Website</p>
-                {editingContact ? (
-                  <input type="text" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="https://your-company.com" />
-                ) : (
-                  <a href={website} target="_blank" rel="noreferrer" className="font-semibold text-[#0b3b4d] hover:underline break-all">{website || "Not specified"}</a>
-                )}
+            <section className="grid gap-4 lg:grid-cols-3">
+              <FieldCard icon={<MdEmail />} label="Account email" value={profile.email} />
+              <FieldCard icon={<MdCategory />} label="Industry" value={profile.industry} />
+              <FieldCard icon={<MdPeople />} label="Company size" value={profile.companySize} />
+            </section>
+
+            <section className="blueprint-card p-5 md:p-6">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="blueprint-kicker">Organization</p>
+                  <h2 className="mt-1 text-xl font-semibold text-black">Company identity</h2>
+                </div>
+                {renderSectionAction("organization")}
               </div>
 
-              {/* LinkedIn */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdPerson /> LinkedIn Profile</p>
-                {editingContact ? (
-                  <input type="text" value={linkedIn} onChange={(e) => setLinkedIn(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="https://linkedin.com/in/..." />
-                ) : (
-                  <a href={linkedIn} target="_blank" rel="noreferrer" className="font-semibold text-[#0b3b4d] hover:underline break-all">{linkedIn || "Not specified"}</a>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ================= ORGANIZATION DETAILS ================= */}
-          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-[#0b3b4d]">Organization Details</h2>
-              <ActionButton isEditing={editingOrganization} onClick={() => handleEditToggle("organization")} />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Company Name */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 md:col-span-2">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdBusiness /> Company Legal Name</p>
-                {editingOrganization ? (
-                  <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Full legal company name..." />
-                ) : (
-                  <p className="font-semibold text-gray-900">{companyName || "Not specified"}</p>
-                )}
-              </div>
-
-              {/* Industry */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdCategory /> Industry</p>
-                {editingOrganization ? (
-                  <input type="text" value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="IT, Finance, E-commerce..." />
-                ) : (
-                  <p className="font-semibold text-gray-900">{industry || "Not specified"}</p>
-                )}
-              </div>
-
-              {/* Company Size */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdPeople /> Company Size</p>
-                {editingOrganization ? (
-                  <select value={companySize} onChange={(e) => setCompanySize(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]">
-                    <option value="">Select size...</option>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldCard
+                  icon={<MdBusiness />}
+                  label="Company legal name"
+                  value={profile.companyName}
+                  editing={editingSection === "organization"}
+                  className="md:col-span-2"
+                >
+                  <input
+                    value={draft.companyName}
+                    onChange={(event) => setDraft((current) => ({ ...current, companyName: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="Full legal company name"
+                  />
+                </FieldCard>
+                <FieldCard
+                  icon={<MdCategory />}
+                  label="Industry"
+                  value={profile.industry}
+                  editing={editingSection === "organization"}
+                >
+                  <input
+                    value={draft.industry}
+                    onChange={(event) => setDraft((current) => ({ ...current, industry: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="Technology, finance, e-commerce..."
+                  />
+                </FieldCard>
+                <FieldCard
+                  icon={<MdPeople />}
+                  label="Company size"
+                  value={profile.companySize}
+                  editing={editingSection === "organization"}
+                >
+                  <select
+                    value={draft.companySize}
+                    onChange={(event) => setDraft((current) => ({ ...current, companySize: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                  >
+                    <option value="">Select size</option>
                     <option value="1-50">1 - 50 employees</option>
                     <option value="51-200">51 - 200 employees</option>
                     <option value="201-500">201 - 500 employees</option>
                     <option value="500+">500+ employees</option>
                   </select>
-                ) : (
-                  <p className="font-semibold text-gray-900">{companySize || "Not specified"}</p>
-                )}
-              </div>
-
-              {/* Tax Code */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdVpnKey /> Tax Code</p>
-                {editingOrganization ? (
-                  <input type="text" value={taxCode} onChange={(e) => setTaxCode(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Enter tax code..." />
-                ) : (
-                  <p className="font-semibold text-gray-900">{taxCode || "Not specified"}</p>
-                )}
-              </div>
-
-              {/* Address */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdLocationOn /> Address</p>
-                {editingOrganization ? (
-                  <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" placeholder="Office address..." />
-                ) : (
-                  <p className="font-semibold text-gray-900">{address || "Not specified"}</p>
-                )}
-              </div>
-
-              {/* Description */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 md:col-span-2">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><MdDescription /> Company Description</p>
-                {editingOrganization ? (
-                  <textarea 
-                    value={description} 
-                    onChange={(e) => setDescription(e.target.value)} 
-                    rows={4}
-                    className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d] resize-none" 
-                    placeholder="Describe your company culture, work environment, and mission..." 
+                </FieldCard>
+                <FieldCard
+                  icon={<MdVpnKey />}
+                  label="Tax code"
+                  value={profile.taxCode}
+                  editing={editingSection === "organization"}
+                >
+                  <input
+                    value={draft.taxCode}
+                    onChange={(event) => setDraft((current) => ({ ...current, taxCode: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="Tax code"
                   />
-                ) : (
-                  <p className="font-semibold text-gray-900 whitespace-pre-line">{description || "No description provided."}</p>
-                )}
+                </FieldCard>
+                <FieldCard
+                  icon={<MdLocationOn />}
+                  label="Address"
+                  value={profile.address}
+                  editing={editingSection === "organization"}
+                >
+                  <input
+                    value={draft.address}
+                    onChange={(event) => setDraft((current) => ({ ...current, address: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="Office address"
+                  />
+                </FieldCard>
+                <FieldCard
+                  icon={<MdDescription />}
+                  label="Company description"
+                  value={profile.description || "No description provided."}
+                  editing={editingSection === "organization"}
+                  className="md:col-span-2"
+                >
+                  <textarea
+                    rows={5}
+                    value={draft.description}
+                    onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
+                    className="blueprint-input w-full resize-none px-3 py-2"
+                    placeholder="Describe your company culture, work environment, and mission..."
+                  />
+                </FieldCard>
               </div>
-            </div>
-          </div>
+            </section>
 
-          {/* ================= DB MAPPING (Chỉ dùng để Debug) ================= */}
-          <div className="bg-[#f7f9fa] rounded-[20px] p-6 md:p-8 shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-[#0b3b4d] mb-4">DB Recruiter Mapping (Debug)</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-              {[
-                { label: "full_name", val: fullName },
-                { label: "job_title", val: jobTitle },
-                { label: "company_name", val: companyName },
-                { label: "email", val: email },
-                { label: "phone", val: phone },
-                { label: "linkedin", val: linkedIn },
-                { label: "industry", val: industry },
-                { label: "company_size", val: companySize },
-                { label: "tax_code", val: taxCode },
-                { label: "address", val: address },
-              ].map((item, index) => (
-                <div key={index} className="bg-white rounded-xl border border-gray-100 p-3">
-                  <p className="text-gray-500 text-xs">{item.label}</p>
-                  <p className="font-semibold text-gray-900 truncate" title={item.val}>{item.val || "-"}</p>
+            <section className="blueprint-card p-5 md:p-6">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="blueprint-kicker">Contact</p>
+                  <h2 className="mt-1 text-xl font-semibold text-black">Public communication channels</h2>
                 </div>
-              ))}
-            </div>
-          </div>
+                {renderSectionAction("contact")}
+              </div>
 
-        </div>
-      </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldCard icon={<MdEmail />} label="Account email" value={profile.email} />
+                <FieldCard
+                  icon={<MdPhone />}
+                  label="Phone number"
+                  value={profile.phone}
+                  editing={editingSection === "contact"}
+                >
+                  <input
+                    value={draft.phone}
+                    onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="Phone number"
+                  />
+                </FieldCard>
+                <FieldCard
+                  icon={<MdLanguage />}
+                  label="Website"
+                  value={profile.website}
+                  editing={editingSection === "contact"}
+                >
+                  <input
+                    value={draft.website}
+                    onChange={(event) => setDraft((current) => ({ ...current, website: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="https://company.com"
+                  />
+                </FieldCard>
+                <FieldCard
+                  icon={<MdBusiness />}
+                  label="LinkedIn"
+                  value={profile.linkedIn}
+                  editing={editingSection === "contact"}
+                >
+                  <input
+                    value={draft.linkedIn}
+                    onChange={(event) => setDraft((current) => ({ ...current, linkedIn: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="https://linkedin.com/company/..."
+                  />
+                </FieldCard>
+              </div>
+            </section>
+          </>
+        )}
+      </main>
     </div>
   );
 };
 
-export default Profile;
+export default RecruiterProfile;

@@ -1,92 +1,167 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  MdOutlineEdit,
   MdAdd,
-  MdCameraAlt,
-  MdSettings,
-  MdPictureAsPdf,
-  MdClose
+  MdBadge,
+  MdCake,
+  MdCheck,
+  MdClose,
+  MdEmail,
+  MdErrorOutline,
+  MdLocationOn,
+  MdOutlineEdit,
+  MdPerson,
+  MdPhone,
+  MdWork,
 } from "react-icons/md";
-import { usersApi } from "../../lib/api";
 import ProfileTopBar from "../../Components/ProfileTopBar";
-import { calculateAge, formatDate } from '../../utils/format';
+import { usersApi } from "../../lib/api";
+import { calculateAge } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
 
-const Profile = () => {
-  const [editingName, setEditingName] = useState(false);
-  const [editingPersonal, setEditingPersonal] = useState(false);
-  const [editingExperience, setEditingExperience] = useState(false);
-  const [editingJobPreferences, setEditingJobPreferences] = useState(false);
-  const [editingResume, setEditingResume] = useState(false);
-  const [editingSkills, setEditingSkills] = useState(false);
+const emptyProfile = {
+  name: "",
+  email: "",
+  phone: "",
+  location: "",
+  dob: "",
+  experience: "",
+  jobType: "",
+  skills: [],
+};
 
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [location, setLocation] = useState("");
-  const [dob, setDoB] = useState("");
-  const [experience, setExperience] = useState("");
-  const [jobType, setJobType] = useState("");
-  const [skills, setSkills] = useState([]);
+const normalizeDateForInput = (value) => {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().slice(0, 10);
+};
+
+const formatDate = (value) => {
+  if (!value) return "Not updated";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Not updated";
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const FieldCard = ({ icon, label, value, children, editing = false }) => (
+  <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.04)]">
+    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-[#737373]">
+      <span className="text-[#0a0a0a]">{icon}</span>
+      {label}
+    </div>
+    {editing ? children : <p className="min-h-[24px] font-semibold text-[#0a0a0a]">{value || "Not updated"}</p>}
+  </div>
+);
+
+const ProfileSkeleton = () => (
+  <div className="animate-pulse space-y-6">
+    <div className="blueprint-hero-panel p-6">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center">
+        <div className="h-24 w-24 rounded-[14px] bg-[#e5e5e5]" />
+        <div className="flex-1 space-y-3">
+          <div className="h-8 w-64 rounded-full bg-[#e5e5e5]" />
+          <div className="h-4 w-80 max-w-full rounded-full bg-[#f2f2f2]" />
+          <div className="flex gap-2">
+            <div className="h-8 w-24 rounded-full bg-[#f2f2f2]" />
+            <div className="h-8 w-28 rounded-full bg-[#f2f2f2]" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="grid gap-4 lg:grid-cols-3">
+      {[1, 2, 3].map((item) => (
+        <div key={item} className="blueprint-card h-28 p-5" />
+      ))}
+    </div>
+    <div className="blueprint-card h-72 p-6" />
+  </div>
+);
+
+const CandidateProfile = () => {
+  const [profile, setProfile] = useState(emptyProfile);
+  const [draft, setDraft] = useState(emptyProfile);
+  const [editingSection, setEditingSection] = useState(null);
   const [newSkill, setNewSkill] = useState("");
-  const [resume, setResume] = useState(null);
   const [profileError, setProfileError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const didLoadProfile = useRef(false);
+
+  const profileCompleteness = useMemo(() => {
+    const checks = [
+      profile.name,
+      profile.email,
+      profile.phone,
+      profile.location,
+      profile.dob,
+      profile.experience,
+      profile.jobType,
+      profile.skills.length > 0,
+    ];
+    const completed = checks.filter(Boolean).length;
+    return Math.round((completed / checks.length) * 100);
+  }, [profile]);
+
+  const age = calculateAge(profile.dob);
+
+  const hydrateProfile = (payload) => {
+    const nextProfile = {
+      name: payload.name || "",
+      email: payload.email || "",
+      phone: payload.phone || "",
+      location: payload.location || "",
+      dob: normalizeDateForInput(payload.dob),
+      experience: payload.experience || "",
+      jobType: payload.job_type || payload.jobType || "",
+      skills: Array.isArray(payload.skills) ? payload.skills.filter(Boolean) : [],
+    };
+    setProfile(nextProfile);
+    setDraft(nextProfile);
+  };
 
   useEffect(() => {
-    if (didLoadProfile.current) {
-      return;
-    }
-    didLoadProfile.current = true;
+    let mounted = true;
 
     const loadProfile = async () => {
       try {
-        const profile = await usersApi.me();
-        setUserName(profile.name || "");
-        setUserEmail(profile.email || "");
-        setName(profile.name || "");
-        setEmail(profile.email || "");
-        setPhone(profile.phone || "");
-        setLocation(profile.location || "");
-        setDoB(profile.dob || "");
-        setExperience(profile.experience || "");
-        setJobType(profile.job_type || "");
-        setSkills(Array.isArray(profile.skills) ? profile.skills : []);
+        setIsLoading(true);
+        const response = await usersApi.me();
+        if (!mounted) return;
+        hydrateProfile(response);
         setProfileError("");
       } catch (error) {
+        if (!mounted) return;
         const message = error.message || "Failed to load profile";
         setProfileError(message);
         showError(message);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     };
 
     loadProfile();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const saveProfile = async () => {
-    setIsSaving(true);
     try {
+      setIsSaving(true);
       const updated = await usersApi.updateMe({
-        name,
-        phone,
-        location,
-        dob,
-        experience,
-        jobType,
-        skills,
+        name: draft.name,
+        phone: draft.phone,
+        location: draft.location,
+        dob: draft.dob || null,
+        experience: draft.experience,
+        jobType: draft.jobType,
+        skills: draft.skills,
       });
-
-      setName(updated.name || "");
-      setEmail(updated.email || "");
-      setPhone(updated.phone || "");
-      setLocation(updated.location || "");
-      setDoB(updated.dob || "");
-      setExperience(updated.experience || "");
-      setJobType(updated.job_type || "");
-      setSkills(Array.isArray(updated.skills) ? updated.skills : []);
+      hydrateProfile(updated);
+      setEditingSection(null);
       setProfileError("");
       showSuccess("Profile saved successfully");
     } catch (error) {
@@ -96,307 +171,317 @@ const Profile = () => {
     }
   };
 
-  const handleEditToggle = async (section) => {
-    const sectionStates = {
-      personal: editingPersonal,
-      experience: editingExperience,
-      jobPreferences: editingJobPreferences,
-      resume: editingResume,
-      skills: editingSkills,
-      name: editingName,
-    };
-
-    if (sectionStates[section] && section !== "resume") {
-      await saveProfile();
-    }
-
-    if (section === "personal") setEditingPersonal(!editingPersonal);
-    else if (section === "experience") setEditingExperience(!editingExperience);
-    else if (section === "jobPreferences") setEditingJobPreferences(!editingJobPreferences);
-    else if (section === "resume") setEditingResume(!editingResume);
-    else if (section === "skills") setEditingSkills(!editingSkills);
-    else if (section === "name") setEditingName(!editingName);
+  const startEditing = (section) => {
+    setDraft(profile);
+    setNewSkill("");
+    setEditingSection(section);
   };
 
-  const handleAddSkill = () => {
-    if (newSkill.trim()) {
-      setSkills([...skills, newSkill]);
-      setNewSkill("");
-    }
+  const cancelEditing = () => {
+    setDraft(profile);
+    setNewSkill("");
+    setEditingSection(null);
   };
 
-  const handleDeleteSkill = (index) => {
-    const newSkills = skills.filter((_, i) => i !== index);
-    setSkills(newSkills);
+  const addSkill = () => {
+    const normalizedSkill = newSkill.trim();
+    if (!normalizedSkill) return;
+    setDraft((current) => ({
+      ...current,
+      skills: current.skills.some((skill) => skill.toLowerCase() === normalizedSkill.toLowerCase())
+        ? current.skills
+        : [...current.skills, normalizedSkill],
+    }));
+    setNewSkill("");
   };
 
-  const handleResumeChange = (e) => {
-    setResume(e.target.files[0]);
+  const removeSkill = (index) => {
+    setDraft((current) => ({
+      ...current,
+      skills: current.skills.filter((_, skillIndex) => skillIndex !== index),
+    }));
   };
 
-  // Nút lưu/edit dùng chung
-  const ActionButton = ({ isEditing, onClick, label = "Save" }) => (
-    isEditing ? (
-      <button
-        disabled={isSaving}
-        onClick={onClick}
-        className="px-4 py-2 bg-[#0b3b4d] text-white text-sm font-semibold rounded-lg hover:bg-[#072733] transition shadow-sm disabled:opacity-70"
-      >
-        {isSaving ? "Saving..." : label}
-      </button>
+  const renderSectionAction = (section) =>
+    editingSection === section ? (
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={cancelEditing}
+          className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-[#f2f2f2]"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={saveProfile}
+          disabled={isSaving}
+          className="blueprint-primary px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSaving ? "Saving..." : "Save"}
+        </button>
+      </div>
     ) : (
-      <button 
-        onClick={onClick} 
-        className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-800 transition"
+      <button
+        type="button"
+        onClick={() => startEditing(section)}
+        className="inline-flex items-center gap-2 rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-[#f2f2f2]"
       >
-        <MdOutlineEdit className="text-lg" /> Edit Info
+        <MdOutlineEdit size={18} />
+        Edit
       </button>
-    )
-  );
+    );
 
   return (
-    <div className="bg-[#fbfcfa] min-h-screen px-8 pt-4 pb-8 lg:px-10 lg:pt-5 lg:pb-10">      
-      <ProfileTopBar userName={userName} userEmail={userEmail}  />
-      
-      {/* ================= KHUNG CHỨA TOÀN BỘ NỘI DUNG PROFILE ================= */}
-      <div className="w-full px-10 py-6 mx-auto font-sans text-gray-800">        
-        {/* ERROR MESSAGE */}
+    <div className="min-h-screen bg-white px-4 pb-8 sm:px-6 lg:px-8">
+      <ProfileTopBar userName={profile.name} userEmail={profile.email} />
+
+      <main className="mx-auto max-w-6xl space-y-6">
         {profileError && (
-          <div className="mb-6 p-4 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium">
-            {profileError}
+          <div className="flex items-start gap-3 rounded-[14px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <MdErrorOutline className="mt-0.5 text-lg" />
+            <span>{profileError}</span>
           </div>
         )}
 
-        {/* ================= HERO PROFILE ================= */}
-        <div className="flex justify-center mb-10">
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-6 max-w-3xl">            
-            
-            {/* Avatar (Đã xóa các class bị nhầm) */}
-            <div className="relative w-36 h-36 bg-[#0b3b4d] rounded-2xl flex-shrink-0 flex items-end justify-center overflow-hidden shadow-sm">
-              <img 
-                src="https://api.dicebear.com/8.x/avataaars/svg?seed=Alex&backgroundColor=0b3b4d" 
-                alt="Avatar" 
-                className="w-32 h-32 object-cover translate-y-2"
-              />
-              <button className="absolute bottom-2 right-2 bg-black/30 text-white p-1.5 rounded-lg backdrop-blur-md hover:bg-black/50 transition">
-                <MdCameraAlt size={16} />
-              </button>
-            </div>
+        {isLoading ? (
+          <ProfileSkeleton />
+        ) : (
+          <>
+            <section className="blueprint-hero-panel p-5 md:p-6">
+              <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-5 md:flex-row md:items-center">
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[14px] border border-[#e5e5e5] bg-black text-4xl font-semibold text-white">
+                    {(profile.name || profile.email || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="blueprint-kicker">Candidate profile</p>
+                    <h1 className="mt-1 text-3xl font-semibold text-black md:text-4xl">
+                      {profile.name || "Candidate Name"}
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[#737373]">
+                      Keep your contact information, skills, and job preferences ready before applying.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">
+                        {profile.jobType || "Job type not set"}
+                      </span>
+                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">
+                        {profile.skills.length} skills
+                      </span>
+                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">
+                        {profileCompleteness}% complete
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="blueprint-card w-full p-4 md:w-64">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-[#0a0a0a]">Profile readiness</span>
+                    <span className="blueprint-metric font-semibold">{profileCompleteness}%</span>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f2f2f2]">
+                    <div className="h-full rounded-full bg-black" style={{ width: `${profileCompleteness}%` }} />
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-[#737373]">
+                    Complete profiles help recruiters understand your fit faster.
+                  </p>
+                </div>
+              </div>
+            </section>
 
-            {/* Thông tin Tên & Mô tả */}
-            <div className="flex-1 text-center md:text-left mt-2">
-              <div className="flex items-center justify-center md:justify-start gap-3">
-                {editingName ? (
+            <section className="grid gap-4 lg:grid-cols-3">
+              <FieldCard icon={<MdEmail />} label="Email address" value={profile.email} />
+              <FieldCard icon={<MdCake />} label="Date of birth" value={formatDate(profile.dob)} />
+              <FieldCard icon={<MdBadge />} label="Age" value={age !== null ? `${age} years old` : "Not updated"} />
+            </section>
+
+            <section className="blueprint-card p-5 md:p-6">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="blueprint-kicker">Personal details</p>
+                  <h2 className="mt-1 text-xl font-semibold text-black">Contact and identity</h2>
+                </div>
+                {renderSectionAction("personal")}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldCard
+                  icon={<MdPerson />}
+                  label="Full name"
+                  value={profile.name}
+                  editing={editingSection === "personal"}
+                >
                   <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="text-3xl font-bold border-b-2 border-[#0b3b4d] outline-none bg-transparent px-1 pb-1 w-full max-w-sm"
-                    placeholder="Your Name"
+                    value={draft.name}
+                    onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="Your full name"
+                  />
+                </FieldCard>
+                <FieldCard
+                  icon={<MdPhone />}
+                  label="Phone number"
+                  value={profile.phone}
+                  editing={editingSection === "personal"}
+                >
+                  <input
+                    value={draft.phone}
+                    onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="Phone number"
+                  />
+                </FieldCard>
+                <FieldCard
+                  icon={<MdLocationOn />}
+                  label="Location"
+                  value={profile.location}
+                  editing={editingSection === "personal"}
+                >
+                  <input
+                    value={draft.location}
+                    onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                    placeholder="City, country"
+                  />
+                </FieldCard>
+                <FieldCard
+                  icon={<MdCake />}
+                  label="Date of birth"
+                  value={formatDate(profile.dob)}
+                  editing={editingSection === "personal"}
+                >
+                  <input
+                    type="date"
+                    value={draft.dob}
+                    onChange={(event) => setDraft((current) => ({ ...current, dob: event.target.value }))}
+                    className="blueprint-input w-full px-3 py-2"
+                  />
+                </FieldCard>
+              </div>
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+              <div className="blueprint-card p-5 md:p-6">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="blueprint-kicker">Experience</p>
+                    <h2 className="mt-1 text-xl font-semibold text-black">Professional summary</h2>
+                  </div>
+                  {renderSectionAction("experience")}
+                </div>
+                {editingSection === "experience" ? (
+                  <textarea
+                    rows={8}
+                    value={draft.experience}
+                    onChange={(event) => setDraft((current) => ({ ...current, experience: event.target.value }))}
+                    className="blueprint-input w-full resize-none px-3 py-2"
+                    placeholder="Summarize your recent work, strengths, and career focus..."
                   />
                 ) : (
-                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-                    {name || "Alex Rivera"} <span className="text-gray-400 font-medium text-2xl md:text-3xl hidden md:inline">• Senior Product Designer</span>
-                  </h1>
-                )}
-                
-                {editingName ? (
-                  <button onClick={() => handleEditToggle("name")} className="text-sm px-3 py-1.5 bg-[#0b3b4d] text-white rounded-lg font-semibold">Save</button>
-                ) : (
-                  <button onClick={() => handleEditToggle("name")} className="text-gray-400 hover:text-gray-800"><MdOutlineEdit size={22} /></button>
-                )}
-              </div>
-        
-              <div className="mt-3">
-                {editingName ? (
-                  <div className="flex items-center justify-center md:justify-start gap-3">
-                    <span className="text-gray-600 text-lg font-medium">Date of Birth:</span>
-                    <input
-                      type="date"
-                      value={dob}
-                      onChange={(e) => setDoB(e.target.value)}
-                      className="text-lg bg-white border border-gray-200 rounded-lg px-3 py-1 outline-none focus:border-[#0b3b4d] text-gray-800 shadow-sm"
-                    />
-                  </div>
-                ) : (
-                  <p className="text-gray-600 text-lg leading-relaxed max-w-2xl">
-                    <span className="font-medium mr-2">Date of Birth:</span>
-                    {dob ? (
-                      <span className="text-gray-900 font-semibold">{formatDate(dob, undefined, "Not updated")}</span>
-                    ) : (
-                      <span className="text-gray-400 italic">Not specified</span>
-                    )}
-                    <br />
-                    <span className="font-medium mr-2">Age:</span>
-                    {calculateAge(dob) !== null ? (
-                      <span className="text-gray-900 font-semibold">{calculateAge(dob)} years old</span>
-                    ) : (
-                      <span className="text-gray-400 italic">Not specified</span>
-                    )}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ================= CÁC PHẦN BÊN DƯỚI ================= */}
-        <div className="flex flex-col gap-6">
-          {/* PERSONAL DETAILS */}
-          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-[#0b3b4d]">Personal Details</h2>
-              <ActionButton isEditing={editingPersonal} onClick={() => handleEditToggle("personal")} />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Email */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Email Address</p>
-                {editingPersonal ? (
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" />
-                ) : (
-                  <p className="font-semibold text-gray-900">{email || "alex.rivera@design.curator"}</p>
-                )}
-              </div>
-              
-              {/* Phone */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Phone Number</p>
-                {editingPersonal ? (
-                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" />
-                ) : (
-                  <p className="font-semibold text-gray-900">{phone || ""}</p>
-                )}
-              </div>
-
-              {/* Address */}
-              <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Address</p>
-                {editingPersonal ? (
-                  <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-2 outline-none focus:border-[#0b3b4d]" />
-                ) : (
-                  <p className="font-semibold text-gray-900">{location || ""}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* WORK EXPERIENCE */}
-          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-[#0b3b4d]">Work Experience</h2>
-              <button 
-                onClick={() => handleEditToggle("experience")}
-                className="px-4 py-2 bg-[#0b3b4d] text-white text-sm font-semibold rounded-full hover:bg-[#072733] transition flex items-center gap-1 shadow-sm"
-              >
-                {editingExperience ? (isSaving ? "Saving..." : "Save Changes") : <><MdAdd size={18} /> Add Position</>}
-              </button>
-            </div>
-
-            <div className="bg-gray-50/80 rounded-2xl p-6 border border-gray-100">
-              {editingExperience ? (
-                <textarea
-                  rows="4"
-                  value={experience}
-                  onChange={(e) => setExperience(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl p-4 outline-none focus:ring-2 focus:ring-[#0b3b4d]/20 focus:border-[#0b3b4d] resize-none"
-                  placeholder="Write about your work experience..."
-                />
-              ) : (
-                <div className="flex gap-4 items-start">
-                    <div className="w-12 h-12 bg-[#c6e1e8] rounded-xl flex items-center justify-center text-[#0b3b4d] flex-shrink-0">
-                      <MdAdd size={20} className="rotate-45" /> {/* Placeholder cho icon công ty */}
+                  <div className="rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-5">
+                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-[10px] bg-white text-black">
+                      <MdWork size={22} />
                     </div>
+                    <p className="whitespace-pre-line text-sm leading-6 text-[#0a0a0a]">
+                      {profile.experience || "No experience summary added yet."}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                <div className="blueprint-card p-5 md:p-6">
+                  <div className="mb-5 flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">Overview</h3>
-                      {experience ? (
-                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{experience}</p>
-                      ) : (
-                        <p className="text-sm text-gray-500 italic">No experience details added yet. Click "+ Add Position" to update.</p>
-                      )}
+                      <p className="blueprint-kicker">Skills</p>
+                      <h2 className="mt-1 text-xl font-semibold text-black">Core capabilities</h2>
                     </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* SKILLS & JOB PREFERENCES ROW */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* SKILLS */}
-            <div className="bg-[#f7f9fa] rounded-[20px] p-6 md:p-8 shadow-sm border border-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-[#0b3b4d]">Skills</h2>
-                <button onClick={() => handleEditToggle("skills")} className="text-gray-400 hover:text-gray-700 transition">
-                  {editingSkills ? <span className="text-sm font-bold bg-white px-3 py-1 rounded border shadow-sm">Save</span> : <MdSettings size={22} />}
-                </button>
-              </div>
-              
-              <div className="flex flex-wrap gap-2">
-                {skills.map((skill, index) => (
-                  <span key={index} className="bg-[#e4ebf0] text-[#2b4c59] px-3.5 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2">
-                    {skill}
-                    {editingSkills && (
-                      <button onClick={() => handleDeleteSkill(index)} className="text-[#2b4c59] hover:text-red-500 bg-white/50 rounded-full p-0.5">
-                        <MdClose size={14} />
-                      </button>
-                    )}
-                  </span>
-                ))}
-                
-                {editingSkills && (
-                  <div className="flex items-center bg-white rounded-full pl-3 pr-1 py-1 border border-gray-200 shadow-sm">
-                    <input
-                      type="text"
-                      value={newSkill}
-                      onChange={(e) => setNewSkill(e.target.value)}
-                      placeholder="New skill..."
-                      className="w-24 text-sm outline-none bg-transparent"
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
-                    />
-                    <button onClick={handleAddSkill} className="bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full p-1 transition">
-                      <MdAdd size={16} />
-                    </button>
+                    {renderSectionAction("skills")}
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* JOB PREFERENCES */}
-            <div className="bg-[#f7f9fa] rounded-[20px] p-6 md:p-8 shadow-sm border border-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-[#0b3b4d]">Job Preferences</h2>
-                <ActionButton isEditing={editingJobPreferences} onClick={() => handleEditToggle("jobPreferences")} />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-50">
-                  <span className="text-gray-500 text-sm font-medium">Desired Salary</span>
-                  <span className="font-bold text-gray-900">$180k - $220k</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(editingSection === "skills" ? draft.skills : profile.skills).map((skill, index) => (
+                      <span
+                        key={`${skill}-${index}`}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-3 py-1.5 text-sm font-semibold text-[#0a0a0a]"
+                      >
+                        {skill}
+                        {editingSection === "skills" && (
+                          <button
+                            type="button"
+                            onClick={() => removeSkill(index)}
+                            className="rounded-full bg-white p-0.5 text-[#737373] hover:text-[#c22b10]"
+                            aria-label={`Remove ${skill}`}
+                          >
+                            <MdClose size={14} />
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                    {profile.skills.length === 0 && editingSection !== "skills" && (
+                      <p className="text-sm text-[#737373]">No skills added yet.</p>
+                    )}
+                  </div>
+                  {editingSection === "skills" && (
+                    <div className="mt-4 flex gap-2">
+                      <input
+                        value={newSkill}
+                        onChange={(event) => setNewSkill(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            addSkill();
+                          }
+                        }}
+                        className="blueprint-input min-w-0 flex-1 px-3 py-2"
+                        placeholder="Add a skill"
+                      />
+                      <button
+                        type="button"
+                        onClick={addSkill}
+                        className="inline-flex items-center gap-2 rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold hover:bg-[#f2f2f2]"
+                      >
+                        <MdAdd size={18} />
+                        Add
+                      </button>
+                    </div>
+                  )}
                 </div>
-                
-                <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-50">
-                  <span className="text-gray-500 text-sm font-medium">Job Type</span>
-                  {editingJobPreferences ? (
-                    <input 
-                      type="text" 
-                      value={jobType} 
-                      onChange={(e) => setJobType(e.target.value)} 
-                      className="text-right border-b border-gray-300 outline-none font-bold text-gray-900 w-1/2 focus:border-[#0b3b4d]" 
-                      placeholder="e.g. Full-time • Remote"
+
+                <div className="blueprint-card p-5 md:p-6">
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="blueprint-kicker">Preference</p>
+                      <h2 className="mt-1 text-xl font-semibold text-black">Target role type</h2>
+                    </div>
+                    {renderSectionAction("preference")}
+                  </div>
+                  {editingSection === "preference" ? (
+                    <input
+                      value={draft.jobType}
+                      onChange={(event) => setDraft((current) => ({ ...current, jobType: event.target.value }))}
+                      className="blueprint-input w-full px-3 py-2"
+                      placeholder="Full-time, remote, hybrid..."
                     />
                   ) : (
-                    <span className="font-bold text-gray-900">{jobType || "Full-time • Remote"}</span>
+                    <div className="flex items-center gap-3 rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-4">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-white text-black">
+                        <MdCheck size={20} />
+                      </span>
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-[#737373]">Preferred job type</p>
+                        <p className="font-semibold text-[#0a0a0a]">{profile.jobType || "Not updated"}</p>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            </section>
+          </>
+        )}
+      </main>
     </div>
   );
 };
 
-export default Profile;
+export default CandidateProfile;

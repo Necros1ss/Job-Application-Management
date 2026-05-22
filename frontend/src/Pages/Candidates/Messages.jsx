@@ -10,12 +10,45 @@ import {
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { messagesApi, usersApi } from "../../lib/api";
-import { formatDateTime } from "../../utils/format";
+import { formatMessageTime } from "../../utils/format";
+import { useI18n } from "../../lib/i18n";
 import { showError } from "../../utils/toast";
 
 const PAGE_SIZE = 10;
 
+const formatFullDateTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getCompanyInitial = (message) =>
+  (message.senderName || "R")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+const getAvatarClass = (name = "") => {
+  const palette = [
+    "bg-[#f2f2f2] text-[#0a0a0a]",
+    "bg-[#0a0a0a] text-white",
+    "bg-white text-[#0a0a0a] border border-[#e5e5e5]",
+  ];
+  const seed = name.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return palette[seed % palette.length];
+};
+
 const Messages = () => {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
@@ -105,12 +138,12 @@ const Messages = () => {
       <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
         <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <p className="blueprint-kicker">Candidate inbox</p>
-            <h1 className="mt-1 text-4xl font-semibold text-[#0a0a0a]">Messages</h1>
-            <p className="mt-2 text-[#737373]">Recruiter updates and application follow-ups in one focused view.</p>
+            <p className="blueprint-kicker">{t("messages.kicker")}</p>
+            <h1 className="mt-1 text-4xl font-semibold text-[#0a0a0a]">{t("messages.title")}</h1>
+            <p className="mt-2 text-[#737373]">{t("messages.subtitle")}</p>
           </div>
           <div className="blueprint-card min-w-[140px] px-5 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#737373]">Unread</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#737373]">{t("messages.unread")}</p>
             <p className="mt-1 text-2xl font-semibold text-[#0a0a0a]">{unreadCount}</p>
           </div>
         </div>
@@ -140,15 +173,15 @@ const Messages = () => {
               <div className="border-b border-[#e5e5e5] p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-[#0a0a0a]">Inbox</h2>
+                    <h2 className="text-xl font-semibold text-[#0a0a0a]">{t("messages.inbox")}</h2>
                     <p className="text-sm text-[#737373]">{messages.length} messages on this page</p>
                   </div>
                   <span className="blueprint-tag">{unreadCount} unread</span>
                 </div>
                 <div className="mt-4 grid grid-cols-2 rounded-full border border-[#e5e5e5] bg-white p-1">
                   {[
-                    { id: "all", label: "All" },
-                    { id: "unread", label: "Unread" },
+                    { id: "all", label: t("messages.all") },
+                    { id: "unread", label: t("messages.unread") },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -215,7 +248,7 @@ const Messages = () => {
                 ) : (
                   <div className="px-6 py-12 text-center">
                     <FaRegEnvelopeOpen className="mx-auto mb-3 text-2xl text-[#737373]" />
-                    <p className="font-semibold text-[#0a0a0a]">No unread messages</p>
+                    <p className="font-semibold text-[#0a0a0a]">{t("messages.noUnreadTitle")}</p>
                     <p className="mt-1 text-sm text-[#737373]">Everything on this page has been read.</p>
                   </div>
                 )}
@@ -229,16 +262,16 @@ const Messages = () => {
                   className="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-white disabled:opacity-40"
                 >
                   <FaChevronLeft className="text-xs" />
-                  Prev
+                  {t("common.previous")}
                 </button>
-                <span className="text-sm font-semibold text-[#737373]">Page {pageNumber}</span>
+                <span className="text-sm font-semibold text-[#737373]">{t("common.page")} {pageNumber}</span>
                 <button
                   type="button"
                   disabled={!hasNextPage}
                   onClick={() => setOffset((current) => current + PAGE_SIZE)}
                   className="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-white disabled:opacity-40"
                 >
-                  Next
+                  {t("common.next")}
                   <FaChevronRight className="text-xs" />
                 </button>
               </div>
@@ -254,12 +287,12 @@ const Messages = () => {
                       className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] px-3 py-2 text-sm font-semibold text-[#0a0a0a] lg:hidden"
                     >
                       <FaArrowLeft size={12} />
-                      Back
+                      {t("common.back")}
                     </button>
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-[#737373]">
-                          From: {selectedMessage.senderName || "Unknown recruiter"}
+                          {t("messages.from")}: {selectedMessage.senderName || "Unknown recruiter"}
                         </p>
                         <h2 className="mt-2 text-2xl font-semibold leading-tight text-[#0a0a0a]">
                           {selectedMessage.subject}
@@ -292,7 +325,7 @@ const Messages = () => {
                         onClick={() => navigate(`/jobs/${selectedMessage.jobPostId}`)}
                         className="blueprint-primary"
                       >
-                        View Job
+                        {t("messages.viewJob")}
                       </button>
                     </div>
                   )}
@@ -303,8 +336,8 @@ const Messages = () => {
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
                       <FaEnvelope />
                     </div>
-                    <h2 className="text-lg font-semibold text-[#0a0a0a]">Select a message to read</h2>
-                    <p className="mt-2 text-sm text-[#737373]">Choose any message from the inbox panel.</p>
+                    <h2 className="text-lg font-semibold text-[#0a0a0a]">{t("messages.selectTitle")}</h2>
+                    <p className="mt-2 text-sm text-[#737373]">{t("messages.selectDescription")}</p>
                   </div>
                 </div>
               )}
@@ -315,8 +348,8 @@ const Messages = () => {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
               <FaEnvelope className="h-5 w-5" />
             </div>
-            <h2 className="mb-2 text-lg font-semibold text-[#0a0a0a]">No messages yet</h2>
-            <p className="text-sm text-[#737373]">Recruiter updates will appear here when they contact you.</p>
+            <h2 className="mb-2 text-lg font-semibold text-[#0a0a0a]">{t("messages.emptyTitle")}</h2>
+            <p className="text-sm text-[#737373]">{t("messages.emptyDescription")}</p>
           </div>
         )}
       </div>

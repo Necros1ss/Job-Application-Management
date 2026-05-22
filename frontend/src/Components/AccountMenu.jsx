@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FaChevronDown, FaCog, FaUserCircle } from "react-icons/fa";
-import LanguageSwitcher from "./LanguageSwitcher";
+import { useI18n } from "../lib/i18n";
 
 const AccountMenu = ({ userName, userEmail, avatarUrl }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
   const location = useLocation();
+  const { t } = useI18n();
   const role = location.pathname.split("/").filter(Boolean)[0] || "candidate";
   const basePath = role === "recruiter" ? "/recruiter" : "/candidate";
 
@@ -73,7 +74,7 @@ const AccountMenu = ({ userName, userEmail, avatarUrl }) => {
             className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]"
           >
             <FaUserCircle className="text-black" />
-            Profile
+            {t("menu.profile")}
           </Link>
 
           <Link
@@ -82,12 +83,8 @@ const AccountMenu = ({ userName, userEmail, avatarUrl }) => {
             className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]"
           >
             <FaCog className="text-black" />
-            Settings
+            {t("menu.settings")}
           </Link>
-
-          <div className="border-t border-[#e5e5e5] px-4 py-3">
-            <LanguageSwitcher />
-          </div>
         </div>
       )}
     </div>

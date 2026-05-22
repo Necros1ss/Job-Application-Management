@@ -3,13 +3,47 @@ import { FaPen, FaPlus, FaSearch, FaTimes } from "react-icons/fa";
 import ApplicationDetail from "./ApplicationDetail";
 import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
-import { formatInterviewDateTime } from "../../utils/format";
+import { useI18n } from "../../lib/i18n";
+import { showError, showSuccess } from "../../utils/toast";
 
 const FILTERS = [
-  { value: "all", label: "All" },
-  { value: "upcoming", label: "Upcoming" },
-  { value: "past", label: "Past" },
+  { value: "all", labelKey: "interviews.all" },
+  { value: "upcoming", labelKey: "interviews.upcoming" },
+  { value: "past", labelKey: "interviews.past" },
 ];
+
+const INITIAL_FORM = {
+  applicationId: "",
+  interviewerName: "",
+  interviewDateTime: "",
+  mode: "online",
+  meetLink: "",
+  location: "",
+  notes: "",
+};
+
+const formatInterviewDateTime = (value) => {
+  if (!value) return "Not scheduled";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not scheduled";
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const toDateTimeInputValue = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+};
 
 const getModeBadge = (mode) => {
   const normalizedMode = (mode || "").toLowerCase();
@@ -44,6 +78,7 @@ const toApplicationDetailCandidate = (interview) => ({
 });
 
 const InterviewModal = ({ interview, onClose, onSaved }) => {
+  const { t } = useI18n();
   const isEdit = Boolean(interview);
   const [applications, setApplications] = useState([]);
   const [applicationSearch, setApplicationSearch] = useState("");
@@ -180,7 +215,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
           <div>
             <p className="blueprint-kicker">{isEdit ? "Edit schedule" : "New schedule"}</p>
             <h2 className="mt-1 text-2xl font-semibold text-[#0a0a0a]">
-              {isEdit ? "Edit Interview" : "Schedule Interview"}
+              {isEdit ? t("interviews.edit") : t("interviews.create")}
             </h2>
           </div>
           <button
@@ -196,7 +231,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
           <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
             <div className="space-y-3">
-              <label className="text-sm font-semibold text-[#0a0a0a]">Application</label>
+              <label className="text-sm font-semibold text-[#0a0a0a]">{t("interviews.application")}</label>
               <div className="relative">
                 <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737373]" size={13} />
                 <input
@@ -251,7 +286,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
               )}
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Interviewer</label>
+                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">{t("interviews.interviewer")}</label>
                 <input
                   type="text"
                   value={form.interviewerName}
@@ -262,7 +297,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Date & time</label>
+                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">{t("interviews.dateTime")}</label>
                 <input
                   type="datetime-local"
                   value={form.interviewDateTime}
@@ -272,7 +307,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Mode</label>
+                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">{t("interviews.mode")}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {["online", "offline"].map((mode) => (
                     <button
@@ -285,7 +320,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
                           : "border-[#e5e5e5] bg-white text-[#0a0a0a] hover:bg-[#f2f2f2]"
                       }`}
                     >
-                      {mode}
+                      {mode === "online" ? t("interviews.online") : t("interviews.offline")}
                     </button>
                   ))}
                 </div>
@@ -316,7 +351,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
               )}
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Notes</label>
+                  <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">{t("interviews.notes")}</label>
                 <textarea
                   value={form.notes}
                   onChange={(event) => updateForm("notes", event.target.value)}
@@ -335,14 +370,14 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
             onClick={onClose}
             className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] transition hover:bg-[#f2f2f2]"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={isSaving || isLoadingApplications}
             className="blueprint-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? "Saving..." : isEdit ? "Save changes" : "Schedule Interview"}
+            {isSaving ? t("common.saving") : isEdit ? t("common.save") : t("interviews.schedule")}
           </button>
         </div>
       </form>
@@ -351,6 +386,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
 };
 
 const InterviewList = () => {
+  const { t } = useI18n();
   const [interviews, setInterviews] = useState([]);
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -478,15 +514,15 @@ const InterviewList = () => {
         userEmail={userEmail}
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search interviews by candidate, job, company..."
+        searchPlaceholder={t("interviews.searchPlaceholder")}
       />
 
       <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="blueprint-kicker">Recruitment schedule</p>
-            <h1 className="mt-1 text-3xl font-semibold text-[#0a0a0a]">Interviews</h1>
-            <p className="mt-1 text-[#737373]">Track and schedule interviews across your hiring pipeline.</p>
+            <p className="blueprint-kicker">{t("interviews.kicker")}</p>
+            <h1 className="mt-1 text-3xl font-semibold text-[#0a0a0a]">{t("interviews.title")}</h1>
+            <p className="mt-1 text-[#737373]">{t("interviews.subtitle")}</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-1 rounded-full border border-[#e5e5e5] bg-white p-1">
@@ -501,13 +537,13 @@ const InterviewList = () => {
                       : "text-[#737373] hover:bg-[#f2f2f2] hover:text-[#0a0a0a]"
                   }`}
                 >
-                  {filter.label}
+                    {t(filter.labelKey)}
                 </button>
               ))}
             </div>
             <button type="button" onClick={openCreateModal} className="blueprint-primary inline-flex items-center gap-2">
               <FaPlus size={12} />
-              Schedule Interview
+              {t("interviews.schedule")}
             </button>
           </div>
         </div>
@@ -530,12 +566,12 @@ const InterviewList = () => {
               <table className="w-full min-w-[900px] text-left">
                 <thead className="border-b border-[#e5e5e5] bg-white">
                   <tr className="text-xs font-semibold uppercase tracking-wide text-[#737373]">
-                    <th className="px-6 py-5">Candidate Name</th>
-                    <th className="px-6 py-5">Job Title</th>
-                    <th className="px-6 py-5">Date & Time</th>
-                    <th className="px-6 py-5">Mode</th>
-                    <th className="px-6 py-5">Interviewer</th>
-                    <th className="px-6 py-5 text-right">Actions</th>
+                    <th className="px-6 py-5">{t("interviews.candidateName")}</th>
+                    <th className="px-6 py-5">{t("interviews.jobTitle")}</th>
+                    <th className="px-6 py-5">{t("interviews.dateTime")}</th>
+                    <th className="px-6 py-5">{t("interviews.mode")}</th>
+                    <th className="px-6 py-5">{t("interviews.interviewer")}</th>
+                    <th className="px-6 py-5 text-right">{t("interviews.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e5e5e5]">
@@ -587,7 +623,7 @@ const InterviewList = () => {
                             }}
                             className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] transition hover:bg-white"
                           >
-                            View Detail
+                            {t("interviews.viewDetail")}
                           </button>
                         </div>
                       </td>
@@ -601,12 +637,12 @@ const InterviewList = () => {
                           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
                             <FaPlus />
                           </div>
-                          <p className="font-semibold text-[#0a0a0a]">No interviews found</p>
+                          <p className="font-semibold text-[#0a0a0a]">{t("interviews.emptyTitle")}</p>
                           <p className="mt-1 text-sm text-[#737373]">
-                            Schedule an interview from an applied or reviewed application.
+                            {t("interviews.emptyDescription")}
                           </p>
                           <button type="button" onClick={openCreateModal} className="blueprint-primary mt-5">
-                            Schedule Interview
+                            {t("interviews.schedule")}
                           </button>
                         </div>
                       </td>

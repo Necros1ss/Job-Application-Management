@@ -11,14 +11,15 @@ import {
 import { employeesApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
+import { useI18n } from "../../lib/i18n";
 import { showError, showSuccess } from "../../utils/toast";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "attendance", label: "Attendance" },
-  { id: "leave", label: "Leave Requests" },
+  { id: "overview", labelKey: "employee.overview" },
+  { id: "attendance", labelKey: "employee.attendance" },
+  { id: "leave", labelKey: "employee.leaveRequests" },
 ];
 
 const leaveStatusStyles = {
@@ -57,6 +58,7 @@ const EmptyState = ({ icon: Icon, title, description }) => (
 );
 
 const EmployeePortal = () => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState("overview");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -162,8 +164,8 @@ const EmployeePortal = () => {
       return (
         <EmptyState
           icon={FaBriefcase}
-          title="Account not activated"
-          description="Please contact Human Resources or your recruiter to activate the employee portal."
+          title={t("employee.notOnboardedTitle")}
+          description={t("employee.notOnboardedDescription")}
         />
       );
     }
@@ -214,8 +216,8 @@ const EmployeePortal = () => {
 
         <div className="blueprint-card p-6">
           <div className="mb-5">
-            <p className="blueprint-kicker">Leave stats</p>
-            <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Request Breakdown</h2>
+            <p className="blueprint-kicker">{t("employee.leaveStats")}</p>
+            <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">{t("employee.requestBreakdown")}</h2>
           </div>
           {leaveStats.total > 0 ? (
             <Doughnut
@@ -403,13 +405,13 @@ const EmployeePortal = () => {
       <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="blueprint-kicker">Employee workspace</p>
-            <h1 className="mt-1 text-3xl font-semibold text-[#0a0a0a]">Employee Portal</h1>
-            <p className="mt-1 text-[#737373]">View employee details, attendance, and leave requests.</p>
+            <p className="blueprint-kicker">{t("employee.kicker")}</p>
+            <h1 className="mt-1 text-3xl font-semibold text-[#0a0a0a]">{t("employee.title")}</h1>
+            <p className="mt-1 text-[#737373]">{t("employee.subtitle")}</p>
           </div>
           {employee && (
             <div className="blueprint-card px-5 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#737373]">Status</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#737373]">{t("employee.status")}</p>
               <p className="mt-1 text-2xl font-semibold capitalize text-[#0a0a0a]">{employee.status}</p>
             </div>
           )}
@@ -442,7 +444,7 @@ const EmployeePortal = () => {
                     activeTab === tab.id ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2]"
                   }`}
                 >
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </button>
               ))}
             </div>

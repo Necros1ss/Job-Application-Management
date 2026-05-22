@@ -32,11 +32,15 @@ import AdminDashboard from "./Pages/Admin/AdminDashboard";
 import AdminUsers from "./Pages/Admin/AdminUsers";
 import AdminJobs from "./Pages/Admin/AdminJobs";
 import NotFound from "./Pages/NotFound";
+import { I18nProvider } from "./lib/i18n";
+import AutoTranslate from "./Components/AutoTranslate";
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <I18nProvider>
+      <AutoTranslate />
+      <Router>
+        <Routes>
       <Route index element={<Landing />} />
       <Route path="login" element={<Login />} />
       <Route path="signup" element={<SelectRole />} />
@@ -82,9 +86,10 @@ function App() {
         <Route path="jobs" element={<AdminJobs />} />
       </Route>
       <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
-  )
+        </Routes>
+      </Router>
+    </I18nProvider>
+  );
 }
 
 export default App;

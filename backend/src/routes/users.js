@@ -251,4 +251,31 @@ router.patch("/notification-preferences", requireAuth, async (req, res) => {
   }
 });
 
+router.delete("/me", requireAuth, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `DELETE FROM users
+       WHERE id = $1
+       RETURNING id`,
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await client.query("COMMIT");
+    return res.status(204).send();
+  } catch (error) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ message: "Failed to delete account", detail: error.message });
+  } finally {
+    client.release();
+  }
+});
+
 export default router;
