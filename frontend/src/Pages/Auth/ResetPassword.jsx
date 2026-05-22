@@ -1,125 +1,99 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { authApi } from "../../lib/api";
+import { Link } from "react-router-dom";
+import { FaArrowLeft, FaLock } from "react-icons/fa";
 
 const ResetPassword = () => {
-  const [newPassword, setNewPassword] = useState("");
+  const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [formError, setFormError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const token = new URLSearchParams(location.search).get("token");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setMessage("");
 
-    if (!token) {
-      setFormError("Reset token is missing.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
 
-    if (!newPassword || !confirmPassword) {
-      setFormError("All fields are required.");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
-    if (newPassword.length < 8) {
-      setFormError("Password must be at least 8 characters.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setFormError("Passwords do not match.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormError("");
-
-    try {
-      await authApi.resetPassword({ token, newPassword });
-      navigate("/login");
-    } catch (error) {
-      setFormError(error.message || "Failed to reset password.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    setError("");
+    setMessage("Your new password is ready to submit once the reset link is validated.");
   };
 
   return (
-    <div className="h-screen lg:flex max-w-screen-lg mx-auto gap-16 w-full py-12 px-4">
-      <div className="lg:w-1/2 max-w-lg mx-auto md:pt-10">
-        <h2 className="mb-10 mt-6 text-4xl font-semibold">Reset Password</h2>
-        <form onSubmit={handleResetPassword} className="space-y-5">
-          <div>
-            <label htmlFor="newPassword" className="p-2">
-              New Password
-            </label>
-            <div className="relative mt-2">
-              <input
-                type={showPassword ? "text" : "password"}
-                id="newPassword"
-                placeholder="Password (8 or more characters)"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                className="block w-full rounded-lg outline-none py-2 px-2.5 pr-10 text-gray-dark shadow-sm border border-gray"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-0 px-3 text-gray hover:text-black"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+      <div className="max-w-md w-full">
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-emerald-600 font-medium mb-8 transition-colors"
+        >
+          <FaArrowLeft size={16} />
+          Back to Login
+        </Link>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-6">
+            <FaLock size={22} className="text-emerald-600" />
           </div>
-          <div>
-            <label htmlFor="confirmPassword" className="p-2">
-              Confirm Password
-            </label>
-            <div className="relative mt-2">
+
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset Password</h1>
+          <p className="text-gray-500 mb-6 leading-relaxed">
+            Create a new password for your account.
+          </p>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm mb-5">
+              {error}
+            </div>
+          )}
+
+          {message && (
+            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 text-sm mb-5">
+              {message}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                New Password
+              </label>
               <input
-                type={showConfirmPassword ? "text" : "password"}
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Confirm Password
+              </label>
+              <input
                 id="confirmPassword"
-                placeholder="Confirm your password"
+                type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="block w-full rounded-lg outline-none py-2 px-2.5 pr-10 text-gray-dark shadow-sm border border-gray"
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all"
               />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-0 px-3 text-gray hover:text-black"
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-              >
-                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
             </div>
-          </div>
-          {formError && <p className="text-[#c93434] text-sm mt-2">{formError}</p>}
-          <div className="pt-4">
+
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="flex w-full justify-center rounded-lg bg-black p-3 text-sm font-semibold text-white mb-2"
+              className="w-full py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
             >
-              {isSubmitting ? "Resetting..." : "Reset password"}
+              Reset Password
             </button>
-            <p className="text-sm text-dark-gray">
-              Back to{" "}
-              <Link to="/login" className="underline hover:no-underline">
-                Login
-              </Link>
-            </p>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

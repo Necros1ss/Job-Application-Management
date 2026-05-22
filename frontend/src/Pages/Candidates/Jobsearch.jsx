@@ -10,6 +10,8 @@ import {
 } from "react-icons/fa";
 import { jobPostsApi, savedJobsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
+import { SkeletonCard } from "../../Components/Skeleton";
+import Pagination from "../../Components/Pagination";
 import { showError, showSuccess } from "../../utils/toast";
 
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Internship"];
@@ -372,18 +374,7 @@ const Jobsearch = () => {
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-gray-100 rounded-xl" />
-                  <div className="w-20 h-6 bg-gray-100 rounded-full" />
-                </div>
-                <div className="w-3/4 h-5 bg-gray-100 rounded mb-2" />
-                <div className="w-1/2 h-4 bg-gray-100 rounded mb-4" />
-                <div className="w-full h-3 bg-gray-100 rounded mb-2" />
-                <div className="w-2/3 h-3 bg-gray-100 rounded" />
-              </div>
-            ))}
+            {Array(6).fill(0).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : filteredJobs.length === 0 ? (
           <div className="text-center py-20">

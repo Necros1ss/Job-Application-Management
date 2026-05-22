@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; 
 import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
+import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
 import { FaUserCircle, FaSearch, FaBookOpen, FaVideo, FaMapMarkerAlt } from "react-icons/fa";
 import { formatMessageTime  } from '../../utils/format';
 
@@ -10,11 +11,13 @@ const Dashboard = () => {
   const [userEmail, setUserEmail] = useState("");
   const [jobs, setJobs] = useState([]);
   const [interviews, setInterviews] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
+        setIsLoading(true);
         const [profile, applications, myInterviews] = await Promise.all([
           usersApi.me(),
           applicationsApi.list(),
@@ -28,6 +31,8 @@ const Dashboard = () => {
         setErrorMessage("");
       } catch (error) {
         setErrorMessage(error.message || "Failed to load dashboard data");
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -124,6 +129,14 @@ const Dashboard = () => {
 
         {/* --- STATS CARDS --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-1">
+        {isLoading ? (
+          <>
+            <SkeletonDashboardCard />
+            <SkeletonDashboardCard />
+            <SkeletonDashboardCard dark />
+          </>
+        ) : (
+        <>
         
         {/* Card 1: Applied */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
@@ -150,6 +163,8 @@ const Dashboard = () => {
           </div>
         </div>
 
+        </>
+        )}
         </div>
 
         {/* --- MAIN LAYOUT (2 COLUMNS) --- */}
@@ -163,7 +178,11 @@ const Dashboard = () => {
           </div>
 
           <div className="space-y-4">
-            {jobs.length > 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-4">
+                {Array(3).fill(0).map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            ) : jobs.length > 0 ? (
               jobs.slice(0, 3).map((job) => (
                 <div key={job.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-4">

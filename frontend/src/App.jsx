@@ -19,9 +19,7 @@ import ForgotPass from "./Pages/Auth/ForgotPass";
 import ResetPassword from "./Pages/Auth/ResetPassword";
 import JobDetail from "./Pages/Jobs/JobDetail";
 import Company from "./Pages/Info/Company";
-import AdminDashboard from "./Pages/Admin/AdminDashboard";
-import AdminUsers from "./Pages/Admin/AdminUsers";
-import AdminJobs from "./Pages/Admin/AdminJobs";
+import NotFound from "./Pages/NotFound";
 
 function App() {
   return (
@@ -56,14 +54,7 @@ function App() {
           <Route path="application" element={<Application/>} />
           <Route path="interviews" element={<InterviewList />} />
         </Route>
-
-        <Route path="/admin" element={<DashboardLayout allowedRole="admin" />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="jobs" element={<AdminJobs />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );
