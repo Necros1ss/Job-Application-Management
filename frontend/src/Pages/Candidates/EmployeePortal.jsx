@@ -1,22 +1,68 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaBriefcase, FaCalendarAlt, FaCheckCircle, FaUmbrellaBeach } from "react-icons/fa";
+import { ArcElement, Chart as ChartJS, Legend, Tooltip } from "chart.js";
+import { Doughnut } from "react-chartjs-2";
+import {
+  FaBriefcase,
+  FaCalendarAlt,
+  FaCheckCircle,
+  FaClock,
+  FaUmbrellaBeach,
+} from "react-icons/fa";
 import { employeesApi, usersApi } from "../../lib/api";
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
-import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
 
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+const TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "attendance", label: "Attendance" },
+  { id: "leave", label: "Leave Requests" },
+];
+
 const leaveStatusStyles = {
-  pending: "bg-amber-50 text-amber-700 border-amber-100",
-  approved: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  rejected: "bg-red-50 text-red-600 border-red-100",
+  pending: "bg-[#f2f2f2] text-[#0a0a0a] border-[#e5e5e5]",
+  approved: "bg-white text-[#0a0a0a] border-[#0a0a0a]",
+  rejected: "bg-red-50 text-red-700 border-red-200",
 };
 
+const attendanceStatusStyles = {
+  present: "bg-black text-white border-black",
+  remote: "bg-[#f2f2f2] text-[#0a0a0a] border-[#e5e5e5]",
+  late: "bg-amber-50 text-amber-700 border-amber-200",
+  absent: "bg-red-50 text-red-700 border-red-200",
+};
+
+const formatDate = (value) => {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not set";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+const formatTime = (value) => {
+  if (!value) return "-";
+  return String(value).slice(0, 5);
+};
+
+const EmptyState = ({ icon: Icon, title, description }) => (
+  <div className="blueprint-card border-dashed p-10 text-center">
+    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
+      <Icon size={22} />
+    </div>
+    <h2 className="mb-1 font-semibold text-[#0a0a0a]">{title}</h2>
+    <p className="text-sm text-[#737373]">{description}</p>
+  </div>
+);
+
 const EmployeePortal = () => {
+  const [activeTab, setActiveTab] = useState("overview");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [employee, setEmployee] = useState(null);
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -31,15 +77,17 @@ const EmployeePortal = () => {
     try {
       setIsLoading(true);
       setError("");
-      const [profile, employeeData, leaveData] = await Promise.all([
+      const [profile, employeeData, leaveData, attendanceData] = await Promise.all([
         usersApi.me(),
         employeesApi.getMine(),
         employeesApi.listLeaveRequests(),
+        employeesApi.listAttendance(),
       ]);
       setUserName(profile.name || "");
       setUserEmail(profile.email || "");
       setEmployee(employeeData || null);
       setLeaveRequests(Array.isArray(leaveData) ? leaveData : []);
+      setAttendanceRecords(Array.isArray(attendanceData) ? attendanceData : []);
     } catch (err) {
       const message = err.message || "Failed to load employee portal";
       setError(message);
@@ -53,11 +101,45 @@ const EmployeePortal = () => {
     loadData();
   }, []);
 
-  const stats = useMemo(() => {
+  const leaveStats = useMemo(() => {
     const approved = leaveRequests.filter((request) => request.status === "approved").length;
     const pending = leaveRequests.filter((request) => request.status === "pending").length;
-    return { total: leaveRequests.length, approved, pending };
+    const rejected = leaveRequests.filter((request) => request.status === "rejected").length;
+    return { total: leaveRequests.length, approved, pending, rejected };
   }, [leaveRequests]);
+
+  const currentMonthAttendance = useMemo(() => {
+    const now = new Date();
+    return attendanceRecords.filter((record) => {
+      const date = new Date(record.workDate);
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    });
+  }, [attendanceRecords]);
+
+  const attendanceStats = useMemo(() => {
+    const initial = { present: 0, remote: 0, late: 0, absent: 0 };
+    return currentMonthAttendance.reduce((acc, record) => {
+      const status = record.status || "present";
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, initial);
+  }, [currentMonthAttendance]);
+
+  const chartData = useMemo(
+    () => ({
+      labels: ["Approved", "Pending", "Rejected"],
+      datasets: [
+        {
+          data: [leaveStats.approved, leaveStats.pending, leaveStats.rejected],
+          backgroundColor: ["#0a0a0a", "#737373", "#e5e5e5"],
+          borderColor: "#ffffff",
+          borderWidth: 4,
+          hoverOffset: 4,
+        },
+      ],
+    }),
+    [leaveStats]
+  );
 
   const handleSubmitLeave = async (event) => {
     event.preventDefault();
@@ -75,177 +157,299 @@ const EmployeePortal = () => {
     }
   };
 
+  const renderOverview = () => {
+    if (!employee) {
+      return (
+        <EmptyState
+          icon={FaBriefcase}
+          title="Ban chua duoc onboard"
+          description="Vui long lien he HR hoac recruiter de kich hoat employee portal."
+        />
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_360px]">
+        <div className="space-y-6">
+          <div className="blueprint-card p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className="blueprint-tag capitalize">{employee.status}</span>
+                <h2 className="mt-3 text-2xl font-semibold text-[#0a0a0a]">{employee.fullName}</h2>
+                <p className="text-sm text-[#737373]">{employee.email}</p>
+              </div>
+              <FaCheckCircle className="mt-1 text-[#0a0a0a]" size={24} />
+            </div>
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              {[
+                ["Employee Code", employee.employeeCode || "Not set"],
+                ["Company", employee.companyName || "Not set"],
+                ["Job Title", employee.jobTitle || "Not set"],
+                ["Department", employee.department || "Not set"],
+                ["Employment Type", employee.employmentType || "Not set"],
+                ["Start Date", formatDate(employee.startDate)],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#737373]">{label}</p>
+                  <p className="text-sm font-semibold text-[#0a0a0a]">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            {[
+              ["Total Leave", leaveStats.total],
+              ["Approved", leaveStats.approved],
+              ["Pending", leaveStats.pending],
+              ["Rejected", leaveStats.rejected],
+            ].map(([label, value]) => (
+              <div key={label} className="blueprint-card p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#737373]">{label}</p>
+                <p className="mt-2 text-3xl font-semibold text-[#0a0a0a]">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="blueprint-card p-6">
+          <div className="mb-5">
+            <p className="blueprint-kicker">Leave stats</p>
+            <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Request Breakdown</h2>
+          </div>
+          {leaveStats.total > 0 ? (
+            <Doughnut
+              data={chartData}
+              options={{
+                cutout: "68%",
+                plugins: {
+                  legend: {
+                    position: "bottom",
+                    labels: { boxWidth: 10, color: "#0a0a0a", font: { family: "Geist" } },
+                  },
+                },
+              }}
+            />
+          ) : (
+            <div className="rounded-[14px] border border-dashed border-[#e5e5e5] p-8 text-center text-sm text-[#737373]">
+              No leave data to chart yet.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderAttendance = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {[
+          ["Present", attendanceStats.present],
+          ["Remote", attendanceStats.remote],
+          ["Late", attendanceStats.late],
+          ["Absent", attendanceStats.absent],
+        ].map(([label, value]) => (
+          <div key={label} className="blueprint-card p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#737373]">{label}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#0a0a0a]">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {currentMonthAttendance.length === 0 ? (
+        <EmptyState
+          icon={FaClock}
+          title="No attendance records"
+          description="Attendance records for the current month will appear here."
+        />
+      ) : (
+        <div className="blueprint-card overflow-hidden p-0">
+          <div className="border-b border-[#e5e5e5] px-6 py-4">
+            <h2 className="font-semibold text-[#0a0a0a]">Current Month Attendance</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left">
+              <thead className="border-b border-[#e5e5e5] text-xs font-semibold uppercase tracking-wide text-[#737373]">
+                <tr>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Check-in</th>
+                  <th className="px-6 py-4">Check-out</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e5e5e5]">
+                {currentMonthAttendance.map((record) => (
+                  <tr key={record.id}>
+                    <td className="px-6 py-4 font-semibold text-[#0a0a0a]">{formatDate(record.workDate)}</td>
+                    <td className="px-6 py-4 text-[#737373]">{formatTime(record.checkIn)}</td>
+                    <td className="px-6 py-4 text-[#737373]">{formatTime(record.checkOut)}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold capitalize ${
+                          attendanceStatusStyles[record.status] || attendanceStatusStyles.present
+                        }`}
+                      >
+                        {record.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-[#737373]">{record.notes || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderLeaveRequests = () => (
+    <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_380px]">
+      <div className="blueprint-card overflow-hidden p-0">
+        <div className="flex items-center gap-2 border-b border-[#e5e5e5] px-6 py-4">
+          <FaUmbrellaBeach className="text-[#0a0a0a]" />
+          <h2 className="font-semibold text-[#0a0a0a]">Leave Requests</h2>
+        </div>
+        {leaveRequests.length === 0 ? (
+          <div className="p-8 text-center text-sm text-[#737373]">No leave requests yet.</div>
+        ) : (
+          <div className="divide-y divide-[#e5e5e5]">
+            {leaveRequests.map((request) => (
+              <div key={request.id} className="px-6 py-4">
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold capitalize ${
+                    leaveStatusStyles[request.status] || leaveStatusStyles.pending
+                  }`}
+                >
+                  {request.status}
+                </span>
+                <h3 className="mt-2 text-base font-semibold capitalize text-[#0a0a0a]">{request.leaveType} leave</h3>
+                <p className="text-sm text-[#737373]">
+                  {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                </p>
+                {request.reason && <p className="mt-2 whitespace-pre-wrap text-sm text-[#737373]">{request.reason}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmitLeave} className="blueprint-card h-fit p-6">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-[#0a0a0a]">
+            <FaCalendarAlt />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-[#0a0a0a]">Request Leave</h2>
+            <p className="text-xs text-[#737373]">Submit for recruiter review</p>
+          </div>
+        </div>
+
+        <label className="mb-1.5 block text-sm font-semibold text-[#0a0a0a]">Leave Type</label>
+        <select
+          value={leaveForm.leaveType}
+          onChange={(event) => setLeaveForm((current) => ({ ...current, leaveType: event.target.value }))}
+          className="blueprint-input mb-4 w-full"
+        >
+          <option value="annual">Annual</option>
+          <option value="sick">Sick</option>
+          <option value="unpaid">Unpaid</option>
+        </select>
+
+        <label className="mb-1.5 block text-sm font-semibold text-[#0a0a0a]">Start Date</label>
+        <input
+          type="date"
+          value={leaveForm.startDate}
+          onChange={(event) => setLeaveForm((current) => ({ ...current, startDate: event.target.value }))}
+          className="blueprint-input mb-4 w-full"
+          required
+        />
+
+        <label className="mb-1.5 block text-sm font-semibold text-[#0a0a0a]">End Date</label>
+        <input
+          type="date"
+          value={leaveForm.endDate}
+          onChange={(event) => setLeaveForm((current) => ({ ...current, endDate: event.target.value }))}
+          className="blueprint-input mb-4 w-full"
+          required
+        />
+
+        <label className="mb-1.5 block text-sm font-semibold text-[#0a0a0a]">Reason</label>
+        <textarea
+          value={leaveForm.reason}
+          onChange={(event) => setLeaveForm((current) => ({ ...current, reason: event.target.value }))}
+          className="blueprint-input mb-5 w-full resize-none"
+          rows={4}
+          placeholder="Reason for leave"
+        />
+
+        <button
+          type="submit"
+          disabled={isSaving || !employee}
+          className="blueprint-primary inline-flex w-full items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <FaUmbrellaBeach />
+          {isSaving ? "Submitting..." : "Submit Request"}
+        </button>
+      </form>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <TopBarDashboard userName={userName} userEmail={userEmail} />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+      <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Employee Portal</h1>
-            <p className="text-gray-500 mt-1">View your employee profile and leave requests.</p>
+            <p className="blueprint-kicker">Employee workspace</p>
+            <h1 className="mt-1 text-3xl font-semibold text-[#0a0a0a]">Employee Portal</h1>
+            <p className="mt-1 text-[#737373]">View employee details, attendance, and leave requests.</p>
           </div>
           {employee && (
-            <div className="bg-[#116843] text-white rounded-2xl px-5 py-3 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-100">Status</p>
-              <p className="text-2xl font-extrabold capitalize">{employee.status}</p>
+            <div className="blueprint-card px-5 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#737373]">Status</p>
+              <p className="mt-1 text-2xl font-semibold capitalize text-[#0a0a0a]">{employee.status}</p>
             </div>
           )}
         </div>
 
         {error && (
-          <p className="text-red-500 text-sm mb-6 bg-red-50 p-3 rounded-lg border border-red-100" role="alert">
+          <p className="mb-6 rounded-[10px] border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
             {error}
           </p>
         )}
 
         {isLoading ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+            <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
               <SkeletonDashboardCard />
               <SkeletonDashboardCard />
-              <SkeletonDashboardCard dark />
+              <SkeletonDashboardCard />
             </div>
             <SkeletonCard />
           </>
-        ) : !employee ? (
-          <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
-            <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-[#188155] flex items-center justify-center mb-4">
-              <FaBriefcase size={22} />
-            </div>
-            <h2 className="font-bold text-gray-900 mb-1">No employee profile yet</h2>
-            <p className="text-sm text-gray-500">Your employee portal will appear after a recruiter converts your accepted application.</p>
-          </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Leave Requests</p>
-                <p className="text-4xl font-extrabold text-gray-900">{stats.total}</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Pending</p>
-                <p className="text-4xl font-extrabold text-amber-700">{stats.pending}</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Approved</p>
-                <p className="text-4xl font-extrabold text-[#188155]">{stats.approved}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-8">
-              <div className="space-y-6">
-                <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="inline-flex px-3 py-1 rounded-full border text-xs font-bold capitalize bg-emerald-50 text-emerald-700 border-emerald-100">
-                        {employee.status}
-                      </span>
-                      <h2 className="text-2xl font-bold text-gray-900 mt-3">{employee.fullName}</h2>
-                      <p className="text-sm text-gray-500">{employee.email}</p>
-                    </div>
-                    <FaCheckCircle className="text-emerald-600 mt-1" size={24} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    {[
-                      ["Employee Code", employee.employeeCode || "Not set"],
-                      ["Company", employee.companyName || "Not set"],
-                      ["Job Title", employee.jobTitle || "Not set"],
-                      ["Department", employee.department || "Not set"],
-                      ["Employment Type", employee.employmentType || "Not set"],
-                      ["Start Date", formatDate(employee.startDate, undefined, "Not set")],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-xl bg-gray-50 border border-gray-100 p-4">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-                        <p className="text-sm font-semibold text-gray-900">{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-                    <FaUmbrellaBeach className="text-emerald-600" />
-                    <h2 className="font-bold text-gray-900">Leave Requests</h2>
-                  </div>
-                  {leaveRequests.length === 0 ? (
-                    <p className="p-8 text-center text-sm text-gray-500">No leave requests yet.</p>
-                  ) : (
-                    <div className="divide-y divide-gray-50">
-                      {leaveRequests.map((request) => (
-                        <div key={request.id} className="px-6 py-4">
-                          <span className={`inline-flex px-3 py-1 rounded-full border text-xs font-bold capitalize ${leaveStatusStyles[request.status] || leaveStatusStyles.pending}`}>
-                            {request.status}
-                          </span>
-                          <h3 className="text-base font-bold text-gray-900 mt-2 capitalize">{request.leaveType} leave</h3>
-                          <p className="text-sm text-gray-500">{formatDate(request.startDate, undefined, "Not set")} - {formatDate(request.endDate, undefined, "Not set")}</p>
-                          {request.reason && <p className="text-sm text-gray-500 mt-2 whitespace-pre-wrap">{request.reason}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmitLeave} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm h-fit">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <FaCalendarAlt />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">Request Leave</h2>
-                    <p className="text-xs text-gray-500">Submit for recruiter review</p>
-                  </div>
-                </div>
-
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Leave Type</label>
-                <select
-                  value={leaveForm.leaveType}
-                  onChange={(event) => setLeaveForm((current) => ({ ...current, leaveType: event.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 mb-4"
-                >
-                  <option value="annual">Annual</option>
-                  <option value="sick">Sick</option>
-                  <option value="unpaid">Unpaid</option>
-                </select>
-
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Start Date</label>
-                <input
-                  type="date"
-                  value={leaveForm.startDate}
-                  onChange={(event) => setLeaveForm((current) => ({ ...current, startDate: event.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 mb-4"
-                  required
-                />
-
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">End Date</label>
-                <input
-                  type="date"
-                  value={leaveForm.endDate}
-                  onChange={(event) => setLeaveForm((current) => ({ ...current, endDate: event.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 mb-4"
-                  required
-                />
-
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Reason</label>
-                <textarea
-                  value={leaveForm.reason}
-                  onChange={(event) => setLeaveForm((current) => ({ ...current, reason: event.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 mb-5 resize-none"
-                  rows={4}
-                  placeholder="Reason for leave"
-                />
-
+            <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-[#e5e5e5] bg-white p-1">
+              {TABS.map((tab) => (
                 <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:bg-gray-300"
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    activeTab === tab.id ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2]"
+                  }`}
                 >
-                  <FaUmbrellaBeach />
-                  {isSaving ? "Submitting..." : "Submit Request"}
+                  {tab.label}
                 </button>
-              </form>
+              ))}
             </div>
+
+            {activeTab === "overview" && renderOverview()}
+            {activeTab === "attendance" && renderAttendance()}
+            {activeTab === "leave" && renderLeaveRequests()}
           </>
         )}
       </div>

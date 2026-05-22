@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { messagesApi } from '../lib/api';
 import { formatMessageTime } from '../utils/format';
 import AccountMenu from './AccountMenu';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const TopBarRecruiter = ({
   userName,
@@ -129,6 +130,8 @@ const TopBarRecruiter = ({
         )}
 
         <div className="flex shrink-0 items-center gap-5 text-[#737373]">
+          <LanguageSwitcher compact />
+
           <button
             type="button"
             className="relative p-1.5 transition-colors hover:text-black"

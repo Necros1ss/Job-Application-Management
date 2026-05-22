@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { messagesApi } from '../lib/api';
 import { formatMessageTime } from '../utils/format';
 import AccountMenu from './AccountMenu';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const TopBarDashboard = ({
   userName,
@@ -159,6 +160,7 @@ const TopBarDashboard = ({
 
         {/* TÀI KHOẢN & THÔNG BÁO */}
         <div className="flex items-center gap-5 text-[#737373]">
+          <LanguageSwitcher compact />
           
           {/* Chuông thông báo */}
           <div className="relative" ref={dropdownRef}>

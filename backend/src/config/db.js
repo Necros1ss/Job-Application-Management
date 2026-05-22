@@ -159,6 +159,8 @@ export const ensurePhaseSchema = async () => {
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_email_body TEXT;
 
+         ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS skills TEXT[] DEFAULT '{}';
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS experience VARCHAR(100);
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS job_type VARCHAR(50);
@@ -208,6 +210,23 @@ export const ensurePhaseSchema = async () => {
          file_data BYTEA NOT NULL,
          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
          CONSTRAINT uq_application_file_type UNIQUE (application_id, file_type)
+       )`
+    );
+
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS interviews (
+         id BIGSERIAL PRIMARY KEY,
+         application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+         recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,
+         interviewer_name VARCHAR(255) NOT NULL,
+         interview_datetime TIMESTAMPTZ NOT NULL,
+         mode VARCHAR(30) NOT NULL DEFAULT 'online',
+         meet_link TEXT,
+         location TEXT,
+         notes TEXT,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT chk_interviews_mode CHECK (mode IN ('online', 'offline'))
        )`
     );
 

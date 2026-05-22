@@ -131,6 +131,25 @@
     font-family: var(--font-geist-mono);
     letter-spacing: 0;
   }
+
+  .animate-shake {
+    animation: shake 0.38s ease-in-out;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
 }
 
 @layer utilities {

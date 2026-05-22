@@ -1,8 +1,8 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FaArrowRight,
   FaCalendarCheck,
-  FaCheckCircle,
   FaClipboardList,
   FaGithub,
   FaLayerGroup,
@@ -36,14 +36,66 @@ const modules = [
 ];
 
 const metrics = [
-  ["Candidates", "248"],
-  ["Interviews", "36"],
-  ["Offers", "12"],
-  ["Open Tasks", "18"],
+  ["Candidates", 248, "+"],
+  ["Interviews", 36, "+"],
+  ["Offers", 12, ""],
+  ["Open Tasks", 18, ""],
 ];
+
+const AnimatedMetric = ({ value, suffix = "", start }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (!start) return undefined;
+
+    let frameId;
+    const duration = 1500;
+    const startedAt = performance.now();
+
+    const tick = (timestamp) => {
+      const progress = Math.min((timestamp - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(value * eased));
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [start, value]);
+
+  return (
+    <span>
+      {displayValue}
+      {suffix}
+    </span>
+  );
+};
 
 const Landing = () => {
   const { t } = useI18n();
+  const metricsRef = useRef(null);
+  const [metricsVisible, setMetricsVisible] = useState(false);
+
+  useEffect(() => {
+    const node = metricsRef.current;
+    if (!node) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setMetricsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="min-h-screen blueprint-grid-bg text-[#0a0a0a]">
@@ -76,7 +128,10 @@ const Landing = () => {
         <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl grid-cols-1 items-center gap-10 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr] lg:px-10">
           <div className="max-w-3xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] shadow-[0_0_0_1px_rgba(10,10,10,0.04)]">
-              <FaCheckCircle className="text-black" />
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#10c22b] opacity-40" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#10c22b]" />
+              </span>
               {t("landing.badge")}
             </div>
             <h1 className="max-w-3xl text-[44px] font-semibold leading-none text-black sm:text-[48px]">
@@ -101,38 +156,73 @@ const Landing = () => {
             </div>
           </div>
 
-          <div className="blueprint-hero-panel p-5">
+          <div ref={metricsRef} className="blueprint-hero-panel p-5">
             <div className="relative z-10 rounded-[10px] border border-[#e5e5e5] bg-white p-4">
               <div className="mb-4 flex items-center justify-between border-b border-[#e5e5e5] pb-3">
                 <div>
                   <p className="blueprint-kicker">Operating console</p>
                   <p className="mt-1 text-sm font-medium text-black">Recruitment command board</p>
                 </div>
-                <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-white">Live</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-black px-3 py-1 text-xs font-medium text-white">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#10c22b]" />
+                  Live
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                {metrics.map(([label, value]) => (
+                {metrics.map(([label, value, suffix]) => (
                   <div key={label} className="rounded-[10px] border border-[#e5e5e5] bg-[#f2f2f2] p-4 text-left">
                     <p className="text-xs font-medium uppercase text-[#737373]">{label}</p>
-                    <p className="blueprint-metric mt-2 text-3xl font-semibold text-black">{value}</p>
+                    <p className="blueprint-metric mt-2 text-3xl font-semibold text-black">
+                      <AnimatedMetric value={value} suffix={suffix} start={metricsVisible} />
+                    </p>
                   </div>
                 ))}
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                {["Applied", "Interview", "Offer"].map((stage, index) => (
+                {[
+                  ["Applied", 42],
+                  ["Interview", 18],
+                  ["Hired", 7],
+                ].map(([stage, count], index) => (
                   <div key={stage} className="rounded-[10px] border border-[#e5e5e5] bg-white p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium uppercase text-[#737373]">{stage}</span>
-                      <span className="font-mono text-xs text-[#737373]">0{index + 1}</span>
+                      <span className="font-mono text-xs text-[#737373]">{count}</span>
                     </div>
                     <div className="mt-4 space-y-2">
-                      <div className="h-2 rounded-full bg-black" />
+                      <div
+                        className="h-2 rounded-full bg-black transition-all duration-700"
+                        style={{ width: `${Math.max(34, 100 - index * 24)}%` }}
+                      />
                       <div className="h-2 w-2/3 rounded-full bg-[#e5e5e5]" />
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[1.1fr_.9fr]">
+                <div className="rounded-[10px] border border-[#e5e5e5] bg-[#f2f2f2] p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium uppercase text-[#737373]">Next interview</p>
+                    <FaCalendarCheck className="text-black" />
+                  </div>
+                  <p className="mt-3 text-sm font-semibold text-black">Frontend Engineer</p>
+                  <p className="mt-1 text-xs text-[#737373]">Today, 10:30 AM - Online</p>
+                </div>
+                <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-4">
+                  <p className="text-xs font-medium uppercase text-[#737373]">Offer readiness</p>
+                  <div className="mt-4 flex items-end gap-2">
+                    {[62, 86, 48, 74].map((height, index) => (
+                      <span
+                        key={height}
+                        className="w-full rounded-t-[6px] bg-black"
+                        style={{ height: `${height}px`, opacity: 1 - index * 0.14 }}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

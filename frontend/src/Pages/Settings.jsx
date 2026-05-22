@@ -4,7 +4,35 @@ import { accountApi } from "../lib/api";
 import DeleteAccountModal from "../Components/DeleteAccountModal";
 import { showError, showSuccess } from "../utils/toast";
 
+const DEFAULT_PREFERENCES = {
+  newApplication: true,
+  interviewReminder: true,
+  statusChanged: true,
+  newMessage: true,
+};
+
+const SETTINGS_TABS = [
+  { id: "security", label: "Security" },
+  { id: "notifications", label: "Notifications" },
+];
+
+const Toggle = ({ checked, onChange }) => (
+  <button
+    type="button"
+    onClick={onChange}
+    className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-black" : "bg-[#e5e5e5]"}`}
+    aria-pressed={checked}
+  >
+    <span
+      className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
+        checked ? "left-6" : "left-1"
+      }`}
+    />
+  </button>
+);
+
 const Settings = () => {
+  const [activeTab, setActiveTab] = useState("security");
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -14,6 +42,61 @@ const Settings = () => {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+
+  const userRole = tokenStorage.getRole() || localStorage.getItem("userRole") || "";
+
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        setIsLoadingPreferences(true);
+        const profile = await usersApi.me();
+        setPreferences({
+          ...DEFAULT_PREFERENCES,
+          ...(profile.notificationPreferences || {}),
+        });
+      } catch (error) {
+        showError(error.message || "Failed to load notification preferences");
+      } finally {
+        setIsLoadingPreferences(false);
+      }
+    };
+
+    loadPreferences();
+  }, []);
+
+  const notificationOptions = useMemo(
+    () =>
+      [
+        {
+          key: "newApplication",
+          roles: ["recruiter"],
+          label: "New application received",
+          description: "Receive email when a candidate applies to one of your jobs.",
+        },
+        {
+          key: "interviewReminder",
+          roles: ["recruiter", "candidate"],
+          label: "Interview reminder",
+          description: "Receive a reminder one day before scheduled interviews.",
+        },
+        {
+          key: "statusChanged",
+          roles: ["candidate"],
+          label: "Application status changed",
+          description: "Receive updates when recruiters change your application status.",
+        },
+        {
+          key: "newMessage",
+          roles: ["candidate"],
+          label: "New message received",
+          description: "Receive email when a recruiter sends you a new message.",
+        },
+      ].filter((option) => option.roles.includes(userRole)),
+    [userRole]
+  );
 
   const validatePassword = (pwd) => {
     if (pwd.length < 8) return "Password must be at least 8 characters";
@@ -55,123 +138,198 @@ const Settings = () => {
     }
   };
 
-  return (
-    <section className="max-w-2xl">
-      <div className="mb-10">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">Settings</h2>
-        <p className="text-gray-500">Manage your account preferences and security</p>
-      </div>
+  const handleSavePreferences = async () => {
+    try {
+      setIsSavingPreferences(true);
+      const response = await usersApi.updateNotificationPreferences(preferences);
+      setPreferences({
+        ...DEFAULT_PREFERENCES,
+        ...(response.notificationPreferences || preferences),
+      });
+      showSuccess("Notification preferences saved.");
+    } catch (error) {
+      showError(error.message || "Failed to save notification preferences");
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
 
-      {/* Change Password */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 md:p-8 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
-            <FaLock size={20} className="text-emerald-600" />
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-900">Change Password</h3>
-            <p className="text-sm text-gray-500">Update your password to keep your account secure</p>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Current Password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
-            <div className="relative">
-              <input
-                type={showCurrent ? "text" : "password"}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-11 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showCurrent ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-              </button>
-            </div>
-          </div>
-
-          {/* New Password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
-            <div className="relative">
-              <input
-                type={showNew ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-11 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNew(!showNew)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showNew ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
-            <div className="relative">
-              <input
-                type={showConfirm ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-11 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showConfirm ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Updating..." : "Update Password"}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Delete Account */}
-      <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-6 md:p-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
-            <FaTrashAlt size={20} className="text-red-500" />
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-900">Delete Account</h3>
-            <p className="text-sm text-gray-500">Permanently delete your account and all associated data</p>
-          </div>
-        </div>
-        <p className="text-sm text-gray-500 mb-4">
-          Once you delete your account, there is no going back. Please be certain.
-        </p>
+  const renderPasswordField = ({ label, value, setValue, show, setShow, placeholder }) => (
+    <div>
+      <label className="mb-1.5 block text-sm font-semibold text-[#0a0a0a]">{label}</label>
+      <div className="relative">
+        <input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          className="blueprint-input w-full pr-11"
+        />
         <button
           type="button"
-          onClick={() => setShowDeleteAccountModal(true)}
-          className="px-5 py-2.5 border border-red-200 text-red-600 font-semibold rounded-xl hover:bg-red-50 transition-colors"
+          onClick={() => setShow(!show)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737373] hover:text-[#0a0a0a]"
         >
-          Delete my Account
+          {show ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
         </button>
       </div>
+    </div>
+  );
+
+  return (
+    <section className="max-w-3xl">
+      <div className="mb-8">
+        <p className="blueprint-kicker">Account controls</p>
+        <h2 className="mt-1 text-2xl font-semibold text-[#0a0a0a]">Settings</h2>
+        <p className="mt-1 text-[#737373]">Manage your account preferences and security</p>
+      </div>
+
+      <div className="mb-6 inline-flex rounded-full border border-[#e5e5e5] bg-white p-1">
+        {SETTINGS_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              activeTab === tab.id ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2]"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "security" && (
+        <>
+          <div className="blueprint-card mb-6 p-6 md:p-8">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-[#0a0a0a]">
+                <FaLock size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#0a0a0a]">Change Password</h3>
+                <p className="text-sm text-[#737373]">Update your password to keep your account secure</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {renderPasswordField({
+                label: "Current Password",
+                value: currentPassword,
+                setValue: setCurrentPassword,
+                show: showCurrent,
+                setShow: setShowCurrent,
+                placeholder: "Enter current password",
+              })}
+              {renderPasswordField({
+                label: "New Password",
+                value: newPassword,
+                setValue: setNewPassword,
+                show: showNew,
+                setShow: setShowNew,
+                placeholder: "At least 8 characters",
+              })}
+              {renderPasswordField({
+                label: "Confirm New Password",
+                value: confirmPassword,
+                setValue: setConfirmPassword,
+                show: showConfirm,
+                setShow: setShowConfirm,
+                placeholder: "Re-enter new password",
+              })}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="blueprint-primary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="rounded-[14px] border border-red-200 bg-white p-6 shadow-[var(--shadow-subtle-2)] md:p-8">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-red-50 text-red-600">
+                <FaTrashAlt size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#0a0a0a]">Delete Account</h3>
+                <p className="text-sm text-[#737373]">Permanently delete your account and all associated data</p>
+              </div>
+            </div>
+            <p className="mb-4 text-sm text-[#737373]">
+              Once you delete your account, there is no going back. Please be certain.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDeleteAccountModal(true)}
+              className="rounded-[10px] border border-red-200 px-5 py-2.5 font-semibold text-red-700 transition hover:bg-red-50"
+            >
+              Delete my Account
+            </button>
+          </div>
+        </>
+      )}
+
+      {activeTab === "notifications" && (
+        <div className="blueprint-card p-6 md:p-8">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f2f2f2] text-[#0a0a0a]">
+              <FaBell size={18} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[#0a0a0a]">Email Notifications</h3>
+              <p className="text-sm text-[#737373]">Choose which account events should trigger email updates.</p>
+            </div>
+          </div>
+
+          {isLoadingPreferences ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="h-16 animate-pulse rounded-[10px] bg-[#f2f2f2]" />
+              ))}
+            </div>
+          ) : notificationOptions.length > 0 ? (
+            <div className="divide-y divide-[#e5e5e5]">
+              {notificationOptions.map((option) => (
+                <div key={option.key} className="flex items-center justify-between gap-6 py-5">
+                  <div>
+                    <p className="font-semibold text-[#0a0a0a]">{option.label}</p>
+                    <p className="mt-1 text-sm text-[#737373]">{option.description}</p>
+                  </div>
+                  <Toggle
+                    checked={Boolean(preferences[option.key])}
+                    onChange={() =>
+                      setPreferences((current) => ({
+                        ...current,
+                        [option.key]: !current[option.key],
+                      }))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-[10px] border border-dashed border-[#e5e5e5] p-6 text-center text-sm text-[#737373]">
+              No notification preferences are available for this role.
+            </p>
+          )}
+
+          <div className="mt-6 flex justify-end">
+            <button
+              type="button"
+              onClick={handleSavePreferences}
+              disabled={isSavingPreferences || isLoadingPreferences}
+              className="blueprint-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSavingPreferences ? "Saving..." : "Save Notifications"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {showDeleteAccountModal && (
         <DeleteAccountModal setDeleteAccountModal={setShowDeleteAccountModal} />

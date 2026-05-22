@@ -305,10 +305,12 @@ const Employees = () => {
               {isLoading ? (
                 Array(3).fill(0).map((_, index) => <SkeletonCard key={index} />)
               ) : filteredEmployees.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
-                  <FaUserTie size={24} className="mx-auto text-gray-400 mb-3" />
-                  <p className="font-bold text-gray-900">No employees yet</p>
-                  <p className="text-sm text-gray-500 mt-1">Convert accepted candidates into employees to start HR tracking.</p>
+                <div className="blueprint-card border-dashed p-12 text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
+                    <FaUserTie size={22} />
+                  </div>
+                  <p className="font-semibold text-[#0a0a0a]">No employees yet</p>
+                  <p className="text-sm text-[#737373] mt-1">Convert accepted candidates into employees to start HR tracking.</p>
                 </div>
               ) : (
                 filteredEmployees.map((employee) => (
@@ -435,7 +437,13 @@ const Employees = () => {
                 <h2 className="font-bold text-gray-900">Recent Attendance</h2>
               </div>
               {attendance.length === 0 ? (
-                <p className="p-8 text-center text-sm text-gray-500">No attendance records yet.</p>
+                <div className="p-10 text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
+                    <FaCalendarCheck size={22} />
+                  </div>
+                  <p className="font-semibold text-[#0a0a0a]">No attendance records yet</p>
+                  <p className="mt-1 text-sm text-[#737373]">Recorded attendance will appear here.</p>
+                </div>
               ) : (
                 <div className="divide-y divide-gray-50">
                   {attendance.map((record) => (
@@ -461,7 +469,13 @@ const Employees = () => {
               <h2 className="font-bold text-gray-900">Leave Requests</h2>
             </div>
             {leaveRequests.length === 0 ? (
-              <p className="p-8 text-center text-sm text-gray-500">No leave requests yet.</p>
+              <div className="p-10 text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
+                  <FaClock size={22} />
+                </div>
+                <p className="font-semibold text-[#0a0a0a]">No leave requests yet</p>
+                <p className="mt-1 text-sm text-[#737373]">Employee leave requests will appear here for review.</p>
+              </div>
             ) : (
               <div className="divide-y divide-gray-50">
                 {leaveRequests.map((request) => (

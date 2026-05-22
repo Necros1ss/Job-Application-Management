@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { FaBell } from "react-icons/fa";
 import { messagesApi } from '../lib/api';
 import { formatMessageTime } from '../utils/format';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const ProfileTopBar = ({ userName, userEmail }) => {
   const location = useLocation();
@@ -141,6 +142,7 @@ const ProfileTopBar = ({ userName, userEmail }) => {
 
         {/* Thông báo & Tài khoản */}
         <div className="flex items-center gap-5 text-[#737373]">
+          <LanguageSwitcher compact />
           
           {/* Nút chuông thông báo */}
           <div className="relative" ref={dropdownRef}>

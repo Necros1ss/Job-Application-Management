@@ -30,6 +30,7 @@ const mapProfile = (row) => ({
   experience: row.role === "recruiter" ? "" : row.experience || "",
   job_type: row.role === "recruiter" ? "" : row.job_type || "",
   skills: row.role === "recruiter" ? [] : row.skills || [],
+  notificationPreferences: row.notification_preferences || {},
   role: row.role,
 });
 
@@ -40,6 +41,7 @@ router.get("/me", requireAuth, async (req, res) => {
           u.id,
           u.role,
           u.login_name,
+          u.notification_preferences,
           c.name AS candidate_name,
           c.email AS candidate_email,
           c.phone AS candidate_phone,
@@ -208,6 +210,44 @@ router.patch("/me", requireAuth, async (req, res) => {
     );
   } catch (error) {
     return res.status(500).json({ message: "Failed to update profile", detail: error.message });
+  }
+});
+
+router.patch("/notification-preferences", requireAuth, async (req, res) => {
+  const preferences =
+    req.body?.preferences && typeof req.body.preferences === "object" && !Array.isArray(req.body.preferences)
+      ? req.body.preferences
+      : null;
+
+  if (!preferences) {
+    return res.status(400).json({ message: "preferences object is required" });
+  }
+
+  const allowedKeys = new Set(["newApplication", "interviewReminder", "statusChanged", "newMessage"]);
+  const normalizedPreferences = {};
+
+  for (const [key, value] of Object.entries(preferences)) {
+    if (allowedKeys.has(key) && typeof value === "boolean") {
+      normalizedPreferences[key] = value;
+    }
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE users
+       SET notification_preferences = COALESCE(notification_preferences, '{}'::jsonb) || $1::jsonb
+       WHERE id = $2
+       RETURNING notification_preferences`,
+      [JSON.stringify(normalizedPreferences), req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({ notificationPreferences: result.rows[0].notification_preferences || {} });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update notification preferences", detail: error.message });
   }
 });
 
