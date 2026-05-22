@@ -1,7 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { applicationsApi, interviewsApi, messagesApi } from '../../lib/api';
 import { formatMessageTime } from '../../utils/format';
-import { FaArrowLeft, FaDownload, FaEnvelope, FaEye, FaMailBulk, FaRegCalendarAlt, FaCheckCircle } from 'react-icons/fa';
+import {
+  FaArrowLeft,
+  FaCheckCircle,
+  FaEnvelope,
+  FaExclamationTriangle,
+  FaEye,
+  FaMailBulk,
+  FaRegCalendarAlt,
+  FaRobot,
+} from 'react-icons/fa';
 import { showError, showSuccess } from '../../utils/toast';
 
 const STATUS_OPTIONS = [
@@ -34,6 +44,19 @@ const DEFAULT_OFFER_TEMPLATE = (candidateName, candidateJobTitle) => (
   `Hi ${candidateName},\n\nWe are pleased to extend you an offer for the ${candidateJobTitle} position. Please review the details and let us know if you have any questions.\n\nBest regards,`
 );
 
+const RECOMMENDATION_LABELS = {
+  strong_yes: 'Strong Yes',
+  yes: 'Yes',
+  maybe: 'Maybe',
+  no: 'No',
+};
+
+const getAiTone = (score = 0) => {
+  if (score >= 80) return { text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', stroke: '#059669' };
+  if (score >= 55) return { text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', stroke: '#d97706' };
+  return { text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', stroke: '#dc2626' };
+};
+
 const getInitials = (name) => {
   if (!name || typeof name !== 'string') return 'NA';
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -49,7 +72,7 @@ const buildMeetLink = () => {
 
 const ApplicationDetail = ({ onBack, candidate }) => {
   const [detail, setDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -66,6 +89,10 @@ const ApplicationDetail = ({ onBack, candidate }) => {
   const [newNote, setNewNote] = useState("");
   const [isSavingRating, setIsSavingRating] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [aiScreening, setAiScreening] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState('');
   const [scheduleForm, setScheduleForm] = useState({
     interviewDateTime: '',
     interviewerName: '',
@@ -115,6 +142,19 @@ const ApplicationDetail = ({ onBack, candidate }) => {
           setNotes(Array.isArray(response?.notes) ? response.notes : []);
           setEvents(Array.isArray(response?.events) ? response.events : []);
         }
+
+        try {
+          const screening = await applicationsApi.getAiScreening(candidate.id);
+          if (isMounted) {
+            setAiScreening(screening);
+            setAiError('');
+          }
+        } catch {
+          if (isMounted) {
+            setAiScreening(null);
+            setAiError('');
+          }
+        }
       } catch (loadError) {
         if (isMounted) {
           setDetail(null);
@@ -145,7 +185,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         emailBody: prev.emailBody || DEFAULT_REJECTION_TEMPLATES[prev.reason] || DEFAULT_REJECTION_TEMPLATES.Other,
       }));
     }
-  }, [showRejectModal]);
+  }, [showRejectModal, rejectForm.reason]);
 
   const source = detail
     ? {
@@ -161,6 +201,9 @@ const ApplicationDetail = ({ onBack, candidate }) => {
         jobTitle: detail.jobTitle,
         department: detail.companyName,
         cvFileName: detail.cvFileName,
+        aiScore: detail.aiScore,
+        aiRecommendation: detail.aiRecommendation,
+        aiScreenedAt: detail.aiScreenedAt,
       }
     : candidate;
 
@@ -175,6 +218,8 @@ const ApplicationDetail = ({ onBack, candidate }) => {
   const cvFileName = source?.cvFileName || 'No CV attached';
   const canPreviewCv = Boolean(source?.id && source?.cvFileName);
   const currentStatusMeta = STATUS_OPTIONS.find((o) => o.value === candidateStatus) || STATUS_OPTIONS[0];
+  const visibleAiScore = aiScreening?.score ?? source?.aiScore ?? null;
+  const aiTone = getAiTone(Number(visibleAiScore || 0));
 
   const refreshWorkflow = async () => {
     if (!source?.id) return;
@@ -183,6 +228,14 @@ const ApplicationDetail = ({ onBack, candidate }) => {
     setRating(refreshed?.rating ?? null);
     setNotes(Array.isArray(refreshed?.notes) ? refreshed.notes : []);
     setEvents(Array.isArray(refreshed?.events) ? refreshed.events : []);
+
+    try {
+      const screening = await applicationsApi.getAiScreening(source.id);
+      setAiScreening(screening);
+      setAiError('');
+    } catch {
+      setAiScreening(null);
+    }
   };
 
   const candidateHeader = useMemo(() => ({
@@ -311,6 +364,27 @@ const ApplicationDetail = ({ onBack, candidate }) => {
       showSuccess('Đã tải CV xuống');
     } catch (loadError) {
       setPreviewError(loadError.message || 'Unable to download CV');
+    }
+  };
+
+  const handleAnalyzeWithAi = async () => {
+    if (!source?.id || !canPreviewCv) return;
+
+    try {
+      setAiAnalyzing(true);
+      setAiLoading(true);
+      setAiError('');
+      const result = await applicationsApi.analyzeAiScreening(source.id);
+      setAiScreening(result);
+      await refreshWorkflow();
+      showSuccess('AI screening completed');
+    } catch (err) {
+      const message = err.message || 'Failed to analyze CV with AI';
+      setAiError(message);
+      showError(message);
+    } finally {
+      setAiAnalyzing(false);
+      setAiLoading(false);
     }
   };
 
@@ -445,6 +519,8 @@ const ApplicationDetail = ({ onBack, candidate }) => {
 
   const avatarColor = getAvatarColor();
   const isBusy = isUpdatingStatus || previewLoading;
+  const aiCircumference = 2 * Math.PI * 44;
+  const aiProgressOffset = aiCircumference - (Number(visibleAiScore || 0) / 100) * aiCircumference;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 relative">
@@ -513,6 +589,120 @@ const ApplicationDetail = ({ onBack, candidate }) => {
                 <p className="text-sm text-gray-600 leading-7 whitespace-pre-wrap">{source.coverLetter}</p>
               ) : (
                 <p className="text-sm text-gray-400">No cover letter was included with this application.</p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <FaRobot className="text-indigo-600" />
+                    <h3 className="font-bold text-gray-800">AI Screening</h3>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Compare this CV against the job requirements and candidate profile.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAnalyzeWithAi}
+                  disabled={!canPreviewCv || aiAnalyzing}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:bg-gray-300"
+                >
+                  <FaRobot size={15} />
+                  {aiAnalyzing ? 'Analyzing...' : aiScreening ? 'Re-analyze' : 'Analyze with AI'}
+                </button>
+              </div>
+
+              {!canPreviewCv && (
+                <p className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  Add a CV file before running AI screening.
+                </p>
+              )}
+
+              {aiError && (
+                <p className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {aiError}
+                </p>
+              )}
+
+              {aiLoading && !aiScreening ? (
+                <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-6">
+                  <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+                  <div className="mt-4 space-y-2">
+                    <div className="h-3 w-full animate-pulse rounded bg-gray-200" />
+                    <div className="h-3 w-5/6 animate-pulse rounded bg-gray-200" />
+                    <div className="h-3 w-2/3 animate-pulse rounded bg-gray-200" />
+                  </div>
+                </div>
+              ) : aiScreening ? (
+                <div className="mt-5 grid gap-5 lg:grid-cols-[180px_1fr]">
+                  <div className={`rounded-2xl border ${aiTone.border} ${aiTone.bg} p-5 text-center`}>
+                    <div className="relative mx-auto h-28 w-28">
+                      <svg className="-rotate-90" width="112" height="112" viewBox="0 0 112 112">
+                        <circle cx="56" cy="56" r="44" fill="none" stroke="#e5e7eb" strokeWidth="10" />
+                        <circle
+                          cx="56"
+                          cy="56"
+                          r="44"
+                          fill="none"
+                          stroke={aiTone.stroke}
+                          strokeWidth="10"
+                          strokeLinecap="round"
+                          strokeDasharray={aiCircumference}
+                          strokeDashoffset={aiProgressOffset}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className={`text-3xl font-extrabold ${aiTone.text}`}>{visibleAiScore}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">score</span>
+                      </div>
+                    </div>
+                    <div className={`mt-4 inline-flex rounded-full border px-3 py-1 text-xs font-bold ${aiTone.border} ${aiTone.text} bg-white`}>
+                      {RECOMMENDATION_LABELS[aiScreening.recommendation] || aiScreening.recommendation}
+                    </div>
+                    {aiScreening.screenedAt && (
+                      <p className="mt-3 text-xs text-gray-500">{formatMessageTime(aiScreening.screenedAt)}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-800">Summary</h4>
+                      <p className="mt-2 text-sm leading-6 text-gray-600">{aiScreening.summary}</p>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-bold text-emerald-700">
+                          <FaCheckCircle size={14} />
+                          Strengths
+                        </h4>
+                        <ul className="space-y-2">
+                          {(aiScreening.strengths || []).map((item) => (
+                            <li key={item} className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-700">
+                          <FaExclamationTriangle size={14} />
+                          Weaknesses
+                        </h4>
+                        <ul className="space-y-2">
+                          {(aiScreening.weaknesses || []).map((item) => (
+                            <li key={item} className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-gray-400">No AI screening result yet.</p>
               )}
             </div>
 
@@ -920,6 +1110,26 @@ const ApplicationDetail = ({ onBack, candidate }) => {
       )}
     </div>
   );
+};
+
+ApplicationDetail.propTypes = {
+  onBack: PropTypes.func.isRequired,
+  candidate: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    candidateId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    jobPostId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    applicationDate: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+    status: PropTypes.string,
+    name: PropTypes.string,
+    email: PropTypes.string,
+    phone: PropTypes.string,
+    jobTitle: PropTypes.string,
+    department: PropTypes.string,
+    cvFileName: PropTypes.string,
+    aiScore: PropTypes.number,
+    aiRecommendation: PropTypes.string,
+    aiScreenedAt: PropTypes.string,
+  }).isRequired,
 };
 
 export default ApplicationDetail;

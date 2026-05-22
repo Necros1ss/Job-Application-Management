@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -10,6 +11,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import LanguageSwitcher from "../Components/LanguageSwitcher";
+import ThemeToggle from "../Components/ThemeToggle";
 
 const modules = [
   {
@@ -97,25 +99,26 @@ const Landing = () => {
   }, []);
 
   return (
-    <div className="min-h-screen blueprint-grid-bg text-[#0a0a0a]">
-      <header className="sticky inset-x-0 top-0 z-50 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
+    <div className="min-h-screen blueprint-grid-bg text-[#0a0a0a] dark:text-white">
+      <header className="sticky inset-x-0 top-0 z-50 border-b border-[#e5e5e5] bg-white/95 backdrop-blur dark:border-[#2a2a2a] dark:bg-[#0a0a0a]/95">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-10">
-            <Link to="/" className="text-lg font-semibold text-black">
+            <Link to="/" className="text-lg font-semibold text-black dark:text-white">
             Job Tracker
           </Link>
-            <nav className="hidden items-center gap-7 text-sm font-medium text-[#737373] md:flex">
-            <a href="#modules" className="hover:text-black">Modules</a>
-            <a href="#workflow" className="hover:text-black">Workflow</a>
-            <a href="#why" className="hover:text-black">Why Us</a>
+            <nav className="hidden items-center gap-7 text-sm font-medium text-[#737373] dark:text-[#a3a3a3] md:flex">
+            <a href="#modules" className="hover:text-black dark:hover:text-white">Modules</a>
+            <a href="#workflow" className="hover:text-black dark:hover:text-white">Workflow</a>
+            <a href="#why" className="hover:text-black dark:hover:text-white">Why Us</a>
           </nav>
           <div className="flex items-center gap-3">
             <LanguageSwitcher compact />
-              <Link to="/login" className="rounded-full px-3 py-2 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2]">
+            <ThemeToggle />
+              <Link to="/login" className="rounded-full px-3 py-2 text-sm font-medium text-[#0a0a0a] hover:bg-[#f2f2f2] dark:text-white dark:hover:bg-[#171717]">
               Log in
             </Link>
             <Link
               to="/signup"
-              className="rounded-[10px] bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-[#0a0a0a]"
+              className="rounded-[10px] bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-[#0a0a0a] dark:bg-white dark:text-black dark:hover:bg-[#f5f5f5]"
             >
               Start Free
             </Link>

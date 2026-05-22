@@ -5,6 +5,13 @@
 @tailwind utilities;
 
 :root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f2f2f2;
+  --bg-elevated: #ffffff;
+  --text-primary: #0a0a0a;
+  --text-secondary: #737373;
+  --border-primary: #e5e5e5;
+  --focus-ring: #0a0a0a;
   --color-canvas-white: #ffffff;
   --color-ghost-gray: #f2f2f2;
   --color-subtle-ash: #e5e5e5;
@@ -23,19 +30,37 @@
   --shadow-subtle-2: 0 0 0 1px rgba(10, 10, 10, 0.1);
 }
 
+.dark {
+  color-scheme: dark;
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #171717;
+  --bg-elevated: #121212;
+  --text-primary: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --border-primary: #2a2a2a;
+  --focus-ring: #f5f5f5;
+  --color-canvas-white: #0a0a0a;
+  --color-ghost-gray: #171717;
+  --color-subtle-ash: #2a2a2a;
+  --color-midtone-gray: #a3a3a3;
+  --color-rich-black: #f5f5f5;
+  --color-deep-black: #ffffff;
+  --shadow-subtle-2: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
 @layer base {
   * {
     box-sizing: border-box;
   }
 
   html {
-    background: var(--color-canvas-white);
+    background: var(--bg-primary);
   }
 
   body {
     min-height: 100vh;
-    background: var(--color-canvas-white);
-    color: var(--color-rich-black);
+    background: var(--bg-primary);
+    color: var(--text-primary);
     font-family: var(--font-geist);
     letter-spacing: 0;
   }
@@ -48,6 +73,12 @@
     letter-spacing: 0;
   }
 
+  input,
+  textarea,
+  select {
+    color: var(--text-primary);
+  }
+
   ::selection {
     background: var(--color-deep-black);
     color: var(--color-canvas-white);
@@ -56,36 +87,36 @@
 
 @layer components {
   .blueprint-card {
-    border: 1px solid var(--color-subtle-ash);
+    border: 1px solid var(--border-primary);
     border-radius: var(--radius-cards);
-    background: var(--color-canvas-white);
+    background: var(--bg-elevated);
     box-shadow: var(--shadow-subtle-2);
     transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   }
 
   .blueprint-card:hover {
-    border-color: #cfcfcf;
-    box-shadow: 0 0 0 1px rgba(10, 10, 10, 0.16);
+    border-color: var(--text-secondary);
+    box-shadow: var(--shadow-subtle-2);
     transform: translateY(-1px);
   }
 
   .blueprint-input {
-    border: 1px solid var(--color-subtle-ash);
+    border: 1px solid var(--border-primary);
     border-radius: var(--radius-input);
-    background: var(--color-canvas-white);
-    color: var(--color-rich-black);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 
   .blueprint-input:focus {
-    border-color: var(--color-deep-black);
-    box-shadow: 0 0 0 2px var(--color-canvas-white), 0 0 0 3px var(--color-deep-black);
+    border-color: var(--focus-ring);
+    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 3px var(--focus-ring);
     outline: none;
   }
 
   .blueprint-primary {
     border-radius: var(--radius-buttons);
     background: var(--color-deep-black);
-    color: var(--color-canvas-white);
+    color: var(--bg-primary);
   }
 
   .blueprint-primary:hover {
@@ -94,19 +125,19 @@
 
   .blueprint-tag {
     border-radius: var(--radius-badge);
-    background: var(--color-ghost-gray);
-    color: var(--color-rich-black);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .blueprint-hero-panel {
     position: relative;
     overflow: hidden;
-    border: 1px solid var(--color-subtle-ash);
+    border: 1px solid var(--border-primary);
     border-radius: var(--radius-cards);
     background:
       linear-gradient(90deg, rgba(229, 229, 229, 0.44) 1px, transparent 1px),
       linear-gradient(180deg, rgba(229, 229, 229, 0.44) 1px, transparent 1px),
-      var(--color-canvas-white);
+      var(--bg-primary);
     background-size: 28px 28px;
     box-shadow: var(--shadow-subtle-2);
   }
@@ -116,12 +147,12 @@
     position: absolute;
     inset: 16px;
     pointer-events: none;
-    border: 1px solid rgba(10, 10, 10, 0.08);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent);
     border-radius: 10px;
   }
 
   .blueprint-kicker {
-    color: var(--color-midtone-gray);
+    color: var(--text-secondary);
     font-size: 12px;
     font-weight: 500;
     text-transform: uppercase;
@@ -154,10 +185,10 @@
 
 @layer utilities {
   .blueprint-grid-bg {
-    background-color: var(--color-canvas-white);
+    background-color: var(--bg-primary);
     background-image:
-      linear-gradient(90deg, rgba(229, 229, 229, 0.42) 1px, transparent 1px),
-      linear-gradient(180deg, rgba(229, 229, 229, 0.42) 1px, transparent 1px);
+      linear-gradient(90deg, color-mix(in srgb, var(--border-primary) 68%, transparent) 1px, transparent 1px),
+      linear-gradient(180deg, color-mix(in srgb, var(--border-primary) 68%, transparent) 1px, transparent 1px);
     background-size: 48px 48px;
   }
 
@@ -237,5 +268,50 @@
   .shadow-emerald-100 {
     --tw-shadow-color: rgba(10, 10, 10, 0.12) !important;
     --tw-shadow: var(--tw-shadow-colored) !important;
+  }
+
+  .dark .bg-white,
+  .dark .bg-white\/95 {
+    background-color: var(--bg-elevated) !important;
+  }
+
+  .dark .bg-gray-50,
+  .dark .bg-gray-100,
+  .dark .bg-\[\#f2f2f2\],
+  .dark .bg-\[\#f8f8f8\],
+  .dark .hover\:bg-\[\#f2f2f2\]:hover,
+  .dark .hover\:bg-gray-50:hover,
+  .dark .hover\:bg-gray-100:hover {
+    background-color: var(--bg-secondary) !important;
+  }
+
+  .dark .text-black,
+  .dark .text-\[\#0a0a0a\],
+  .dark .text-gray-900,
+  .dark .text-gray-800,
+  .dark .hover\:text-black:hover {
+    color: var(--text-primary) !important;
+  }
+
+  .dark .text-\[\#737373\],
+  .dark .text-gray-700,
+  .dark .text-gray-600,
+  .dark .text-gray-500,
+  .dark .text-gray-400 {
+    color: var(--text-secondary) !important;
+  }
+
+  .dark .border-\[\#e5e5e5\],
+  .dark .border-gray-200,
+  .dark .border-gray-100,
+  .dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border-primary) !important;
+  }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
   }
 }

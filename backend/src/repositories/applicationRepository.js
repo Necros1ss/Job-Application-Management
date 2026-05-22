@@ -76,32 +76,34 @@ export const findByRecruiter = async ({ recruiterId, page, limit, offset, jobPos
         a.status,
         a.cover_letter,
         a.rating,
-        COUNT(an.id)::int AS note_count,
         c.name AS candidate_name,
         c.email AS candidate_email,
         c.phone AS candidate_phone,
         jp.title AS job_title,
         COALESCE(r.company_name, 'Unknown Company') AS company_name,
-        a.cv_file_name
+        a.cv_file_name,
+        COALESCE(note_counts.note_count, 0)::int AS note_count,
+        (ai_screening.metadata->>'score')::int AS ai_score,
+        ai_screening.metadata->>'recommendation' AS ai_recommendation,
+        ai_screening.created_at AS ai_screened_at
      FROM applications a
      INNER JOIN candidates c ON c.id = a.candidate_id
      INNER JOIN job_posts jp ON jp.id = a.job_post_id
      LEFT JOIN recruiters r ON r.id = jp.recruiter_id
-     LEFT JOIN application_notes an ON an.application_id = a.id
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS note_count
+       FROM application_notes an
+       WHERE an.application_id = a.id
+     ) note_counts ON true
+     LEFT JOIN LATERAL (
+       SELECT ae.metadata, ae.created_at
+       FROM application_events ae
+       WHERE ae.application_id = a.id
+         AND ae.event_type = 'ai_screening'
+       ORDER BY ae.created_at DESC, ae.id DESC
+       LIMIT 1
+     ) ai_screening ON true
      ${filterSql}
-     GROUP BY a.id,
-              a.candidate_id,
-              a.job_post_id,
-              a.applied_at,
-              a.status,
-              a.cover_letter,
-              a.rating,
-              c.name,
-              c.email,
-              c.phone,
-              jp.title,
-              r.company_name,
-              a.cv_file_name
      ORDER BY a.applied_at DESC, a.id DESC
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, limit, offset]
@@ -280,14 +282,84 @@ export const findById = async ({ applicationId, recruiterId }) => {
         c.phone AS candidate_phone,
         jp.title AS job_title,
         COALESCE(r.company_name, 'Unknown Company') AS company_name,
-        a.cv_file_name
+        a.cv_file_name,
+        (ai_screening.metadata->>'score')::int AS ai_score,
+        ai_screening.metadata->>'recommendation' AS ai_recommendation,
+        ai_screening.created_at AS ai_screened_at
      FROM applications a
      INNER JOIN candidates c ON c.id = a.candidate_id
      INNER JOIN job_posts jp ON jp.id = a.job_post_id
      LEFT JOIN recruiters r ON r.id = jp.recruiter_id
+     LEFT JOIN LATERAL (
+       SELECT ae.metadata, ae.created_at
+       FROM application_events ae
+       WHERE ae.application_id = a.id
+         AND ae.event_type = 'ai_screening'
+       ORDER BY ae.created_at DESC, ae.id DESC
+       LIMIT 1
+     ) ai_screening ON true
      WHERE jp.recruiter_id = $1 AND a.id = $2
      LIMIT 1`,
     [recruiterId, applicationId]
+  );
+
+  return result.rows[0] || null;
+};
+
+export const findAiScreeningContext = async ({ applicationId, recruiterId }) => {
+  const result = await pool.query(
+    `SELECT
+        a.id,
+        a.candidate_id,
+        a.job_post_id,
+        a.cover_letter,
+        a.cv_file_name,
+        a.cv_mime_type,
+        a.cv_file_size_bytes,
+        c.name AS candidate_name,
+        c.email AS candidate_email,
+        c.phone AS candidate_phone,
+        c.skills AS candidate_skills,
+        c.experience AS candidate_experience,
+        jp.title AS job_title,
+        jp.description AS job_description,
+        jp.requirements AS job_requirements,
+        jp.responsibilities AS job_responsibilities,
+        jp.experience AS job_experience,
+        jp.employment_type AS employment_type,
+        COALESCE(r.company_name, 'Unknown Company') AS company_name
+     FROM applications a
+     INNER JOIN candidates c ON c.id = a.candidate_id
+     INNER JOIN job_posts jp ON jp.id = a.job_post_id
+     LEFT JOIN recruiters r ON r.id = jp.recruiter_id
+     WHERE a.id = $1
+       AND jp.recruiter_id = $2
+     LIMIT 1`,
+    [applicationId, recruiterId]
+  );
+
+  return result.rows[0] || null;
+};
+
+export const findLatestAiScreening = async ({ applicationId, recruiterId }) => {
+  const result = await pool.query(
+    `SELECT ae.id,
+            ae.application_id,
+            ae.actor_user_id,
+            ae.event_type,
+            ae.title,
+            ae.description,
+            ae.metadata,
+            ae.created_at
+     FROM application_events ae
+     INNER JOIN applications a ON a.id = ae.application_id
+     INNER JOIN job_posts jp ON jp.id = a.job_post_id
+     WHERE ae.application_id = $1
+       AND jp.recruiter_id = $2
+       AND ae.event_type = 'ai_screening'
+     ORDER BY ae.created_at DESC, ae.id DESC
+     LIMIT 1`,
+    [applicationId, recruiterId]
   );
 
   return result.rows[0] || null;
@@ -386,7 +458,7 @@ export const createApplicationEvent = async (
   client,
   { applicationId, actorUserId, eventType, title, description = "", metadata = {} }
 ) => {
-  await client.query(
+  const result = await client.query(
     `INSERT INTO application_events (
        application_id,
        actor_user_id,
@@ -394,7 +466,8 @@ export const createApplicationEvent = async (
        title,
        description,
        metadata
-     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+     RETURNING id, application_id, actor_user_id, event_type, title, description, metadata, created_at`,
     [
       applicationId,
       actorUserId,
@@ -404,6 +477,8 @@ export const createApplicationEvent = async (
       JSON.stringify(metadata),
     ]
   );
+
+  return result.rows[0] || null;
 };
 
 export const findRecruiterByCompanyName = async (client, { companyName }) => {

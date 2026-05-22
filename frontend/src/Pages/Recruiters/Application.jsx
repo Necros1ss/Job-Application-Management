@@ -54,6 +54,9 @@ const toDisplayRow = (row) => {
     rating: row.rating,
     coverLetter: row.coverLetter || '',
     noteCount: row.noteCount || 0,
+    aiScore: row.aiScore ?? null,
+    aiRecommendation: row.aiRecommendation || '',
+    aiScreenedAt: row.aiScreenedAt || null,
     ref: `APP-${String(row.id).padStart(5, '0')}`,
     jobTitle: row.jobTitle || 'Unknown Position',
     department: row.companyName || 'Unknown Company',
@@ -62,7 +65,7 @@ const toDisplayRow = (row) => {
     stageColor: stageMeta.badge,
     stageDot: stageMeta.dot,
     subtext: formatAppliedDate(row.applicationDate),
-    matchScore: row.rating ? row.rating * 20 : 70,
+    matchScore: row.aiScore ?? (row.rating ? row.rating * 20 : 70),
     avatar: `https://api.dicebear.com/8.x/notionists/svg?seed=${encodeURIComponent(row.candidateName || row.id)}`,
   };
 };
@@ -323,11 +326,18 @@ const Application = () => {
                             <p className="font-bold text-gray-900">{app.name}</p>
                             <p className="text-sm text-gray-500 mt-1">{app.jobTitle}</p>
                           </div>
-                          {app.noteCount > 0 && (
-                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
-                              {app.noteCount} notes
-                            </span>
-                          )}
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            {app.noteCount > 0 && (
+                              <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
+                                {app.noteCount} notes
+                              </span>
+                            )}
+                            {app.aiScore !== null && (
+                              <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full">
+                                AI {app.aiScore}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <p className="text-xs text-gray-400 mt-2">{app.subtext}</p>
                       </button>
@@ -387,7 +397,14 @@ const Application = () => {
                       <img src={app.avatar} alt="avatar" className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200" />
                       <div>
                         <p className="font-bold text-gray-900">{app.name}</p>
-                        <p className="text-xs font-medium text-gray-400 mt-0.5">REF: {app.ref}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                          <p className="text-xs font-medium text-gray-400">REF: {app.ref}</p>
+                          {app.aiScore !== null && (
+                            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                              AI {app.aiScore}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>

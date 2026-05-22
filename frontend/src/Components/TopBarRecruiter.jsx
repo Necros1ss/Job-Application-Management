@@ -3,6 +3,7 @@ import { FaSearch, FaEnvelope } from "react-icons/fa";
 import AccountMenu from './AccountMenu';
 import LanguageSwitcher from './LanguageSwitcher';
 import NotificationBell from './NotificationBell';
+import ThemeToggle from './ThemeToggle';
 
 const TopBarRecruiter = ({
   userName,
@@ -15,29 +16,30 @@ const TopBarRecruiter = ({
   const isSearchControlled = typeof onSearchChange === "function";
 
   return (
-    <header className="w-full border-b border-[#e5e5e5] bg-white">
+    <header className="w-full border-b border-[#e5e5e5] bg-white dark:border-[#2a2a2a] dark:bg-[#0a0a0a]">
       <div className={`px-6 lg:px-10 h-20 flex items-center gap-6 ${isSearchControlled ? "justify-between" : "justify-end"}`}>
         {isSearchControlled && (
           <div className="flex-1 min-w-0 max-w-3xl">
-            <label className="flex h-10 items-center rounded-[10px] border border-[#e5e5e5] bg-white px-3">
-              <FaSearch className="mr-3 text-[#737373]" size={16} />
+            <label className="flex h-10 items-center rounded-[10px] border border-[#e5e5e5] bg-white px-3 dark:border-[#2a2a2a] dark:bg-[#121212]">
+              <FaSearch className="mr-3 text-[#737373] dark:text-[#a3a3a3]" size={16} />
               <input
                 type="text"
                 placeholder={searchPlaceholder || "Search candidates, jobs, or applications..."}
                 onChange={isSearchControlled ? (e) => onSearchChange(e.target.value) : undefined}
                 {...(typeof searchValue === "string" ? { value: searchValue } : {})}
-                className="w-full border-none bg-transparent text-sm text-[#0a0a0a] outline-none placeholder:text-[#737373] focus:ring-0"
+                className="w-full border-none bg-transparent text-sm text-[#0a0a0a] outline-none placeholder:text-[#737373] focus:ring-0 dark:text-white dark:placeholder:text-[#a3a3a3]"
               />
             </label>
           </div>
         )}
 
-        <div className="flex shrink-0 items-center gap-5 text-[#737373]">
+        <div className="flex shrink-0 items-center gap-5 text-[#737373] dark:text-[#a3a3a3]">
           <LanguageSwitcher compact />
+          <ThemeToggle />
 
           <button
             type="button"
-            className="relative p-1.5 transition-colors hover:text-black"
+            className="relative p-1.5 transition-colors hover:text-black dark:hover:text-white"
             aria-label="Messages"
           >
             <FaEnvelope size={18} />
@@ -45,7 +47,7 @@ const TopBarRecruiter = ({
 
           <NotificationBell />
 
-          <div className="h-8 w-px bg-[#e5e5e5]" />
+          <div className="h-8 w-px bg-[#e5e5e5] dark:bg-[#2a2a2a]" />
 
           <AccountMenu userName={userName || "Recruiter"} userEmail={userEmail} avatarUrl={avatarUrl} />
         </div>

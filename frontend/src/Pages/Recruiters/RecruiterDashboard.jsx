@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { FaBriefcase, FaUsers, FaCalendar, FaCheckCircle, FaChartLine, FaHistory } from "react-icons/fa";
+import { FaBriefcase, FaUsers, FaChartLine, FaHistory } from "react-icons/fa";
 import {
   ArcElement,
   BarElement,
@@ -17,7 +17,6 @@ import {
 import { Bar, Doughnut, Line, getElementsAtEvent } from "react-chartjs-2";
 import { jobPostsApi, applicationsApi, usersApi } from "../../lib/api";
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
-import { SkeletonDashboardCard } from "../../Components/Skeleton";
 import { showError } from "../../utils/toast";
 import {
   getApplicationDisplayStatus,
@@ -36,32 +35,6 @@ ChartJS.register(
   PointElement,
   Tooltip
 );
-
-const StatCard = ({ title, value, subtitle, icon: Icon, color = "emerald" }) => {
-  const colorMap = {
-    emerald: "bg-black text-white border-black",
-    blue: "bg-[#f2f2f2] text-black border-[#e5e5e5]",
-    orange: "bg-[#f2f2f2] text-black border-[#e5e5e5]",
-    purple: "bg-[#f2f2f2] text-black border-[#e5e5e5]",
-  };
-  const activeColor = colorMap[color] || colorMap.emerald;
-
-  return (
-    <div className="blueprint-card p-5">
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-xs font-medium text-[#737373] uppercase">{title}</p>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeColor}`}>
-          <Icon size={20} />
-        </div>
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="blueprint-metric text-4xl font-semibold text-black">{value ?? "—"}</span>
-        {subtitle && <span className="text-xs font-medium text-[#737373]">{subtitle}</span>}
-      </div>
-      <div className="mt-5 h-px blueprint-divider" />
-    </div>
-  );
-};
 
 const formatTime = (dateStr) => {
   if (!dateStr) return "";
@@ -456,10 +429,16 @@ const RecruiterDashboard = () => {
       <div className="min-h-screen blueprint-grid-bg">
         <TopBarRecruiter userName="" userEmail="" />
         <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-            {[...Array(4)].map((_, i) => (
-              <SkeletonDashboardCard key={i} />
-            ))}
+          <div className="blueprint-hero-panel mb-6 p-5">
+            <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+              <div className="h-44 animate-pulse rounded-[10px] bg-white/80" />
+              <div className="h-44 animate-pulse rounded-[10px] bg-white/80" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <div className="h-28 animate-pulse rounded-[14px] bg-white" />
+            <div className="h-28 animate-pulse rounded-[14px] bg-white" />
+            <div className="h-28 animate-pulse rounded-[14px] bg-white" />
           </div>
         </div>
       </div>
@@ -476,7 +455,7 @@ const RecruiterDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         {/* --- HEADER --- */}
-        <div className="blueprint-hero-panel mb-8 p-5">
+        <div className="blueprint-hero-panel mb-6 p-5">
           <div className="relative z-10 grid gap-5 lg:grid-cols-[1fr_360px]">
             <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-5">
               <p className="blueprint-kicker">Recruiter console</p>
@@ -484,13 +463,6 @@ const RecruiterDashboard = () => {
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#737373]">
                 Welcome back, {userName || "there"}. Monitor jobs, candidates, interviews, and offers with a denser operational view.
               </p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {["Jobs", "Candidates", "Interviews", "Offers"].map((item) => (
-                  <span key={item} className="rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-3 py-1 text-xs font-medium text-[#0a0a0a]">
-                    {item}
-                  </span>
-                ))}
-              </div>
             </div>
 
             <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-4">
@@ -521,38 +493,6 @@ const RecruiterDashboard = () => {
             {error}
           </div>
         )}
-
-        {/* --- STATS --- */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-10">
-          <StatCard
-            title="Total Jobs"
-            value={stats.totalJobs}
-            subtitle="posted"
-            icon={FaBriefcase}
-            color="emerald"
-          />
-          <StatCard
-            title="Active Jobs"
-            value={stats.activeJobs}
-            subtitle="open now"
-            icon={FaCheckCircle}
-            color="blue"
-          />
-          <StatCard
-            title="Total Candidates"
-            value={stats.totalCandidates}
-            subtitle="applied"
-            icon={FaUsers}
-            color="purple"
-          />
-          <StatCard
-            title="Interviews"
-            value={stats.interviews}
-            subtitle={`${stats.offers} offers sent`}
-            icon={FaCalendar}
-            color="orange"
-          />
-        </div>
 
         {/* --- ANALYTICS --- */}
         <div className="mb-10">

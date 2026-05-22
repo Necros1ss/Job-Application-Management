@@ -43,6 +43,30 @@ export const getAnalytics = asyncHandler(async (req, res) => {
   }
 });
 
+export const getAiScreening = asyncHandler(async (req, res) => {
+  try {
+    const result = await applicationService.getAiScreening({
+      user: req.user,
+      applicationId: req.params.id,
+    });
+    return res.json(result);
+  } catch (error) {
+    return sendError(res, error);
+  }
+});
+
+export const analyzeAiScreening = asyncHandler(async (req, res) => {
+  try {
+    const result = await applicationService.analyzeAiScreening({
+      user: req.user,
+      applicationId: req.params.id,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return sendError(res, error);
+  }
+});
+
 export const getForRecruiter = asyncHandler(async (req, res) => {
   try {
     const result = await applicationService.getForRecruiter({ user: req.user, applicationId: req.params.id });

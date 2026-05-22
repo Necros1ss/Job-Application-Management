@@ -5,6 +5,7 @@ import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import * as applicationRepository from "../repositories/applicationRepository.js";
+import * as aiScreeningService from "./aiScreeningService.js";
 import { broadcast } from "../utils/notificationBroadcast.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -215,6 +216,9 @@ const mapRecruiterRow = (row) => ({
   jobTitle: row.job_title,
   companyName: row.company_name,
   cvFileName: row.cv_file_name,
+  aiScore: row.ai_score === null || row.ai_score === undefined ? null : Number(row.ai_score),
+  aiRecommendation: row.ai_recommendation || null,
+  aiScreenedAt: row.ai_screened_at || null,
 });
 
 const mapNoteRow = (row) => ({
@@ -242,6 +246,26 @@ const mapRecruiterDetailRow = (row) => ({
   coverLetter: row.cover_letter || "",
   rating: row.rating,
 });
+
+const mapAiScreeningEvent = (event) => {
+  if (!event) {
+    return null;
+  }
+
+  const metadata = event.metadata || {};
+
+  return {
+    id: event.id,
+    applicationId: event.application_id,
+    score: metadata.score,
+    strengths: Array.isArray(metadata.strengths) ? metadata.strengths : [],
+    weaknesses: Array.isArray(metadata.weaknesses) ? metadata.weaknesses : [],
+    recommendation: metadata.recommendation,
+    summary: metadata.summary || "",
+    model: metadata.model || "",
+    screenedAt: event.created_at,
+  };
+};
 
 const mapActivityRow = (row) => ({
   id: row.id,
@@ -420,6 +444,49 @@ export const getForRecruiter = async ({ user, applicationId }) => {
     notes: notes.map(mapNoteRow),
     events: events.map(mapEventRow),
   };
+};
+
+export const getAiScreening = async ({ user, applicationId }) => {
+  assertRole(user, "recruiter", "Only recruiter accounts can access AI screening");
+  const id = parsePositiveId(applicationId, "application id");
+  const event = await applicationRepository.findLatestAiScreening({
+    applicationId: id,
+    recruiterId: user.id,
+  });
+
+  if (!event) {
+    throw createHttpError(404, "No AI screening result found for this application");
+  }
+
+  return mapAiScreeningEvent(event);
+};
+
+export const analyzeAiScreening = async ({ user, applicationId }) => {
+  assertRole(user, "recruiter", "Only recruiter accounts can run AI screening");
+  const id = parsePositiveId(applicationId, "application id");
+  const context = await applicationRepository.findAiScreeningContext({
+    applicationId: id,
+    recruiterId: user.id,
+  });
+
+  if (!context) {
+    throw createHttpError(404, "Application not found or you don't have permission to screen it");
+  }
+
+  const result = await aiScreeningService.analyzeApplication(context);
+
+  const savedEvent = await applicationRepository.withTransaction(async (client) =>
+    applicationRepository.createApplicationEvent(client, {
+      applicationId: id,
+      actorUserId: user.id,
+      eventType: "ai_screening",
+      title: "AI screening completed",
+      description: `AI recommendation: ${result.recommendation} (${result.score}/100)`,
+      metadata: result,
+    })
+  );
+
+  return mapAiScreeningEvent(savedEvent);
 };
 
 export const downloadCv = async ({ user, applicationId }) => {

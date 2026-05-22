@@ -1,6 +1,7 @@
-import React from 'react';
+/* eslint-disable react/prop-types */
 import { Link, useLocation } from 'react-router-dom';
 import { FaBell } from "react-icons/fa";
+import ThemeToggle from './ThemeToggle';
 
 const TopBar = ({ userName, userEmail, roleOverride }) => {
   const location = useLocation();
@@ -16,16 +17,16 @@ const TopBar = ({ userName, userEmail, roleOverride }) => {
   const navLinkStyle = (path) => {
     const isActive = location.pathname.includes(path);
     return isActive
-      ? "text-black font-medium border-b-2 border-black pb-1"
-      : "text-[#737373] font-medium hover:text-black pb-1 transition-colors";
+      ? "text-black font-medium border-b-2 border-black pb-1 dark:border-white dark:text-white"
+      : "text-[#737373] font-medium hover:text-black pb-1 transition-colors dark:text-[#a3a3a3] dark:hover:text-white";
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#e5e5e5] bg-white">
+    <header className="sticky top-0 z-50 border-b border-[#e5e5e5] bg-white dark:border-[#2a2a2a] dark:bg-[#0a0a0a]">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         
         <div className="flex items-center gap-10">
-          <Link to={`/${currentRole}`} className="text-xl font-semibold text-black">
+          <Link to={`/${currentRole}`} className="text-xl font-semibold text-black dark:text-white">
             Job Tracker
           </Link>
           
@@ -48,16 +49,17 @@ const TopBar = ({ userName, userEmail, roleOverride }) => {
           <div className="relative mr-6 flex items-center h-full"> 
             <button
               type="button"
-              className="relative flex items-center justify-center p-2 text-[#737373] transition-colors hover:text-black"
+              className="relative flex items-center justify-center p-2 text-[#737373] transition-colors hover:text-black dark:text-[#a3a3a3] dark:hover:text-white"
             >
               <FaBell size={20} />
             </button>
           </div>
+          <ThemeToggle />
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-medium text-[#0a0a0a]">{userName || "User Name"}</p>
-            <p className="text-xs text-[#737373]">{userEmail || "email@example.com"}</p>
+            <p className="text-sm font-medium text-[#0a0a0a] dark:text-white">{userName || "User Name"}</p>
+            <p className="text-xs text-[#737373] dark:text-[#a3a3a3]">{userEmail || "email@example.com"}</p>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e5e5] bg-[#f2f2f2] font-semibold text-black">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e5e5] bg-[#f2f2f2] font-semibold text-black dark:border-[#2a2a2a] dark:bg-[#171717] dark:text-white">
             {typeof userName === 'string' && userName.length > 0 ? userName.charAt(0).toUpperCase() : 'U'}
           </div>
         </div>

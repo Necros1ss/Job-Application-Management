@@ -358,6 +358,11 @@ export const applicationsApi = {
   getRecruiterAnalytics: (params = {}) => request(`/applications/recruiter/analytics${buildQueryString(params)}`),
   getForRecruiter: (id) => request(`/applications/recruiter/${id}`),
   getRecruiterCvFile: (id) => requestBlob(`/applications/recruiter/${id}/cv`),
+  getAiScreening: (id) => request(`/applications/recruiter/${id}/ai-screen`),
+  analyzeAiScreening: (id) =>
+    request(`/applications/recruiter/${id}/ai-screen`, {
+      method: "POST",
+    }),
   update: (id, payload) =>
     request(`/applications/${id}`, {
       method: "PUT",

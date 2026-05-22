@@ -1,9 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+/* eslint-disable react/prop-types */
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FaBell } from "react-icons/fa";
 import { messagesApi } from '../lib/api';
 import { formatMessageTime } from '../utils/format';
 import LanguageSwitcher from './LanguageSwitcher';
+import ThemeToggle from './ThemeToggle';
 import { useI18n } from '../lib/i18n';
 
 const ProfileTopBar = ({ userName, userEmail }) => {
@@ -119,40 +121,41 @@ const ProfileTopBar = ({ userName, userEmail }) => {
         key={message.id}
         type="button"
         onClick={() => handleOpenMessage(message)}
-        className={`w-full border-b border-[#e5e5e5] px-4 py-3 text-left transition-colors hover:bg-[#f2f2f2] ${message.isRead ? 'bg-white' : 'bg-[#f2f2f2]'}`}
+        className={`w-full border-b border-[#e5e5e5] px-4 py-3 text-left transition-colors hover:bg-[#f2f2f2] dark:border-[#2a2a2a] dark:hover:bg-[#171717] ${message.isRead ? 'bg-white dark:bg-[#121212]' : 'bg-[#f2f2f2] dark:bg-[#171717]'}`}
       >
         <div className="flex items-start justify-between gap-3">
-          <p className={`text-sm ${message.isRead ? 'font-medium text-[#737373]' : 'font-semibold text-[#0a0a0a]'}`}>
+          <p className={`text-sm ${message.isRead ? 'font-medium text-[#737373] dark:text-[#a3a3a3]' : 'font-semibold text-[#0a0a0a] dark:text-white'}`}>
             {message.subject}
           </p>
           {!message.isRead && <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-black" />}
         </div>
         <p className="mt-1 text-xs text-[#737373]">{t("messages.from")}: {message.senderName || 'Recruiter'}</p>
-        <p className="mt-1 line-clamp-2 text-sm text-[#0a0a0a]">{message.content}</p>
+        <p className="mt-1 line-clamp-2 text-sm text-[#0a0a0a] dark:text-white">{message.content}</p>
         <p className="mt-2 text-[11px] text-[#737373]">{formatMessageTime(message.createdAt)}</p>
       </button>
     ));
   };
 
   return (
-    <header className="mb-8 flex w-full items-center justify-between border-b border-[#e5e5e5] bg-white">
+    <header className="mb-8 flex w-full items-center justify-between border-b border-[#e5e5e5] bg-white dark:border-[#2a2a2a] dark:bg-[#0a0a0a]">
       <div className="w-full mx-auto px-10 h-16 flex items-center justify-between">        
         
         {/* Tiêu đề trang */}
-        <div className="flex items-center gap-10 text-[28px] font-semibold text-black">
+        <div className="flex items-center gap-10 text-[28px] font-semibold text-black dark:text-white">
           Profile
         </div>
 
         {/* Thông báo & Tài khoản */}
-        <div className="flex items-center gap-5 text-[#737373]">
+        <div className="flex items-center gap-5 text-[#737373] dark:text-[#a3a3a3]">
           <LanguageSwitcher compact />
+          <ThemeToggle />
           
           {/* Nút chuông thông báo */}
           <div className="relative" ref={dropdownRef}>
             <button
               type="button"
               onClick={handleBellClick}
-              className="relative transition-colors hover:text-black"
+              className="relative transition-colors hover:text-black dark:hover:text-white"
               aria-label="Open messages"
             >
               <FaBell size={20} />
@@ -165,9 +168,9 @@ const ProfileTopBar = ({ userName, userEmail }) => {
 
             {/* Dropdown danh sách tin nhắn */}
             {isOpen && (
-              <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
-                <div className="border-b border-[#e5e5e5] bg-[#f2f2f2] px-4 py-3">
-                  <p className="text-sm font-medium text-[#0a0a0a]">{t("topbar.messages")}</p>
+              <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)] dark:border-[#2a2a2a] dark:bg-[#121212]">
+                <div className="border-b border-[#e5e5e5] bg-[#f2f2f2] px-4 py-3 dark:border-[#2a2a2a] dark:bg-[#171717]">
+                  <p className="text-sm font-medium text-[#0a0a0a] dark:text-white">{t("topbar.messages")}</p>
                   <p className="text-xs text-[#737373]">{unreadCount} {t("topbar.unread")}</p>
                 </div>
                 <div className="max-h-96 overflow-auto">
@@ -179,26 +182,26 @@ const ProfileTopBar = ({ userName, userEmail }) => {
 
           {selectedMessage && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/35 p-4">
-              <div className="w-full max-w-lg overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
-                <div className="flex items-start justify-between gap-4 border-b border-[#e5e5e5] px-5 py-4">
+              <div className="w-full max-w-lg overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)] dark:border-[#2a2a2a] dark:bg-[#121212]">
+                <div className="flex items-start justify-between gap-4 border-b border-[#e5e5e5] px-5 py-4 dark:border-[#2a2a2a]">
                   <div>
-                    <p className="text-sm font-medium text-[#0a0a0a]">{selectedMessage.subject}</p>
+                    <p className="text-sm font-medium text-[#0a0a0a] dark:text-white">{selectedMessage.subject}</p>
                     <p className="mt-1 text-xs text-[#737373]">{t("messages.from")}: {selectedMessage.senderName || 'Recruiter'}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setSelectedMessage(null)}
-                    className="text-[#737373] hover:text-black"
+                    className="text-[#737373] hover:text-black dark:text-[#a3a3a3] dark:hover:text-white"
                     aria-label="Close message detail"
                   >
                     ×
                   </button>
                 </div>
                 <div className="px-5 py-4">
-                  <p className="whitespace-pre-line text-sm leading-6 text-[#0a0a0a]">{selectedMessage.content}</p>
+                  <p className="whitespace-pre-line text-sm leading-6 text-[#0a0a0a] dark:text-white">{selectedMessage.content}</p>
                   <p className="mt-4 text-xs text-[#737373]">{formatMessageTime(selectedMessage.createdAt)}</p>
                 </div>
-                <div className="flex justify-end border-t border-[#e5e5e5] px-5 py-4">
+                <div className="flex justify-end border-t border-[#e5e5e5] px-5 py-4 dark:border-[#2a2a2a]">
                   <button
                     type="button"
                     onClick={() => setSelectedMessage(null)}
@@ -214,10 +217,10 @@ const ProfileTopBar = ({ userName, userEmail }) => {
           {/* User Info */}
           <div className="flex items-center gap-3 ml-2">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-[#0a0a0a]">{userName || "User Name"}</p>
-              <p className="text-xs text-[#737373]">{userEmail || "email@example.com"}</p>
+              <p className="text-sm font-medium text-[#0a0a0a] dark:text-white">{userName || "User Name"}</p>
+              <p className="text-xs text-[#737373] dark:text-[#a3a3a3]">{userEmail || "email@example.com"}</p>
             </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e5e5] bg-[#f2f2f2] font-semibold text-black">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e5e5] bg-[#f2f2f2] font-semibold text-black dark:border-[#2a2a2a] dark:bg-[#171717] dark:text-white">
               {typeof userName === 'string' && userName.length > 0 ? userName.charAt(0).toUpperCase() : 'U'}
             </div>
           </div>

@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types, react-hooks/exhaustive-deps */
 import { useState, useEffect } from "react";
 import { SidebarMenuItem } from "./SidebarMenuItem";
 import { RiLogoutCircleRFill } from "react-icons/ri";
@@ -53,7 +54,7 @@ const SideBar = ({ role = "candidate" }) => {
       <nav
         className={`px-5 py-3 fixed z-50 w-full lg:hidden transition-all duration-300 ${
           openSidebar ? "-translate-y-full" : "translate-x-0"
-        } border-b border-[#e5e5e5] bg-white text-[#0a0a0a]`}
+        } border-b border-[#e5e5e5] bg-white text-[#0a0a0a] dark:border-[#2a2a2a] dark:bg-[#0a0a0a] dark:text-white`}
       >
         <div className="flex gap-3 items-center">
           <button
@@ -77,11 +78,11 @@ const SideBar = ({ role = "candidate" }) => {
       <div
         className={`fixed h-full top-0 left-0 bottom-0 z-40 w-56 py-4 lg:py-6 transition-transform
           ${openSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-          border-r border-[#e5e5e5] bg-white`}
+          border-r border-[#e5e5e5] bg-white dark:border-[#2a2a2a] dark:bg-[#0a0a0a]`}
       >
-        <div className="h-full overflow-y-auto rounded-[14px] bg-white px-4 text-[#0a0a0a]">
+        <div className="h-full overflow-y-auto rounded-[14px] bg-white px-4 text-[#0a0a0a] dark:bg-[#0a0a0a] dark:text-white">
           <div className="flex items-center justify-between pl-6">
-            <p className="font-semibold text-black">Job Tracker</p>
+            <p className="font-semibold text-black dark:text-white">Job Tracker</p>
             <button
               className="text-xl lg:hidden"
               title="Minimize Sidebar"
@@ -100,8 +101,8 @@ const SideBar = ({ role = "candidate" }) => {
                     to={item.path}
                     className={`flex cursor-pointer items-center gap-2 rounded-[10px] py-2.5 pl-5 transition-all duration-200 ${
                       active
-                        ? "bg-black text-white font-medium"
-                        : "text-[#737373] hover:bg-[#f2f2f2] hover:text-[#0a0a0a]"
+                        ? "bg-black text-white font-medium dark:bg-white dark:text-black"
+                        : "text-[#737373] hover:bg-[#f2f2f2] hover:text-[#0a0a0a] dark:text-[#a3a3a3] dark:hover:bg-[#171717] dark:hover:text-white"
                     }`}
                   >
                     <span className="text-xl">{item.icon}</span>
@@ -113,11 +114,11 @@ const SideBar = ({ role = "candidate" }) => {
           </ul>
         </div>
 
-        <div className="absolute bottom-1 left-4 right-4 rounded-[10px] bg-white">
-          <ul className="space-y-1 py-3 text-[#0a0a0a]">
+        <div className="absolute bottom-1 left-4 right-4 rounded-[10px] bg-white dark:bg-[#0a0a0a]">
+          <ul className="space-y-1 py-3 text-[#0a0a0a] dark:text-white">
             <li>
               <div
-                className="flex cursor-pointer items-center gap-2 rounded-[10px] py-2 pl-5 text-[#737373] transition-colors duration-200 hover:bg-[#f2f2f2] hover:text-[#0a0a0a]"
+                className="flex cursor-pointer items-center gap-2 rounded-[10px] py-2 pl-5 text-[#737373] transition-colors duration-200 hover:bg-[#f2f2f2] hover:text-[#0a0a0a] dark:text-[#a3a3a3] dark:hover:bg-[#171717] dark:hover:text-white"
                 onClick={() => {
                   toggleMenu();
                   toggleLogoutModal();
