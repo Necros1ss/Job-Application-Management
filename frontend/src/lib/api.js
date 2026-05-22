@@ -130,6 +130,11 @@ export const usersApi = {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
+  updateNotificationPreferences: (preferences) =>
+    request("/users/notification-preferences", {
+      method: "PATCH",
+      body: JSON.stringify({ preferences }),
+    }),
 };
 
 export const applicationsApi = {
@@ -208,6 +213,15 @@ export const interviewsApi = {
     request("/interviews", {
       method: "POST",
       body: JSON.stringify(payload),
+    }),
+  update: (id, payload) =>
+    request(`/interviews/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  remove: (id) =>
+    request(`/interviews/${id}`, {
+      method: "DELETE",
     }),
 };
 

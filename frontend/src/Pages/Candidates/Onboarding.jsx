@@ -100,7 +100,7 @@ const CandidateOnboarding = () => {
             <>
               <SkeletonDashboardCard />
               <SkeletonDashboardCard />
-              <SkeletonDashboardCard dark />
+              <SkeletonDashboardCard />
             </>
           ) : (
             <>
@@ -124,12 +124,12 @@ const CandidateOnboarding = () => {
           {isLoading ? (
             Array(3).fill(0).map((_, index) => <SkeletonCard key={index} />)
           ) : tasks.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
-              <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-[#188155] flex items-center justify-center mb-4">
+            <div className="blueprint-card border-dashed p-12 text-center">
+              <div className="w-14 h-14 mx-auto rounded-full bg-[#f2f2f2] text-[#0a0a0a] flex items-center justify-center mb-4">
                 <FaClipboardList size={22} />
               </div>
-              <h2 className="font-bold text-gray-900 mb-1">No onboarding tasks yet</h2>
-              <p className="text-sm text-gray-500">When you accept an offer, recruiter onboarding tasks will appear here.</p>
+              <h2 className="font-semibold text-[#0a0a0a] mb-1">No onboarding tasks yet</h2>
+              <p className="text-sm text-[#737373]">When you accept an offer, recruiter onboarding tasks will appear here.</p>
             </div>
           ) : (
             tasks.map((task) => (

@@ -37,6 +37,7 @@ const mapInboxRow = (row) => ({
   readAt: row.read_at,
   senderName: row.sender_name,
   jobPostId: row.job_post_id,
+  jobTitle: row.job_title,
   applicationId: row.application_id,
 });
 
@@ -61,9 +62,11 @@ router.get("/inbox", requireAuth, async (req, res) => {
           m.read_at,
           m.job_post_id,
           m.application_id,
-          COALESCE(r.company_name, 'Unknown recruiter') AS sender_name
+          COALESCE(r.company_name, 'Unknown recruiter') AS sender_name,
+          jp.title AS job_title
        FROM messages m
        LEFT JOIN recruiters r ON r.id = m.sender_recruiter_id
+       LEFT JOIN job_posts jp ON jp.id = m.job_post_id
        WHERE m.receiver_candidate_id = $1
        ORDER BY m.created_at DESC, m.id DESC
        LIMIT $2 OFFSET $3`,
@@ -89,7 +92,8 @@ router.get("/unread-count", requireAuth, async (req, res) => {
       [req.user.id]
     );
 
-    return res.json({ unreadCount: result.rows[0]?.unread_count || 0 });
+    const count = result.rows[0]?.unread_count || 0;
+    return res.json({ count, unreadCount: count });
   } catch (error) {
     return res.status(500).json({ message: "Failed to load unread count", detail: error.message });
   }

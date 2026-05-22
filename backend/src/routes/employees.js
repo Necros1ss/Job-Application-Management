@@ -342,9 +342,11 @@ router.patch("/:id", requireAuth, async (req, res) => {
 });
 
 router.get("/attendance", requireAuth, async (req, res) => {
-  if (req.user.role !== "recruiter") {
-    return res.status(403).json({ message: "Only recruiter accounts can access attendance" });
+  if (!["recruiter", "candidate"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Only recruiter or candidate accounts can access attendance" });
   }
+
+  const recruiterMode = req.user.role === "recruiter";
 
   try {
     const result = await pool.query(
@@ -358,7 +360,7 @@ router.get("/attendance", requireAuth, async (req, res) => {
               e.full_name AS employee_name
        FROM attendance_records ar
        INNER JOIN employees e ON e.id = ar.employee_id
-       WHERE e.recruiter_id = $1
+       WHERE ${recruiterMode ? "e.recruiter_id" : "e.candidate_id"} = $1
        ORDER BY ar.work_date DESC, ar.id DESC
        LIMIT 100`,
       [req.user.id]

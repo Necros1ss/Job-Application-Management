@@ -1,13 +1,25 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { FaPen, FaPlus, FaSearch, FaTimes } from "react-icons/fa";
 import ApplicationDetail from "./ApplicationDetail";
-import { interviewsApi, usersApi } from "../../lib/api";
+import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
 import TopBarRecruiter from "../../Components/TopBarRecruiter";
+import { showError, showSuccess } from "../../utils/toast";
 
 const FILTERS = [
   { value: "all", label: "All" },
   { value: "upcoming", label: "Upcoming" },
   { value: "past", label: "Past" },
 ];
+
+const INITIAL_FORM = {
+  applicationId: "",
+  interviewerName: "",
+  interviewDateTime: "",
+  mode: "online",
+  meetLink: "",
+  location: "",
+  notes: "",
+};
 
 const formatInterviewDateTime = (value) => {
   if (!value) return "Not scheduled";
@@ -24,16 +36,24 @@ const formatInterviewDateTime = (value) => {
   });
 };
 
+const toDateTimeInputValue = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+};
+
 const getModeBadge = (mode) => {
   const normalizedMode = (mode || "").toLowerCase();
   const isOnline = normalizedMode === "online";
 
   return (
     <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
         isOnline
-          ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-          : "bg-orange-50 text-orange-700 border border-orange-100"
+          ? "border-[#e5e5e5] bg-[#f2f2f2] text-[#0a0a0a]"
+          : "border-[#e5e5e5] bg-white text-[#737373]"
       }`}
     >
       {isOnline ? "Online" : "Offline"}
@@ -56,15 +76,351 @@ const toApplicationDetailCandidate = (interview) => ({
   companyName: interview.company_name || "Unknown Company",
 });
 
+const InterviewModal = ({ interview, onClose, onSaved }) => {
+  const isEdit = Boolean(interview);
+  const [applications, setApplications] = useState([]);
+  const [applicationSearch, setApplicationSearch] = useState("");
+  const [form, setForm] = useState(() =>
+    interview
+      ? {
+          applicationId: String(interview.application_id || ""),
+          interviewerName: interview.interviewer_name || "",
+          interviewDateTime: toDateTimeInputValue(interview.interview_datetime),
+          mode: interview.mode || "online",
+          meetLink: interview.meet_link || "",
+          location: interview.location || "",
+          notes: interview.notes || "",
+        }
+      : INITIAL_FORM
+  );
+  const [isLoadingApplications, setIsLoadingApplications] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadApplications = async () => {
+      try {
+        setIsLoadingApplications(true);
+        const rows = await applicationsApi.listForRecruiter();
+        const eligibleApplications = rows.filter((item) =>
+          ["applied", "reviewed"].includes(String(item.status || "").toLowerCase())
+        );
+
+        if (isMounted) {
+          setApplications(eligibleApplications);
+          if (!isEdit && eligibleApplications.length > 0) {
+            setForm((current) => ({
+              ...current,
+              applicationId: current.applicationId || String(eligibleApplications[0].id),
+            }));
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          setApplications([]);
+          showError(error.message || "Failed to load applications");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingApplications(false);
+        }
+      }
+    };
+
+    loadApplications();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEdit]);
+
+  const selectedApplication = useMemo(
+    () => applications.find((item) => String(item.id) === String(form.applicationId)),
+    [applications, form.applicationId]
+  );
+
+  const filteredApplications = useMemo(() => {
+    const normalizedSearch = applicationSearch.trim().toLowerCase();
+    if (!normalizedSearch) return applications;
+
+    return applications.filter((item) =>
+      [item.candidateName, item.candidateEmail, item.jobTitle, item.companyName]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedSearch))
+    );
+  }, [applicationSearch, applications]);
+
+  const updateForm = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!form.applicationId) {
+      showError("Please choose an application.");
+      return;
+    }
+
+    if (!form.interviewerName.trim() || !form.interviewDateTime) {
+      showError("Interviewer and interview time are required.");
+      return;
+    }
+
+    if (form.mode === "online" && !form.meetLink.trim()) {
+      showError("Meet link is required for online interviews.");
+      return;
+    }
+
+    if (form.mode === "offline" && !form.location.trim()) {
+      showError("Location is required for offline interviews.");
+      return;
+    }
+
+    const payload = {
+      applicationId: Number(form.applicationId),
+      interviewerName: form.interviewerName.trim(),
+      interviewDateTime: form.interviewDateTime,
+      mode: form.mode,
+      meetLink: form.mode === "online" ? form.meetLink.trim() : "",
+      location: form.mode === "offline" ? form.location.trim() : "",
+      notes: form.notes.trim(),
+    };
+
+    try {
+      setIsSaving(true);
+      if (isEdit) {
+        await interviewsApi.update(interview.id, payload);
+        showSuccess("Interview updated successfully.");
+      } else {
+        await interviewsApi.create(payload);
+        showSuccess("Interview scheduled successfully.");
+      }
+      await onSaved();
+      onClose();
+    } catch (error) {
+      showError(error.message || "Failed to save interview");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8 backdrop-blur-sm">
+      <form onSubmit={handleSubmit} className="blueprint-card w-full max-w-3xl p-0">
+        <div className="flex items-start justify-between border-b border-[#e5e5e5] px-6 py-5">
+          <div>
+            <p className="blueprint-kicker">{isEdit ? "Edit schedule" : "New schedule"}</p>
+            <h2 className="mt-1 text-2xl font-semibold text-[#0a0a0a]">
+              {isEdit ? "Edit Interview" : "Schedule Interview"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-[#737373] transition hover:bg-[#f2f2f2] hover:text-black"
+            aria-label="Close modal"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+          <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-[#0a0a0a]">Application</label>
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737373]" size={13} />
+                <input
+                  type="text"
+                  value={applicationSearch}
+                  onChange={(event) => setApplicationSearch(event.target.value)}
+                  placeholder="Search candidate, email, job..."
+                  disabled={isEdit}
+                  className="blueprint-input w-full pl-9 disabled:bg-[#f2f2f2] disabled:text-[#737373]"
+                />
+              </div>
+              <div className="max-h-72 overflow-y-auto rounded-[14px] border border-[#e5e5e5] bg-white">
+                {isLoadingApplications ? (
+                  <div className="p-4 text-sm text-[#737373]">Loading applications...</div>
+                ) : filteredApplications.length > 0 ? (
+                  filteredApplications.map((application) => {
+                    const isSelected = String(application.id) === String(form.applicationId);
+                    return (
+                      <button
+                        key={application.id}
+                        type="button"
+                        disabled={isEdit}
+                        onClick={() => updateForm("applicationId", String(application.id))}
+                        className={`block w-full border-b border-[#e5e5e5] px-4 py-3 text-left last:border-b-0 disabled:cursor-not-allowed ${
+                          isSelected ? "bg-[#f2f2f2]" : "bg-white hover:bg-[#f2f2f2]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-semibold text-[#0a0a0a]">
+                            {application.candidateName || "Unknown Candidate"}
+                          </p>
+                          <span className="blueprint-tag">{application.status}</span>
+                        </div>
+                        <p className="mt-1 text-sm text-[#737373]">{application.jobTitle || "Unknown Position"}</p>
+                        <p className="mt-0.5 text-xs text-[#737373]">{application.candidateEmail || "No email"}</p>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="p-4 text-sm text-[#737373]">No applied or reviewed applications found.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {selectedApplication && (
+                <div className="rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-4">
+                  <p className="text-xs font-semibold uppercase text-[#737373]">Selected</p>
+                  <p className="mt-1 font-semibold text-[#0a0a0a]">{selectedApplication.candidateName}</p>
+                  <p className="text-sm text-[#737373]">{selectedApplication.jobTitle}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Interviewer</label>
+                <input
+                  type="text"
+                  value={form.interviewerName}
+                  onChange={(event) => updateForm("interviewerName", event.target.value)}
+                  placeholder="Interviewer name"
+                  className="blueprint-input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Date & time</label>
+                <input
+                  type="datetime-local"
+                  value={form.interviewDateTime}
+                  onChange={(event) => updateForm("interviewDateTime", event.target.value)}
+                  className="blueprint-input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Mode</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {["online", "offline"].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => updateForm("mode", mode)}
+                      className={`rounded-[10px] border px-4 py-2 text-sm font-semibold capitalize transition ${
+                        form.mode === mode
+                          ? "border-black bg-black text-white"
+                          : "border-[#e5e5e5] bg-white text-[#0a0a0a] hover:bg-[#f2f2f2]"
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {form.mode === "online" ? (
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Meet link</label>
+                  <input
+                    type="url"
+                    value={form.meetLink}
+                    onChange={(event) => updateForm("meetLink", event.target.value)}
+                    placeholder="https://meet.google.com/..."
+                    className="blueprint-input w-full"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Location</label>
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={(event) => updateForm("location", event.target.value)}
+                    placeholder="Office, floor, room..."
+                    className="blueprint-input w-full"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">Notes</label>
+                <textarea
+                  value={form.notes}
+                  onChange={(event) => updateForm("notes", event.target.value)}
+                  rows={4}
+                  placeholder="Optional notes for the candidate"
+                  className="blueprint-input w-full resize-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-[#e5e5e5] px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] transition hover:bg-[#f2f2f2]"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving || isLoadingApplications}
+            className="blueprint-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? "Saving..." : isEdit ? "Save changes" : "Schedule Interview"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 const InterviewList = () => {
   const [interviews, setInterviews] = useState([]);
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedApplication, setSelectedApplication] = useState(null);
+  const [editingInterview, setEditingInterview] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadInterviews = async ({ includeProfile = false } = {}) => {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      if (includeProfile) {
+        const [profile, interviewData] = await Promise.all([
+          usersApi.me(),
+          interviewsApi.listForRecruiter(),
+        ]);
+        setUserName(profile.name || "");
+        setUserEmail(profile.email || "");
+        setInterviews(Array.isArray(interviewData) ? interviewData : []);
+        return;
+      }
+
+      const interviewData = await interviewsApi.listForRecruiter();
+      setInterviews(Array.isArray(interviewData) ? interviewData : []);
+    } catch (loadError) {
+      setError(loadError.message || "Failed to load interviews");
+      setInterviews([]);
+      showError(loadError.message || "Failed to load interviews");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -88,6 +444,7 @@ const InterviewList = () => {
         if (isMounted) {
           setError(loadError.message || "Failed to load interviews");
           setInterviews([]);
+          showError(loadError.message || "Failed to load interviews");
         }
       } finally {
         if (isMounted) {
@@ -129,6 +486,16 @@ const InterviewList = () => {
       .sort((a, b) => new Date(a.interview_datetime) - new Date(b.interview_datetime));
   }, [activeFilter, interviews, searchTerm]);
 
+  const openCreateModal = () => {
+    setEditingInterview(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (interview) => {
+    setEditingInterview(interview);
+    setIsModalOpen(true);
+  };
+
   if (selectedApplication) {
     return (
       <div className="flex-1">
@@ -138,7 +505,7 @@ const InterviewList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <TopBarRecruiter
         userName={userName}
         userEmail={userEmail}
@@ -147,104 +514,151 @@ const InterviewList = () => {
         searchPlaceholder="Search interviews by candidate, job, company..."
       />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+      <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Interviews</h1>
-            <p className="text-gray-500 mt-1">Track scheduled interviews across your hiring pipeline.</p>
+            <p className="blueprint-kicker">Recruitment schedule</p>
+            <h1 className="mt-1 text-3xl font-semibold text-[#0a0a0a]">Interviews</h1>
+            <p className="mt-1 text-[#737373]">Track and schedule interviews across your hiring pipeline.</p>
           </div>
-          <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-2xl p-1 shadow-sm">
-            {FILTERS.map((filter) => (
-              <button
-                key={filter.value}
-                type="button"
-                onClick={() => setActiveFilter(filter.value)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                  activeFilter === filter.value
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-1 rounded-full border border-[#e5e5e5] bg-white p-1">
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setActiveFilter(filter.value)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                    activeFilter === filter.value
+                      ? "bg-black text-white"
+                      : "text-[#737373] hover:bg-[#f2f2f2] hover:text-[#0a0a0a]"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={openCreateModal} className="blueprint-primary inline-flex items-center gap-2">
+              <FaPlus size={12} />
+              Schedule Interview
+            </button>
           </div>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
+          <div className="mb-6 rounded-[14px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="blueprint-card overflow-hidden p-0">
           {isLoading ? (
-            <div className="px-6 py-10 text-center text-gray-500">Loading interviews...</div>
+            <div className="space-y-3 px-6 py-8">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="h-14 animate-pulse rounded-[10px] bg-[#f2f2f2]" />
+              ))}
+            </div>
           ) : (
-            <table className="w-full text-left">
-              <thead className="bg-white border-b border-gray-100">
-                <tr className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  <th className="px-6 py-5">Candidate Name</th>
-                  <th className="px-6 py-5">Job Title</th>
-                  <th className="px-6 py-5">Date & Time</th>
-                  <th className="px-6 py-5">Mode</th>
-                  <th className="px-6 py-5">Interviewer</th>
-                  <th className="px-6 py-5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filteredInterviews.map((interview) => (
-                  <tr
-                    key={interview.id}
-                    className="hover:bg-gray-50/60 transition-colors cursor-pointer"
-                    onClick={() => setSelectedApplication(toApplicationDetailCandidate(interview))}
-                  >
-                    <td className="px-6 py-5">
-                      <div>
-                        <p className="font-bold text-gray-900">{interview.candidate_name || "Unknown Candidate"}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{interview.candidate_email || "No email"}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <p className="font-bold text-gray-900">{interview.job_title || "Unknown Position"}</p>
-                      <p className="text-sm text-gray-500 mt-0.5">{interview.company_name || "Unknown Company"}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <p className="text-sm font-semibold text-gray-800">
-                        {formatInterviewDateTime(interview.interview_datetime)}
-                      </p>
-                    </td>
-                    <td className="px-6 py-5">{getModeBadge(interview.mode)}</td>
-                    <td className="px-6 py-5">
-                      <p className="text-sm font-semibold text-gray-800">{interview.interviewer_name || "—"}</p>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedApplication(toApplicationDetailCandidate(interview));
-                        }}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                      >
-                        View Detail
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-left">
+                <thead className="border-b border-[#e5e5e5] bg-white">
+                  <tr className="text-xs font-semibold uppercase tracking-wide text-[#737373]">
+                    <th className="px-6 py-5">Candidate Name</th>
+                    <th className="px-6 py-5">Job Title</th>
+                    <th className="px-6 py-5">Date & Time</th>
+                    <th className="px-6 py-5">Mode</th>
+                    <th className="px-6 py-5">Interviewer</th>
+                    <th className="px-6 py-5 text-right">Actions</th>
                   </tr>
-                ))}
+                </thead>
+                <tbody className="divide-y divide-[#e5e5e5]">
+                  {filteredInterviews.map((interview) => (
+                    <tr
+                      key={interview.id}
+                      className="cursor-pointer transition-colors hover:bg-[#f2f2f2]"
+                      onClick={() => setSelectedApplication(toApplicationDetailCandidate(interview))}
+                    >
+                      <td className="px-6 py-5">
+                        <div>
+                          <p className="font-semibold text-[#0a0a0a]">
+                            {interview.candidate_name || "Unknown Candidate"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-[#737373]">{interview.candidate_email || "No email"}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="font-semibold text-[#0a0a0a]">{interview.job_title || "Unknown Position"}</p>
+                        <p className="mt-0.5 text-sm text-[#737373]">{interview.company_name || "Unknown Company"}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-sm font-semibold text-[#0a0a0a]">
+                          {formatInterviewDateTime(interview.interview_datetime)}
+                        </p>
+                      </td>
+                      <td className="px-6 py-5">{getModeBadge(interview.mode)}</td>
+                      <td className="px-6 py-5">
+                        <p className="text-sm font-semibold text-[#0a0a0a]">{interview.interviewer_name || "-"}</p>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEditModal(interview);
+                            }}
+                            className="rounded-[10px] border border-[#e5e5e5] p-2 text-[#0a0a0a] transition hover:bg-white"
+                            aria-label="Edit interview"
+                          >
+                            <FaPen size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedApplication(toApplicationDetailCandidate(interview));
+                            }}
+                            className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] transition hover:bg-white"
+                          >
+                            View Detail
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
 
-                {filteredInterviews.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
-                      No interviews found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  {filteredInterviews.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-14 text-center">
+                        <div className="mx-auto max-w-sm">
+                          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
+                            <FaPlus />
+                          </div>
+                          <p className="font-semibold text-[#0a0a0a]">No interviews found</p>
+                          <p className="mt-1 text-sm text-[#737373]">
+                            Schedule an interview from an applied or reviewed application.
+                          </p>
+                          <button type="button" onClick={openCreateModal} className="blueprint-primary mt-5">
+                            Schedule Interview
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
+
+      {isModalOpen && (
+        <InterviewModal
+          interview={editingInterview}
+          onClose={() => setIsModalOpen(false)}
+          onSaved={() => loadInterviews()}
+        />
+      )}
     </div>
   );
 };

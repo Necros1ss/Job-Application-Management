@@ -1,18 +1,27 @@
-import { useEffect, useState } from "react";
-import { FaChevronLeft, FaChevronRight, FaEnvelope, FaEnvelopeOpen, FaTimes } from "react-icons/fa";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  FaArrowLeft,
+  FaChevronLeft,
+  FaChevronRight,
+  FaEnvelope,
+  FaRegEnvelopeOpen,
+} from "react-icons/fa";
 import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { messagesApi, usersApi } from "../../lib/api";
+import { formatMessageTime } from "../../utils/format";
 import { showError } from "../../utils/toast";
 
 const PAGE_SIZE = 10;
 
-const formatDateTime = (value) => {
+const formatFullDateTime = (value) => {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
   return date.toLocaleString("en-US", {
+    weekday: "short",
     month: "short",
     day: "2-digit",
     year: "numeric",
@@ -21,10 +30,30 @@ const formatDateTime = (value) => {
   });
 };
 
+const getCompanyInitial = (message) =>
+  (message.senderName || "R")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+const getAvatarClass = (name = "") => {
+  const palette = [
+    "bg-[#f2f2f2] text-[#0a0a0a]",
+    "bg-[#0a0a0a] text-white",
+    "bg-white text-[#0a0a0a] border border-[#e5e5e5]",
+  ];
+  const seed = name.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return palette[seed % palette.length];
+};
+
 const Messages = () => {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [offset, setOffset] = useState(0);
+  const [activeTab, setActiveTab] = useState("all");
+  const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [userName, setUserName] = useState("");
@@ -34,14 +63,21 @@ const Messages = () => {
     const loadMessages = async () => {
       try {
         setIsLoading(true);
-        const [profile, inbox] = await Promise.all([
+        const [profile, inbox, unread] = await Promise.all([
           usersApi.me(),
           messagesApi.inbox({ limit: PAGE_SIZE, offset }),
+          messagesApi.unreadCount(),
         ]);
 
+        const normalizedMessages = Array.isArray(inbox) ? inbox : [];
         setUserName(profile.name || "");
         setUserEmail(profile.email || "");
-        setMessages(Array.isArray(inbox) ? inbox : []);
+        setMessages(normalizedMessages);
+        setUnreadCount(Number(unread?.count ?? unread?.unreadCount ?? 0));
+        setSelectedMessage((current) => {
+          if (!current) return normalizedMessages[0] || null;
+          return normalizedMessages.find((item) => item.id === current.id) || normalizedMessages[0] || null;
+        });
         setErrorMessage("");
       } catch (error) {
         const message = error.message || "Failed to load messages";
@@ -55,8 +91,16 @@ const Messages = () => {
     loadMessages();
   }, [offset]);
 
+  const visibleMessages = useMemo(() => {
+    if (activeTab === "unread") {
+      return messages.filter((message) => !message.isRead);
+    }
+    return messages;
+  }, [activeTab, messages]);
+
   const openMessage = async (message) => {
     setSelectedMessage(message);
+    setShowDetailOnMobile(true);
 
     if (message.isRead) {
       return;
@@ -76,6 +120,7 @@ const Messages = () => {
           ? { ...current, isRead: updated.isRead, readAt: updated.readAt }
           : current
       );
+      setUnreadCount((current) => Math.max(current - 1, 0));
     } catch (error) {
       showError(error.message || "Failed to mark message as read");
     }
@@ -85,136 +130,227 @@ const Messages = () => {
   const pageNumber = Math.floor(offset / PAGE_SIZE) + 1;
 
   return (
-    <div className="min-h-screen bg-[#fbfcfa]">
+    <div className="min-h-screen bg-white">
       <TopBarDashboard userName={userName} userEmail={userEmail} />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+      <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
+        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Messages</h1>
-            <p className="text-gray-500">Updates from recruiters about your applications.</p>
+            <p className="blueprint-kicker">Candidate inbox</p>
+            <h1 className="mt-1 text-4xl font-semibold text-[#0a0a0a]">Messages</h1>
+            <p className="mt-2 text-[#737373]">Recruiter updates and application follow-ups in one focused view.</p>
           </div>
-          <div className="bg-emerald-50 px-5 py-3 rounded-2xl border border-emerald-100">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Unread</p>
-            <p className="text-2xl font-bold text-[#188155]">
-              {messages.filter((message) => !message.isRead).length}
-            </p>
+          <div className="blueprint-card min-w-[140px] px-5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#737373]">Unread</p>
+            <p className="mt-1 text-2xl font-semibold text-[#0a0a0a]">{unreadCount}</p>
           </div>
         </div>
 
         {errorMessage && (
-          <p className="text-red-500 text-sm mb-4 bg-red-50 p-3 rounded-lg border border-red-100" role="alert">
+          <p className="mb-4 rounded-[10px] border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
             {errorMessage}
           </p>
         )}
 
         {isLoading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {Array(4).fill(0).map((_, index) => <SkeletonCard key={index} />)}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <div className="lg:col-span-1">
+              <SkeletonCard />
+            </div>
+            <div className="lg:col-span-2">
+              <SkeletonCard />
+            </div>
           </div>
         ) : messages.length > 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="divide-y divide-gray-100">
-              {messages.map((message) => (
+          <div className="blueprint-card grid min-h-[650px] overflow-hidden p-0 lg:grid-cols-[0.38fr_0.62fr]">
+            <aside
+              className={`border-r border-[#e5e5e5] bg-white ${
+                showDetailOnMobile ? "hidden lg:block" : "block"
+              }`}
+            >
+              <div className="border-b border-[#e5e5e5] p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-[#0a0a0a]">Inbox</h2>
+                    <p className="text-sm text-[#737373]">{messages.length} messages on this page</p>
+                  </div>
+                  <span className="blueprint-tag">{unreadCount} unread</span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 rounded-full border border-[#e5e5e5] bg-white p-1">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "unread", label: "Unread" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        activeTab === tab.id ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2]"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="max-h-[500px] overflow-y-auto">
+                {visibleMessages.length > 0 ? (
+                  visibleMessages.map((message) => {
+                    const isSelected = selectedMessage?.id === message.id;
+                    return (
+                      <button
+                        key={message.id}
+                        type="button"
+                        onClick={() => openMessage(message)}
+                        className={`block w-full border-b border-[#e5e5e5] px-4 py-4 text-left transition ${
+                          isSelected
+                            ? "border-l-2 border-l-black bg-[#f2f2f2]"
+                            : "border-l-2 border-l-transparent hover:bg-[#f2f2f2]"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${getAvatarClass(
+                              message.senderName
+                            )}`}
+                          >
+                            {getCompanyInitial(message)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <h3
+                                className={`truncate text-sm ${
+                                  message.isRead ? "font-medium text-[#0a0a0a]" : "font-semibold text-black"
+                                }`}
+                              >
+                                {message.subject}
+                              </h3>
+                              <span className="shrink-0 text-[11px] font-medium text-[#737373]">
+                                {formatMessageTime(message.createdAt)}
+                              </span>
+                            </div>
+                            <p className="mt-1 truncate text-xs font-medium text-[#737373]">
+                              {message.senderName || "Unknown recruiter"}
+                            </p>
+                            <p className="mt-2 truncate text-sm text-[#737373]">{message.content}</p>
+                          </div>
+                          {!message.isRead && (
+                            <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-black" aria-label="Unread" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="px-6 py-12 text-center">
+                    <FaRegEnvelopeOpen className="mx-auto mb-3 text-2xl text-[#737373]" />
+                    <p className="font-semibold text-[#0a0a0a]">No unread messages</p>
+                    <p className="mt-1 text-sm text-[#737373]">Everything on this page has been read.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between border-t border-[#e5e5e5] bg-[#f2f2f2] px-4 py-3">
                 <button
-                  key={message.id}
                   type="button"
-                  onClick={() => openMessage(message)}
-                  className="w-full text-left px-6 py-5 hover:bg-emerald-50/40 transition-colors"
+                  disabled={offset === 0}
+                  onClick={() => setOffset((current) => Math.max(current - PAGE_SIZE, 0))}
+                  className="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-white disabled:opacity-40"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className={`mt-1 w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                      message.isRead ? "bg-gray-100 text-gray-500" : "bg-emerald-100 text-[#188155]"
-                    }`}>
-                      {message.isRead ? <FaEnvelopeOpen /> : <FaEnvelope />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <h2 className={`text-base truncate ${message.isRead ? "font-semibold text-gray-800" : "font-bold text-gray-950"}`}>
-                          {message.subject}
+                  <FaChevronLeft className="text-xs" />
+                  Prev
+                </button>
+                <span className="text-sm font-semibold text-[#737373]">Page {pageNumber}</span>
+                <button
+                  type="button"
+                  disabled={!hasNextPage}
+                  onClick={() => setOffset((current) => current + PAGE_SIZE)}
+                  className="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-white disabled:opacity-40"
+                >
+                  Next
+                  <FaChevronRight className="text-xs" />
+                </button>
+              </div>
+            </aside>
+
+            <section className={`${showDetailOnMobile ? "block" : "hidden lg:block"} bg-white`}>
+              {selectedMessage ? (
+                <div className="flex h-full flex-col">
+                  <div className="border-b border-[#e5e5e5] p-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowDetailOnMobile(false)}
+                      className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] px-3 py-2 text-sm font-semibold text-[#0a0a0a] lg:hidden"
+                    >
+                      <FaArrowLeft size={12} />
+                      Back
+                    </button>
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-[#737373]">
+                          From: {selectedMessage.senderName || "Unknown recruiter"}
+                        </p>
+                        <h2 className="mt-2 text-2xl font-semibold leading-tight text-[#0a0a0a]">
+                          {selectedMessage.subject}
                         </h2>
-                        <span className="text-xs font-semibold text-gray-400 shrink-0">
-                          {formatDateTime(message.createdAt)}
-                        </span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {message.senderName || "Unknown recruiter"}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                        {message.content}
+                      <p className="text-sm font-medium text-[#737373]">
+                        {formatFullDateTime(selectedMessage.createdAt)}
                       </p>
                     </div>
-                    {!message.isRead && (
-                      <span className="mt-2 w-2.5 h-2.5 bg-[#188155] rounded-full shrink-0" aria-label="Unread" />
+                    {(selectedMessage.jobTitle || selectedMessage.jobPostId) && (
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        {selectedMessage.jobTitle && <span className="blueprint-tag">{selectedMessage.jobTitle}</span>}
+                        {selectedMessage.jobPostId && <span className="blueprint-tag">Job #{selectedMessage.jobPostId}</span>}
+                      </div>
                     )}
                   </div>
-                </button>
-              ))}
-            </div>
 
-            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-100">
-              <button
-                type="button"
-                disabled={offset === 0}
-                onClick={() => setOffset((current) => Math.max(current - PAGE_SIZE, 0))}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-white disabled:opacity-40 disabled:hover:bg-transparent"
-              >
-                <FaChevronLeft className="text-xs" />
-                Previous
-              </button>
-              <span className="text-sm font-bold text-gray-500">Page {pageNumber}</span>
-              <button
-                type="button"
-                disabled={!hasNextPage}
-                onClick={() => setOffset((current) => current + PAGE_SIZE)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-white disabled:opacity-40 disabled:hover:bg-transparent"
-              >
-                Next
-                <FaChevronRight className="text-xs" />
-              </button>
-            </div>
+                  <div className="flex-1 overflow-y-auto p-6">
+                    <div className="prose prose-sm max-w-none">
+                      <p className="whitespace-pre-wrap text-base leading-8 text-[#0a0a0a]">
+                        {selectedMessage.content}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedMessage.jobPostId && (
+                    <div className="border-t border-[#e5e5e5] p-6">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/jobs/${selectedMessage.jobPostId}`)}
+                        className="blueprint-primary"
+                      >
+                        View Job
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex h-full min-h-[650px] items-center justify-center p-10 text-center">
+                  <div>
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
+                      <FaEnvelope />
+                    </div>
+                    <h2 className="text-lg font-semibold text-[#0a0a0a]">Select a message to read</h2>
+                    <p className="mt-2 text-sm text-[#737373]">Choose any message from the inbox panel.</p>
+                  </div>
+                </div>
+              )}
+            </section>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
-            <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-[#188155] flex items-center justify-center mb-4">
-              <FaEnvelope className="w-5 h-5" />
+          <div className="blueprint-card border-dashed p-10 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2] text-[#0a0a0a]">
+              <FaEnvelope className="h-5 w-5" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">No messages yet</h2>
-            <p className="text-sm text-gray-500">Recruiter updates will appear here when they contact you.</p>
+            <h2 className="mb-2 text-lg font-semibold text-[#0a0a0a]">No messages yet</h2>
+            <p className="text-sm text-[#737373]">Recruiter updates will appear here when they contact you.</p>
           </div>
         )}
       </div>
-
-      {selectedMessage && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-gray-100">
-              <div>
-                <p className="text-sm font-semibold text-[#188155] mb-1">
-                  {selectedMessage.senderName || "Unknown recruiter"}
-                </p>
-                <h2 className="text-2xl font-bold text-gray-900">{selectedMessage.subject}</h2>
-                <p className="text-xs font-semibold text-gray-400 mt-2">
-                  {formatDateTime(selectedMessage.createdAt)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedMessage(null)}
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-800 hover:bg-gray-100"
-                aria-label="Close message"
-              >
-                <FaTimes />
-              </button>
-            </div>
-            <div className="px-6 py-6">
-              <p className="text-sm leading-7 text-gray-700 whitespace-pre-wrap">
-                {selectedMessage.content}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

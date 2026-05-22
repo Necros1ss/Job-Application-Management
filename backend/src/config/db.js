@@ -106,6 +106,8 @@ export const ensurePhaseSchema = async () => {
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_email_body TEXT;
 
+         ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS skills TEXT[] DEFAULT '{}';
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS experience VARCHAR(100);
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS job_type VARCHAR(50);
