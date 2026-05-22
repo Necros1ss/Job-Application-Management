@@ -161,6 +161,23 @@ export const ensurePhaseSchema = async () => {
     );
 
     await client.query(
+      `CREATE TABLE IF NOT EXISTS interviews (
+         id BIGSERIAL PRIMARY KEY,
+         application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+         recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,
+         interviewer_name VARCHAR(255) NOT NULL,
+         interview_datetime TIMESTAMPTZ NOT NULL,
+         mode VARCHAR(30) NOT NULL DEFAULT 'online',
+         meet_link TEXT,
+         location TEXT,
+         notes TEXT,
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT chk_interviews_mode CHECK (mode IN ('online', 'offline'))
+       )`
+    );
+
+    await client.query(
       `DO $$
        BEGIN
          IF EXISTS (
@@ -272,6 +289,8 @@ export const ensurePhaseSchema = async () => {
       `CREATE INDEX IF NOT EXISTS idx_application_files_application_id ON application_files(application_id);
        CREATE INDEX IF NOT EXISTS idx_application_notes_application_id ON application_notes(application_id);
        CREATE INDEX IF NOT EXISTS idx_application_events_application_created ON application_events(application_id, created_at DESC);
+       CREATE INDEX IF NOT EXISTS idx_interviews_recruiter_datetime ON interviews(recruiter_id, interview_datetime DESC);
+       CREATE INDEX IF NOT EXISTS idx_interviews_application_id ON interviews(application_id);
        CREATE INDEX IF NOT EXISTS idx_messages_receiver_candidate_id ON messages(receiver_candidate_id);
        CREATE INDEX IF NOT EXISTS idx_messages_sender_recruiter_id ON messages(sender_recruiter_id);
        CREATE INDEX IF NOT EXISTS idx_messages_receiver_read_created ON messages(receiver_candidate_id, is_read, created_at DESC);
