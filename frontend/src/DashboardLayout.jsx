@@ -1,36 +1,32 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
 import SideBar from "./Components/SideBar";
 import { Navigate, Outlet } from "react-router-dom";
-import { authApi, tokenStorage } from "./lib/api";
+import { initializeSession, tokenStorage } from "./lib/api";
 
 const DashboardLayout = ({ allowedRole }) => {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
-  const token = tokenStorage.getToken();
-  const userRole = tokenStorage.getRole();
+  const [session, setSession] = useState({
+    token: tokenStorage.getToken(),
+    role: tokenStorage.getRole(),
+  });
   const allowedRoles = Array.isArray(allowedRole) ? allowedRole : allowedRole ? [allowedRole] : [];
 
   useEffect(() => {
     let isMounted = true;
 
     const restoreSession = async () => {
-      const currentToken = tokenStorage.getToken();
-      const shouldRefresh = !currentToken || tokenStorage.isTokenExpired(currentToken);
+      // initializeSession restores the in-memory access token from the httpOnly
+      // refresh cookie after reloads, then DashboardLayout stores a render-safe
+      // snapshot instead of reading sessionStorage directly during render.
+      await initializeSession();
 
-      if (!shouldRefresh) {
-        if (isMounted) {
-          setIsCheckingSession(false);
-        }
-        return;
-      }
-
-      try {
-        await authApi.refresh();
-      } catch {
-        tokenStorage.clearSession();
-      } finally {
-        if (isMounted) {
-          setIsCheckingSession(false);
-        }
+      if (isMounted) {
+        setSession({
+          token: tokenStorage.getToken(),
+          role: tokenStorage.getRole(),
+        });
+        setIsCheckingSession(false);
       }
     };
 
@@ -45,23 +41,23 @@ const DashboardLayout = ({ allowedRole }) => {
     return null;
   }
 
-  if (!token) {
+  if (!session.token) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!userRole) {
+  if (!session.role) {
     tokenStorage.clearSession();
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
-    const fallbackRoute = userRole === "recruiter" ? "/recruiter" : userRole === "admin" ? "/admin" : "/candidate";
+  if (allowedRoles.length > 0 && !allowedRoles.includes(session.role)) {
+    const fallbackRoute = session.role === "recruiter" ? "/recruiter" : session.role === "admin" ? "/admin" : "/candidate";
     return <Navigate to={fallbackRoute} replace />;
   }
 
   return (
     <div className="min-h-screen bg-white">
-      <SideBar role={userRole} />
+      <SideBar role={session.role} />
       <div className="h-auto flex-grow px-6 pb-6 pt-16 lg:ml-56 lg:pt-4">
         <Outlet />
       </div>

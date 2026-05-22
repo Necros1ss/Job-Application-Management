@@ -1,9 +1,25 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-const TOKEN_KEY = "token";
+const LEGACY_TOKEN_KEY = "token";
 const ROLE_KEY = "userRole";
 
-const getStorage = () => sessionStorage;
+// Access tokens are intentionally kept in module memory only. The refresh token
+// lives in an httpOnly cookie, so a page reload can restore the access token
+// without exposing long-lived credentials to JavaScript-readable storage.
+let _accessToken = null;
+let _initializeSessionPromise = null;
+
+const getRoleStorage = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+};
 
 const base64UrlDecode = (value) => {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -37,27 +53,31 @@ const isTokenExpired = (token) => {
   return Date.now() >= payload.exp * 1000;
 };
 
-const getToken = () => getStorage().getItem(TOKEN_KEY);
-const getRole = () => getStorage().getItem(ROLE_KEY);
+const getToken = () => _accessToken;
+const getRole = () => getRoleStorage()?.getItem(ROLE_KEY) || null;
 
 const setToken = (token) => {
   if (token) {
-    getStorage().setItem(TOKEN_KEY, token);
+    _accessToken = token;
+    // Remove tokens left by older builds that used sessionStorage.
+    getRoleStorage()?.removeItem(LEGACY_TOKEN_KEY);
   }
 };
 
 const setRole = (role) => {
   if (role) {
-    getStorage().setItem(ROLE_KEY, role);
+    // Role is non-sensitive UI routing state, so keeping it in sessionStorage is OK.
+    getRoleStorage()?.setItem(ROLE_KEY, role);
   }
 };
 
 const clearToken = () => {
-  getStorage().removeItem(TOKEN_KEY);
+  _accessToken = null;
+  getRoleStorage()?.removeItem(LEGACY_TOKEN_KEY);
 };
 
 const clearRole = () => {
-  getStorage().removeItem(ROLE_KEY);
+  getRoleStorage()?.removeItem(ROLE_KEY);
 };
 
 const clearSession = () => {
@@ -66,11 +86,13 @@ const clearSession = () => {
 };
 
 const authFetch = async (path, options = {}) => {
+  const token = getToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     credentials: "include",
     headers: {
       ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   });
@@ -94,12 +116,13 @@ const authFetch = async (path, options = {}) => {
   return response.json();
 };
 
-const refreshSession = async () => {
-  const payload = await authFetch("/auth/refresh", { method: "POST" });
-  const authData = payload?.data || payload;
+const normalizeAuthPayload = (payload) => payload?.data || payload || null;
 
-  if (authData?.token) {
-    setToken(authData.token);
+const persistAuthData = (authData) => {
+  const token = authData?.token || authData?.accessToken;
+
+  if (token) {
+    setToken(token);
   }
 
   if (authData?.user?.role) {
@@ -107,6 +130,36 @@ const refreshSession = async () => {
   }
 
   return authData;
+};
+
+const refreshSession = async () => {
+  const payload = await authFetch("/auth/refresh", { method: "POST" });
+  return persistAuthData(normalizeAuthPayload(payload));
+};
+
+export const initializeSession = async () => {
+  const currentToken = getToken();
+
+  if (currentToken && !isTokenExpired(currentToken) && getRole()) {
+    return { token: currentToken, user: { role: getRole() } };
+  }
+
+  if (_initializeSessionPromise) {
+    return _initializeSessionPromise;
+  }
+
+  // A missing/expired refresh cookie is a normal unauthenticated state, so this
+  // function clears local session hints and returns null instead of throwing.
+  _initializeSessionPromise = refreshSession()
+    .catch(() => {
+      clearSession();
+      return null;
+    })
+    .finally(() => {
+      _initializeSessionPromise = null;
+    });
+
+  return _initializeSessionPromise;
 };
 
 const request = async (path, options = {}) => {
@@ -219,20 +272,30 @@ const requestBlob = async (path, options = {}) => {
 };
 
 export const authApi = {
-  signup: (payload) =>
-    request("/auth/signup", {
+  signup: async (payload) => {
+    const authData = await request("/auth/signup", {
       method: "POST",
       tryRefresh: false,
       body: JSON.stringify(payload),
-    }),
-  login: (payload) =>
-    request("/auth/login", {
+    });
+    return persistAuthData(authData);
+  },
+  login: async (payload) => {
+    const authData = await request("/auth/login", {
       method: "POST",
       tryRefresh: false,
       body: JSON.stringify(payload),
-    }),
+    });
+    return persistAuthData(authData);
+  },
   refresh: () => refreshSession(),
-  logout: () => authFetch("/auth/logout", { method: "POST" }),
+  logout: async () => {
+    try {
+      return await authFetch("/auth/logout", { method: "POST" });
+    } finally {
+      clearSession();
+    }
+  },
   forgotPassword: (payload) =>
     request("/auth/forgot-password", {
       method: "POST",

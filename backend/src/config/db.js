@@ -154,6 +154,9 @@ export const ensurePhaseSchema = async () => {
          ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS status VARCHAR(20);
 
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_file_path VARCHAR(255);
+         ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_file_name VARCHAR(255);
+         ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_mime_type VARCHAR(120);
+         ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_file_size_bytes INT;
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS cover_letter TEXT;
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS rating INTEGER;
          ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
@@ -205,12 +208,29 @@ export const ensurePhaseSchema = async () => {
          application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
          file_type VARCHAR(30) NOT NULL DEFAULT 'cv',
          file_name VARCHAR(255) NOT NULL,
+         file_path VARCHAR(255),
          mime_type VARCHAR(120) NOT NULL,
          file_size_bytes INTEGER NOT NULL CHECK (file_size_bytes > 0),
-         file_data BYTEA NOT NULL,
          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
          CONSTRAINT uq_application_file_type UNIQUE (application_id, file_type)
        )`
+    );
+
+    await client.query(
+      `DO $$
+       BEGIN
+         ALTER TABLE application_files ADD COLUMN IF NOT EXISTS file_path VARCHAR(255);
+
+         IF EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'public'
+             AND table_name = 'application_files'
+             AND column_name = 'file_data'
+         ) THEN
+           ALTER TABLE application_files ALTER COLUMN file_data DROP NOT NULL;
+         END IF;
+       END $$;`
     );
 
     await client.query(
