@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+/* eslint-disable react/prop-types */
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   MdAdd,
   MdBadge,
   MdCake,
+  MdCameraAlt,
   MdCheck,
+  MdCheckCircle,
   MdClose,
   MdEmail,
   MdErrorOutline,
+  MdInfoOutline,
   MdLocationOn,
   MdOutlineEdit,
   MdPerson,
@@ -18,7 +22,26 @@ import { usersApi } from "../../lib/api";
 import { calculateAge } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
 
+const POPULAR_SKILLS = [
+  "JavaScript",
+  "TypeScript",
+  "React",
+  "Node.js",
+  "Express",
+  "PostgreSQL",
+  "Python",
+  "Java",
+  "C#",
+  "Docker",
+  "Git",
+  "REST API",
+  "TailwindCSS",
+  "SQL",
+  "Figma",
+];
+
 const emptyProfile = {
+  id: "",
   name: "",
   email: "",
   phone: "",
@@ -27,6 +50,7 @@ const emptyProfile = {
   experience: "",
   jobType: "",
   skills: [],
+  avatarFileName: "",
 };
 
 const normalizeDateForInput = (value) => {
@@ -47,13 +71,21 @@ const formatDate = (value) => {
   });
 };
 
+const getDraftKey = (profile) => (profile.id ? `candidate-profile-draft:${profile.id}` : "");
+
 const FieldCard = ({ icon, label, value, children, editing = false }) => (
-  <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.04)]">
-    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-[#737373]">
-      <span className="text-[#0a0a0a]">{icon}</span>
+  <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.04)] dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-[#737373] dark:text-neutral-400">
+      <span className="text-[#0a0a0a] dark:text-white">{icon}</span>
       {label}
     </div>
-    {editing ? children : <p className="min-h-[24px] font-semibold text-[#0a0a0a]">{value || "Not updated"}</p>}
+    {editing ? (
+      children
+    ) : (
+      <p className="min-h-[24px] break-words font-semibold text-[#0a0a0a] dark:text-white">
+        {value || "Not updated"}
+      </p>
+    )}
   </div>
 );
 
@@ -81,6 +113,29 @@ const ProfileSkeleton = () => (
   </div>
 );
 
+const CompletionChecklist = ({ items, nextSuggestion }) => (
+  <div className="mt-4 space-y-2">
+    {items.map((item) => (
+      <div key={item.label} className="flex items-center gap-2 text-xs text-[#525252] dark:text-neutral-300">
+        <span
+          className={`flex h-5 w-5 items-center justify-center rounded-full ${
+            item.complete ? "bg-black text-white dark:bg-white dark:text-black" : "bg-[#f2f2f2] text-[#a3a3a3] dark:bg-neutral-800"
+          }`}
+        >
+          {item.complete ? <MdCheck size={14} /> : "?"}
+        </span>
+        <span className={item.complete ? "font-semibold text-[#0a0a0a] dark:text-white" : ""}>{item.label}</span>
+      </div>
+    ))}
+    {nextSuggestion && (
+      <div className="mt-3 flex items-start gap-2 rounded-[12px] bg-[#f7f7f7] p-3 text-xs leading-5 text-[#525252] dark:bg-neutral-900 dark:text-neutral-300">
+        <MdInfoOutline className="mt-0.5 shrink-0 text-base" />
+        <span>{nextSuggestion}</span>
+      </div>
+    )}
+  </div>
+);
+
 const CandidateProfile = () => {
   const [profile, setProfile] = useState(emptyProfile);
   const [draft, setDraft] = useState(emptyProfile);
@@ -89,26 +144,54 @@ const CandidateProfile = () => {
   const [profileError, setProfileError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const fileInputRef = useRef(null);
+
+  const completionItems = useMemo(
+    () => [
+      { label: "Name", complete: Boolean(profile.name) },
+      { label: "Email", complete: Boolean(profile.email) },
+      { label: "Phone", complete: Boolean(profile.phone) },
+      { label: "Location", complete: Boolean(profile.location) },
+      { label: "Date of birth", complete: Boolean(profile.dob) },
+      { label: "Skills", complete: profile.skills.length > 0 },
+      { label: "Experience", complete: Boolean(profile.experience) },
+      { label: "Job preference", complete: Boolean(profile.jobType) },
+    ],
+    [profile]
+  );
 
   const profileCompleteness = useMemo(() => {
-    const checks = [
-      profile.name,
-      profile.email,
-      profile.phone,
-      profile.location,
-      profile.dob,
-      profile.experience,
-      profile.jobType,
-      profile.skills.length > 0,
-    ];
-    const completed = checks.filter(Boolean).length;
-    return Math.round((completed / checks.length) * 100);
-  }, [profile]);
+    const completed = completionItems.filter((item) => item.complete).length;
+    return Math.round((completed / completionItems.length) * 100);
+  }, [completionItems]);
+
+  const nextSuggestion = completionItems.find((item) => !item.complete)
+    ? `Add ${completionItems.find((item) => !item.complete).label.toLowerCase()} to make your profile stronger.`
+    : "Your profile is ready for recruiters to review.";
+
+  const hasUnsavedChanges = useMemo(
+    () => editingSection && JSON.stringify(draft) !== JSON.stringify(profile),
+    [draft, editingSection, profile]
+  );
+
+  const skillSuggestions = useMemo(() => {
+    const keyword = newSkill.trim().toLowerCase();
+    if (!keyword) return POPULAR_SKILLS.filter((skill) => !draft.skills.includes(skill)).slice(0, 6);
+
+    return POPULAR_SKILLS.filter(
+      (skill) =>
+        skill.toLowerCase().includes(keyword) &&
+        !draft.skills.some((existingSkill) => existingSkill.toLowerCase() === skill.toLowerCase())
+    ).slice(0, 6);
+  }, [draft.skills, newSkill]);
 
   const age = calculateAge(profile.dob);
 
   const hydrateProfile = (payload) => {
     const nextProfile = {
+      id: payload.id || "",
       name: payload.name || "",
       email: payload.email || "",
       phone: payload.phone || "",
@@ -117,6 +200,7 @@ const CandidateProfile = () => {
       experience: payload.experience || "",
       jobType: payload.job_type || payload.jobType || "",
       skills: Array.isArray(payload.skills) ? payload.skills.filter(Boolean) : [],
+      avatarFileName: payload.avatarFileName || payload.avatar_file_name || "",
     };
     setProfile(nextProfile);
     setDraft(nextProfile);
@@ -148,6 +232,50 @@ const CandidateProfile = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!profile.avatarFileName) {
+      setAvatarUrl("");
+      return undefined;
+    }
+
+    let active = true;
+    let objectUrl = "";
+
+    usersApi
+      .getAvatarFile()
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setAvatarUrl(objectUrl);
+      })
+      .catch(() => {
+        if (active) setAvatarUrl("");
+      });
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [profile.avatarFileName]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const draftKey = getDraftKey(profile);
+    if (!draftKey || !editingSection || !hasUnsavedChanges) return;
+    window.localStorage.setItem(draftKey, JSON.stringify(draft));
+  }, [draft, editingSection, hasUnsavedChanges, profile]);
+
   const saveProfile = async () => {
     try {
       setIsSaving(true);
@@ -161,6 +289,7 @@ const CandidateProfile = () => {
         skills: draft.skills,
       });
       hydrateProfile(updated);
+      window.localStorage.removeItem(getDraftKey(profile));
       setEditingSection(null);
       setProfileError("");
       showSuccess("Profile saved successfully");
@@ -172,26 +301,51 @@ const CandidateProfile = () => {
   };
 
   const startEditing = (section) => {
-    setDraft(profile);
+    const draftKey = getDraftKey(profile);
+    const savedDraft = draftKey ? window.localStorage.getItem(draftKey) : null;
+
+    if (savedDraft) {
+      try {
+        setDraft({ ...profile, ...JSON.parse(savedDraft) });
+      } catch {
+        setDraft(profile);
+      }
+    } else {
+      setDraft(profile);
+    }
+
     setNewSkill("");
     setEditingSection(section);
   };
 
   const cancelEditing = () => {
+    if (hasUnsavedChanges && !window.confirm("Discard unsaved profile changes?")) {
+      return;
+    }
+
     setDraft(profile);
     setNewSkill("");
     setEditingSection(null);
   };
 
-  const addSkill = () => {
-    const normalizedSkill = newSkill.trim();
-    if (!normalizedSkill) return;
-    setDraft((current) => ({
-      ...current,
-      skills: current.skills.some((skill) => skill.toLowerCase() === normalizedSkill.toLowerCase())
-        ? current.skills
-        : [...current.skills, normalizedSkill],
-    }));
+  const addSkillValue = (value) => {
+    const nextSkills = value
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter(Boolean);
+
+    if (nextSkills.length === 0) return;
+
+    setDraft((current) => {
+      const mergedSkills = [...current.skills];
+      nextSkills.forEach((skill) => {
+        if (!mergedSkills.some((existingSkill) => existingSkill.toLowerCase() === skill.toLowerCase())) {
+          mergedSkills.push(skill);
+        }
+      });
+
+      return { ...current, skills: mergedSkills };
+    });
     setNewSkill("");
   };
 
@@ -202,13 +356,40 @@ const CandidateProfile = () => {
     }));
   };
 
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showError("Please choose an image file.");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarUrl(previewUrl);
+
+    try {
+      setIsUploadingAvatar(true);
+      const updated = await usersApi.uploadAvatar(file);
+      hydrateProfile(updated);
+      showSuccess("Avatar updated successfully");
+    } catch (error) {
+      showError(error.message || "Failed to upload avatar");
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const renderSectionAction = (section) =>
     editingSection === section ? (
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={cancelEditing}
-          className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-[#f2f2f2]"
+          className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-[#f2f2f2] dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-900"
         >
           Cancel
         </button>
@@ -225,7 +406,7 @@ const CandidateProfile = () => {
       <button
         type="button"
         onClick={() => startEditing(section)}
-        className="inline-flex items-center gap-2 rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-[#f2f2f2]"
+        className="inline-flex items-center gap-2 rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-[#f2f2f2] dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-900"
       >
         <MdOutlineEdit size={18} />
         Edit
@@ -233,7 +414,7 @@ const CandidateProfile = () => {
     );
 
   return (
-    <div className="min-h-screen bg-white px-4 pb-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-white px-4 pb-8 dark:bg-[#050505] sm:px-6 lg:px-8">
       <ProfileTopBar userName={profile.name} userEmail={profile.email} />
 
       <main className="mx-auto max-w-6xl space-y-6">
@@ -249,43 +430,62 @@ const CandidateProfile = () => {
         ) : (
           <>
             <section className="blueprint-hero-panel p-5 md:p-6">
-              <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                 <div className="flex flex-col gap-5 md:flex-row md:items-center">
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[14px] border border-[#e5e5e5] bg-black text-4xl font-semibold text-white">
-                    {(profile.name || profile.email || "U").charAt(0).toUpperCase()}
+                  <div className="relative h-24 w-24 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-black text-4xl font-semibold text-white shadow-sm"
+                      aria-label="Upload avatar"
+                    >
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={profile.name || "Candidate avatar"} className="h-full w-full object-cover" />
+                      ) : (
+                        (profile.name || profile.email || "U").charAt(0).toUpperCase()
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-black shadow-sm hover:bg-[#f2f2f2] disabled:opacity-60"
+                      aria-label="Change avatar"
+                    >
+                      <MdCameraAlt size={18} />
+                    </button>
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
                   </div>
                   <div>
                     <p className="blueprint-kicker">Candidate profile</p>
-                    <h1 className="mt-1 text-3xl font-semibold text-black md:text-4xl">
+                    <h1 className="mt-1 text-3xl font-semibold text-black dark:text-white md:text-4xl">
                       {profile.name || "Candidate Name"}
                     </h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[#737373]">
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[#737373] dark:text-neutral-300">
                       Keep your contact information, skills, and job preferences ready before applying.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="blueprint-tag px-3 py-1 text-sm font-medium">
                         {profile.jobType || "Job type not set"}
                       </span>
-                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">
-                        {profile.skills.length} skills
-                      </span>
-                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">
-                        {profileCompleteness}% complete
-                      </span>
+                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">{profile.skills.length} skills</span>
+                      <span className="blueprint-tag px-3 py-1 text-sm font-medium">{profileCompleteness}% complete</span>
+                      {isUploadingAvatar && <span className="blueprint-tag px-3 py-1 text-sm font-medium">Uploading avatar...</span>}
                     </div>
                   </div>
                 </div>
-                <div className="blueprint-card w-full p-4 md:w-64">
+                <div className="blueprint-card w-full p-4 md:w-72">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold text-[#0a0a0a]">Profile readiness</span>
+                    <span className="font-semibold text-[#0a0a0a] dark:text-white">Profile readiness</span>
                     <span className="blueprint-metric font-semibold">{profileCompleteness}%</span>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f2f2f2]">
-                    <div className="h-full rounded-full bg-black" style={{ width: `${profileCompleteness}%` }} />
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f2f2f2] dark:bg-neutral-800">
+                    <div className="h-full rounded-full bg-black dark:bg-white" style={{ width: `${profileCompleteness}%` }} />
                   </div>
-                  <p className="mt-3 text-xs leading-5 text-[#737373]">
-                    Complete profiles help recruiters understand your fit faster.
+                  <p className="mt-3 text-xs font-semibold text-[#0a0a0a] dark:text-white">
+                    Your profile is {profileCompleteness}% complete.
                   </p>
+                  <CompletionChecklist items={completionItems} nextSuggestion={nextSuggestion} />
                 </div>
               </div>
             </section>
@@ -300,18 +500,13 @@ const CandidateProfile = () => {
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="blueprint-kicker">Personal details</p>
-                  <h2 className="mt-1 text-xl font-semibold text-black">Contact and identity</h2>
+                  <h2 className="mt-1 text-xl font-semibold text-black dark:text-white">Contact and identity</h2>
                 </div>
                 {renderSectionAction("personal")}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <FieldCard
-                  icon={<MdPerson />}
-                  label="Full name"
-                  value={profile.name}
-                  editing={editingSection === "personal"}
-                >
+                <FieldCard icon={<MdPerson />} label="Full name" value={profile.name} editing={editingSection === "personal"}>
                   <input
                     value={draft.name}
                     onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
@@ -319,12 +514,7 @@ const CandidateProfile = () => {
                     placeholder="Your full name"
                   />
                 </FieldCard>
-                <FieldCard
-                  icon={<MdPhone />}
-                  label="Phone number"
-                  value={profile.phone}
-                  editing={editingSection === "personal"}
-                >
+                <FieldCard icon={<MdPhone />} label="Phone number" value={profile.phone} editing={editingSection === "personal"}>
                   <input
                     value={draft.phone}
                     onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))}
@@ -332,12 +522,7 @@ const CandidateProfile = () => {
                     placeholder="Phone number"
                   />
                 </FieldCard>
-                <FieldCard
-                  icon={<MdLocationOn />}
-                  label="Location"
-                  value={profile.location}
-                  editing={editingSection === "personal"}
-                >
+                <FieldCard icon={<MdLocationOn />} label="Location" value={profile.location} editing={editingSection === "personal"}>
                   <input
                     value={draft.location}
                     onChange={(event) => setDraft((current) => ({ ...current, location: event.target.value }))}
@@ -345,12 +530,7 @@ const CandidateProfile = () => {
                     placeholder="City, country"
                   />
                 </FieldCard>
-                <FieldCard
-                  icon={<MdCake />}
-                  label="Date of birth"
-                  value={formatDate(profile.dob)}
-                  editing={editingSection === "personal"}
-                >
+                <FieldCard icon={<MdCake />} label="Date of birth" value={formatDate(profile.dob)} editing={editingSection === "personal"}>
                   <input
                     type="date"
                     value={draft.dob}
@@ -366,7 +546,7 @@ const CandidateProfile = () => {
                 <div className="mb-5 flex items-center justify-between gap-3">
                   <div>
                     <p className="blueprint-kicker">Experience</p>
-                    <h2 className="mt-1 text-xl font-semibold text-black">Professional summary</h2>
+                    <h2 className="mt-1 text-xl font-semibold text-black dark:text-white">Professional summary</h2>
                   </div>
                   {renderSectionAction("experience")}
                 </div>
@@ -379,11 +559,11 @@ const CandidateProfile = () => {
                     placeholder="Summarize your recent work, strengths, and career focus..."
                   />
                 ) : (
-                  <div className="rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-5">
-                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-[10px] bg-white text-black">
+                  <div className="rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-5 dark:border-neutral-800 dark:bg-neutral-900">
+                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-[10px] bg-white text-black dark:bg-neutral-950 dark:text-white">
                       <MdWork size={22} />
                     </div>
-                    <p className="whitespace-pre-line text-sm leading-6 text-[#0a0a0a]">
+                    <p className="whitespace-pre-line text-sm leading-6 text-[#0a0a0a] dark:text-neutral-100">
                       {profile.experience || "No experience summary added yet."}
                     </p>
                   </div>
@@ -395,7 +575,7 @@ const CandidateProfile = () => {
                   <div className="mb-5 flex items-center justify-between gap-3">
                     <div>
                       <p className="blueprint-kicker">Skills</p>
-                      <h2 className="mt-1 text-xl font-semibold text-black">Core capabilities</h2>
+                      <h2 className="mt-1 text-xl font-semibold text-black dark:text-white">Core capabilities</h2>
                     </div>
                     {renderSectionAction("skills")}
                   </div>
@@ -403,14 +583,14 @@ const CandidateProfile = () => {
                     {(editingSection === "skills" ? draft.skills : profile.skills).map((skill, index) => (
                       <span
                         key={`${skill}-${index}`}
-                        className="inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-3 py-1.5 text-sm font-semibold text-[#0a0a0a]"
+                        className="inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-3 py-1.5 text-sm font-semibold text-[#0a0a0a] dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
                       >
                         {skill}
                         {editingSection === "skills" && (
                           <button
                             type="button"
                             onClick={() => removeSkill(index)}
-                            className="rounded-full bg-white p-0.5 text-[#737373] hover:text-[#c22b10]"
+                            className="rounded-full bg-white p-0.5 text-[#737373] hover:text-[#c22b10] dark:bg-neutral-950"
                             aria-label={`Remove ${skill}`}
                           >
                             <MdClose size={14} />
@@ -419,31 +599,47 @@ const CandidateProfile = () => {
                       </span>
                     ))}
                     {profile.skills.length === 0 && editingSection !== "skills" && (
-                      <p className="text-sm text-[#737373]">No skills added yet.</p>
+                      <p className="text-sm text-[#737373] dark:text-neutral-400">No skills added yet.</p>
                     )}
                   </div>
                   {editingSection === "skills" && (
-                    <div className="mt-4 flex gap-2">
-                      <input
-                        value={newSkill}
-                        onChange={(event) => setNewSkill(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            addSkill();
-                          }
-                        }}
-                        className="blueprint-input min-w-0 flex-1 px-3 py-2"
-                        placeholder="Add a skill"
-                      />
-                      <button
-                        type="button"
-                        onClick={addSkill}
-                        className="inline-flex items-center gap-2 rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold hover:bg-[#f2f2f2]"
-                      >
-                        <MdAdd size={18} />
-                        Add
-                      </button>
+                    <div className="mt-4 space-y-3">
+                      <div className="flex gap-2">
+                        <input
+                          value={newSkill}
+                          onChange={(event) => setNewSkill(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === ",") {
+                              event.preventDefault();
+                              addSkillValue(newSkill);
+                            }
+                          }}
+                          className="blueprint-input min-w-0 flex-1 px-3 py-2"
+                          placeholder="Add a skill, then press Enter"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addSkillValue(newSkill)}
+                          className="inline-flex items-center gap-2 rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold hover:bg-[#f2f2f2] dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-900"
+                        >
+                          <MdAdd size={18} />
+                          Add
+                        </button>
+                      </div>
+                      {skillSuggestions.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {skillSuggestions.map((skill) => (
+                            <button
+                              key={skill}
+                              type="button"
+                              onClick={() => addSkillValue(skill)}
+                              className="rounded-full border border-dashed border-[#cfcfcf] px-3 py-1 text-xs font-semibold text-[#525252] hover:border-black hover:text-black dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-white dark:hover:text-white"
+                            >
+                              + {skill}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -452,7 +648,7 @@ const CandidateProfile = () => {
                   <div className="mb-5 flex items-center justify-between gap-3">
                     <div>
                       <p className="blueprint-kicker">Preference</p>
-                      <h2 className="mt-1 text-xl font-semibold text-black">Target role type</h2>
+                      <h2 className="mt-1 text-xl font-semibold text-black dark:text-white">Target role type</h2>
                     </div>
                     {renderSectionAction("preference")}
                   </div>
@@ -464,13 +660,13 @@ const CandidateProfile = () => {
                       placeholder="Full-time, remote, hybrid..."
                     />
                   ) : (
-                    <div className="flex items-center gap-3 rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-4">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-white text-black">
-                        <MdCheck size={20} />
+                    <div className="flex items-center gap-3 rounded-[14px] border border-[#e5e5e5] bg-[#f2f2f2] p-4 dark:border-neutral-800 dark:bg-neutral-900">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-white text-black dark:bg-neutral-950 dark:text-white">
+                        <MdCheckCircle size={20} />
                       </span>
                       <div>
-                        <p className="text-xs font-semibold uppercase text-[#737373]">Preferred job type</p>
-                        <p className="font-semibold text-[#0a0a0a]">{profile.jobType || "Not updated"}</p>
+                        <p className="text-xs font-semibold uppercase text-[#737373] dark:text-neutral-400">Preferred job type</p>
+                        <p className="font-semibold text-[#0a0a0a] dark:text-white">{profile.jobType || "Not updated"}</p>
                       </div>
                     </div>
                   )}

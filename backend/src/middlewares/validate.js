@@ -1,3 +1,4 @@
+import { promises as fs } from "fs";
 import { validationErrorResponse } from "../utils/apiResponse.js";
 
 export const validate = (schema) => (req, res, next) => {
@@ -8,6 +9,10 @@ export const validate = (schema) => (req, res, next) => {
   });
 
   if (!result.success) {
+    if (req.file?.path) {
+      fs.unlink(req.file.path).catch(() => {});
+    }
+
     return res.status(400).json(
       validationErrorResponse(
         result.error.issues.map((issue) => ({

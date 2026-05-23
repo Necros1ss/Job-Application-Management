@@ -329,6 +329,16 @@ export const usersApi = {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    return request("/users/me/avatar", {
+      method: "PATCH",
+      body: formData,
+    });
+  },
+  getAvatarFile: () => requestBlob(`/users/me/avatar?t=${Date.now()}`),
   updateNotificationPreferences: (preferences) =>
     request("/users/notification-preferences", {
       method: "PATCH",

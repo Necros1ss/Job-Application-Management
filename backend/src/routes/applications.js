@@ -21,7 +21,14 @@ import {
   updateStatus,
 } from "../controllers/applicationController.js";
 import { requireAuth } from "../middlewares/auth.js";
+import { validate } from "../middlewares/validate.js";
 import { uploadCv } from "../services/applicationService.js";
+import {
+  addNoteSchema,
+  createApplicationSchema,
+  rejectApplicationSchema,
+  updateStatusSchema,
+} from "../validators/applicationValidators.js";
 
 const router = express.Router();
 
@@ -45,16 +52,16 @@ router.get("/recruiter/:id/cv", requireAuth, downloadCv);
 
 router.put("/:id", requireAuth, update);
 router.delete("/:id", requireAuth, remove);
-router.post("/apply", requireAuth, uploadCv.single("cvFile"), apply);
+router.post("/apply", requireAuth, uploadCv.single("cvFile"), validate(createApplicationSchema), apply);
 
-router.patch("/:id/status", requireAuth, updateStatus);
+router.patch("/:id/status", requireAuth, validate(updateStatusSchema), updateStatus);
 router.patch("/:id/rating", requireAuth, updateRating);
 
-router.post("/:id/notes", requireAuth, addNote);
+router.post("/:id/notes", requireAuth, validate(addNoteSchema), addNote);
 router.put("/:id/notes/:noteId", requireAuth, updateNote);
 router.delete("/:id/notes/:noteId", requireAuth, deleteNote);
 
-router.post("/:id/reject", requireAuth, reject);
+router.post("/:id/reject", requireAuth, validate(rejectApplicationSchema), reject);
 router.post("/:id/offer", requireAuth, offer);
 
 export default router;

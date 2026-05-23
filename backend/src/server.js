@@ -121,17 +121,21 @@ app.use((err, _req, res, _next) => {
 
   if (err?.name === "MulterError") {
     if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({ success: false, message: "CV file is too large", detail: "Maximum allowed size is 20MB" });
+      return res.status(400).json({ success: false, message: "Uploaded file is too large", detail: "Maximum allowed size depends on the upload type" });
     }
 
     if (err.code === "LIMIT_UNEXPECTED_FILE") {
-      return res.status(400).json({ success: false, message: "Invalid CV upload field", detail: "Expected field name is cvFile" });
+      return res.status(400).json({ success: false, message: "Invalid upload field", detail: "Check the expected multipart field name" });
     }
 
-    return res.status(400).json({ success: false, message: "Invalid CV upload", detail: err.message });
+    return res.status(400).json({ success: false, message: "Invalid upload", detail: err.message });
   }
 
   if (typeof err?.message === "string" && err.message.includes("Only PDF, DOC and DOCX")) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+
+  if (typeof err?.message === "string" && err.message.includes("Only JPG, PNG, WEBP and GIF")) {
     return res.status(400).json({ success: false, message: err.message });
   }
 

@@ -1,50 +1,84 @@
-import React, { useState } from "react";
+/* eslint-disable react/prop-types */
+import { useState } from "react";
 import { FaTimes, FaMapMarker, FaDollarSign, FaBriefcase, FaRegCalendarAlt, FaBookOpen, FaCheck } from "react-icons/fa";
 import { jobPostsApi } from "../../lib/api";
 import { showError, showSuccess } from "../../utils/toast";
+import { useFormValidation, validators } from "../../hooks/useFormValidation";
 
 const CreateJob = ({ isOpen, onClose, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
+
+  const initialValues = {
     title: "",
     location: "",
     salary: "",
-    employment_type: "Full-time",
+    employment_type: "full-time",
     experience: "",
     deadline: "",
     industry: "",
     description: "",
     responsibilities: "",
     requirements: "",
-  });
+  };
+
+  const futureDate = (message = "Deadline must be today or a future date") => (value) => {
+    if (!value) return "";
+    const selected = new Date(`${value}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selected >= today ? "" : message;
+  };
+
+  const validationRules = {
+    title: [
+      validators.required("Job title is required"),
+      validators.minLength(5, "Job title must be at least 5 characters"),
+      validators.maxLength(255, "Job title must be 255 characters or less"),
+    ],
+    description: [
+      validators.required("Description is required"),
+      validators.minLength(50, "Description must be at least 50 characters"),
+      validators.maxLength(10000, "Description must be 10000 characters or less"),
+    ],
+    deadline: [validators.required("Application deadline is required"), futureDate()],
+  };
+
+  const {
+    values: form,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    isValid,
+    reset,
+  } = useFormValidation(initialValues, validationRules);
 
   if (!isOpen) return null;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.title.trim()) {
-      showError("Job title is required.");
-      return;
-    }
+  const submitJob = async (values) => {
     setIsSubmitting(true);
     setError("");
     try {
-      await jobPostsApi.create(form);
+      await jobPostsApi.create(values);
       showSuccess("Job created successfully");
+      reset();
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
+      setError(err.message || "Failed to create job");
       showError(err.message || "Failed to create job");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const onSubmit = handleSubmit(async (values) => {
+    await submitJob(values);
+  });
+
+  const getFieldError = (name) => (touched[name] ? errors[name] : "");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -61,7 +95,7 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+        <form onSubmit={onSubmit} className="flex-1 overflow-y-auto" noValidate>
           <div className="p-6 space-y-6">
             {error && (
               <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
@@ -82,10 +116,16 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
                     name="title"
                     value={form.title}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="e.g. Senior Frontend Developer"
                     required
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all"
+                    className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all ${
+                      getFieldError("title") ? "border-red-300" : "border-gray-200"
+                    }`}
                   />
+                  {getFieldError("title") && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">{getFieldError("title")}</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -97,6 +137,7 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
                       name="location"
                       value={form.location}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="e.g. Ho Chi Minh City, Vietnam"
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all"
                     />
@@ -110,6 +151,7 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
                       name="salary"
                       value={form.salary}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="e.g. $50,000 - $80,000 / year"
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all"
                     />
@@ -122,12 +164,13 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
                       name="employment_type"
                       value={form.employment_type}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all bg-white"
                     >
-                      <option value="Full-time">Full-time</option>
-                      <option value="Part-time">Part-time</option>
-                      <option value="Contract">Contract</option>
-                      <option value="Internship">Internship</option>
+                      <option value="full-time">Full-time</option>
+                      <option value="part-time">Part-time</option>
+                      <option value="contract">Contract</option>
+                      <option value="internship">Internship</option>
                     </select>
                   </div>
                   <div>
@@ -139,8 +182,15 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
                       name="deadline"
                       value={form.deadline}
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all"
+                      onBlur={handleBlur}
+                      required
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all ${
+                        getFieldError("deadline") ? "border-red-300" : "border-gray-200"
+                      }`}
                     />
+                    {getFieldError("deadline") && (
+                      <p className="mt-1.5 text-xs font-medium text-red-600">{getFieldError("deadline")}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -158,10 +208,17 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
                     name="description"
                     value={form.description}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     rows="4"
                     placeholder="Describe the role, team, and company culture..."
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all resize-none"
+                    required
+                    className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all resize-none ${
+                      getFieldError("description") ? "border-red-300" : "border-gray-200"
+                    }`}
                   />
+                  {getFieldError("description") && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">{getFieldError("description")}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -171,6 +228,7 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
                     name="responsibilities"
                     value={form.responsibilities}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     rows="3"
                     placeholder="List key responsibilities and daily tasks..."
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all resize-none"
@@ -184,6 +242,7 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
                     name="requirements"
                     value={form.requirements}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     rows="3"
                     placeholder="List required skills, qualifications, and experience..."
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none transition-all resize-none"
@@ -204,7 +263,7 @@ const CreateJob = ({ isOpen, onClose, onSuccess }) => {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isValid}
               className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? "Creating..." : "Create Job"}

@@ -183,6 +183,16 @@
   }
 }
 
+@keyframes landingFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 @layer utilities {
   .blueprint-grid-bg {
     background-color: var(--bg-primary);
@@ -313,5 +323,20 @@
   .dark select {
     background-color: var(--bg-elevated);
     color: var(--text-primary);
+  }
+
+  .landing-mockup-glow {
+    animation: landingFloat 6s ease-in-out infinite;
+  }
+
+  .landing-step-reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 520ms ease, transform 520ms ease;
+  }
+
+  .landing-step-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

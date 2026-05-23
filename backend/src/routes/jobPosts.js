@@ -1,6 +1,8 @@
 import express from "express";
 import { pool } from "../config/db.js";
 import { requireAuth } from "../middlewares/auth.js";
+import { validate } from "../middlewares/validate.js";
+import { createJobSchema, updateJobSchema } from "../validators/jobPostValidators.js";
 
 const router = express.Router();
 
@@ -274,7 +276,7 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, validate(createJobSchema), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can create job posts" });
   }
@@ -282,7 +284,7 @@ router.post("/", requireAuth, async (req, res) => {
   const {
     title, description, location, salary, experience,
     employment_type, deadline, responsibilities, requirements
-  } = req.body;
+  } = req.validated.body;
 
   if (!title || typeof title !== "string" || title.trim().length === 0) {
     return res.status(400).json({ message: "Job title is required" });
@@ -308,18 +310,18 @@ router.post("/", requireAuth, async (req, res) => {
       ]
     );
 
-    return res.status(201).json({ id: result.rows[0].id, ...req.body });
+    return res.status(201).json({ id: result.rows[0].id, ...req.validated.body });
   } catch (error) {
     return res.status(500).json({ message: "Failed to create job post", detail: error.message });
   }
 });
 
-router.put("/:id", requireAuth, async (req, res) => {
+router.put("/:id", requireAuth, validate(updateJobSchema), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can update job posts" });
   }
 
-  const postId = Number(req.params.id);
+  const postId = Number(req.validated.params.id);
   if (!Number.isInteger(postId) || postId <= 0) {
     return res.status(400).json({ message: "Invalid job post id" });
   }
@@ -327,7 +329,7 @@ router.put("/:id", requireAuth, async (req, res) => {
   const {
     title, description, location, salary, experience,
     employment_type, deadline, responsibilities, requirements
-  } = req.body;
+  } = req.validated.body;
 
   if (!title || typeof title !== "string" || title.trim().length === 0) {
     return res.status(400).json({ message: "Job title is required" });
@@ -364,7 +366,7 @@ router.put("/:id", requireAuth, async (req, res) => {
       ]
     );
 
-    return res.json({ id: postId, ...req.body });
+    return res.json({ id: postId, ...req.validated.body });
   } catch (error) {
     return res.status(500).json({ message: "Failed to update job post", detail: error.message });
   }

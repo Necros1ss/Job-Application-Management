@@ -1,7 +1,9 @@
 import express from "express";
 import { pool } from "../config/db.js";
 import { requireAuth } from "../middlewares/auth.js";
+import { validate } from "../middlewares/validate.js";
 import { broadcast } from "../utils/notificationBroadcast.js";
+import { createInterviewSchema } from "../validators/interviewValidators.js";
 
 const router = express.Router();
 
@@ -151,7 +153,7 @@ router.get("/candidate", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, validate(createInterviewSchema), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can schedule interviews" });
   }

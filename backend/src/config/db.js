@@ -167,6 +167,9 @@ export const ensurePhaseSchema = async () => {
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS skills TEXT[] DEFAULT '{}';
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS experience VARCHAR(100);
          ALTER TABLE candidates ADD COLUMN IF NOT EXISTS job_type VARCHAR(50);
+         ALTER TABLE candidates ADD COLUMN IF NOT EXISTS avatar_file_name VARCHAR(255);
+         ALTER TABLE candidates ADD COLUMN IF NOT EXISTS avatar_mime_type VARCHAR(120);
+         ALTER TABLE candidates ADD COLUMN IF NOT EXISTS avatar_file_size_bytes INT;
 
          ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS website VARCHAR(500);
          ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS address VARCHAR(500);
@@ -175,6 +178,9 @@ export const ensurePhaseSchema = async () => {
          ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS company_size VARCHAR(50);
          ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS tax_code VARCHAR(50);
          ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS description TEXT;
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS logo_file_name VARCHAR(255);
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS logo_mime_type VARCHAR(120);
+         ALTER TABLE recruiters ADD COLUMN IF NOT EXISTS logo_file_size_bytes INT;
        END $$;`
     );
 
