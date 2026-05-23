@@ -22,10 +22,6 @@
 >
 > The system supports the full recruitment flow: candidates can search jobs and apply with CVs, recruiters can manage job posts, screen applications, schedule interviews, send messages and onboarding tasks, while admins can moderate users and job listings. The project is built with **React 18 + Vite**, **Express.js**, **PostgreSQL**, **JWT authentication**, and a Docker-based development/deployment setup.
 
-<p align="center">
-  <img src="frontend/src/assets/img/Illustration-person.png" alt="Job Application Tracker illustration" width="420">
-</p>
-
 ---
 
 ## **Project Information**
