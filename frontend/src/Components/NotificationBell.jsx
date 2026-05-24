@@ -99,7 +99,7 @@ const NotificationBell = ({ enabled = true }) => {
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="relative p-1.5 transition-colors hover:text-black"
+        className="relative p-1.5 transition-colors hover:text-[var(--text-primary)]"
         aria-label="Notifications"
       >
         <FaBell size={18} />
@@ -111,17 +111,17 @@ const NotificationBell = ({ enabled = true }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
-          <div className="flex items-center justify-between gap-3 border-b border-[#e5e5e5] bg-[#f2f2f2] px-4 py-3">
+        <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-[14px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-[#0a0a0a]">Notifications</p>
-              <p className="text-xs text-[#737373]">{unreadCount} unread</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Notifications</p>
+              <p className="text-xs text-[var(--text-secondary)]">{unreadCount} unread</p>
             </div>
             {unreadCount > 0 && (
               <button
                 type="button"
                 onClick={markAllAsRead}
-                className="text-xs font-semibold text-[#0a0a0a] hover:underline"
+                className="text-xs font-semibold text-[var(--text-primary)] hover:underline"
               >
                 Mark all as read
               </button>
@@ -130,21 +130,21 @@ const NotificationBell = ({ enabled = true }) => {
 
           <div className="max-h-96 overflow-auto">
             {recentNotifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-[#737373]">
+              <div className="px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
                 No notifications yet.
               </div>
             ) : (
               recentNotifications.map((notification) => {
                 const Icon = iconByType[notification.type] || FaBell;
-                const iconStyle = iconStyleByType[notification.type] || "bg-[#f2f2f2] text-[#0a0a0a]";
+                const iconStyle = iconStyleByType[notification.type] || "bg-[var(--bg-secondary)] text-[var(--text-primary)]";
 
                 return (
                   <button
                     key={notification.id}
                     type="button"
                     onClick={() => handleNotificationClick(notification)}
-                    className={`flex w-full gap-3 border-b border-[#e5e5e5] px-4 py-3 text-left transition-colors hover:bg-[#f2f2f2] ${
-                      notification.read ? "bg-white" : "bg-[#f8f8f8]"
+                    className={`flex w-full gap-3 border-b border-[var(--border-primary)] px-4 py-3 text-left transition-colors hover:bg-[var(--bg-secondary)] ${
+                      notification.read ? "bg-[var(--bg-elevated)]" : "bg-[var(--bg-secondary)]"
                     }`}
                   >
                     <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconStyle}`}>
@@ -152,17 +152,17 @@ const NotificationBell = ({ enabled = true }) => {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-start justify-between gap-3">
-                        <span className={`text-sm ${notification.read ? "font-medium text-[#737373]" : "font-semibold text-[#0a0a0a]"}`}>
+                        <span className={`text-sm ${notification.read ? "font-medium text-[var(--text-secondary)]" : "font-semibold text-[var(--text-primary)]"}`}>
                           {notification.title}
                         </span>
-                        {!notification.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-black" />}
+                        {!notification.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--text-primary)]" />}
                       </span>
                       {notification.message && (
-                        <span className="mt-1 line-clamp-2 block text-xs leading-5 text-[#737373]">
+                        <span className="mt-1 line-clamp-2 block text-xs leading-5 text-[var(--text-secondary)]">
                           {notification.message}
                         </span>
                       )}
-                      <span className="mt-2 block text-[11px] text-[#737373]">
+                      <span className="mt-2 block text-[11px] text-[var(--text-secondary)]">
                         {formatTimeAgo(notification.createdAt)}
                       </span>
                     </span>

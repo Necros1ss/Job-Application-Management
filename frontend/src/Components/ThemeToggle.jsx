@@ -10,7 +10,7 @@ const ThemeToggle = () => {
       onClick={toggleTheme}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#e5e5e5] bg-white text-[#737373] transition-all duration-200 hover:border-black hover:text-black dark:border-[#2a2a2a] dark:bg-[#121212] dark:text-[#a3a3a3] dark:hover:border-[#f5f5f5] dark:hover:text-white"
+      className="relative inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] transition-all duration-200 hover:border-[var(--text-primary)] hover:text-[var(--text-primary)]"
     >
       <FaSun
         size={16}

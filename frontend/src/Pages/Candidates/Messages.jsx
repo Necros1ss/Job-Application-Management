@@ -166,19 +166,19 @@ const Messages = () => {
         ) : messages.length > 0 ? (
           <div className="blueprint-card grid min-h-[650px] overflow-hidden p-0 lg:grid-cols-[0.38fr_0.62fr]">
             <aside
-              className={`border-r border-[#e5e5e5] bg-white ${
+              className={`border-r border-[var(--border-primary)] bg-[var(--bg-elevated)] ${
                 showDetailOnMobile ? "hidden lg:block" : "block"
               }`}
             >
-              <div className="border-b border-[#e5e5e5] p-4">
+              <div className="border-b border-[var(--border-primary)] p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-[#0a0a0a]">{t("messages.inbox")}</h2>
-                    <p className="text-sm text-[#737373]">{messages.length} messages on this page</p>
+                    <h2 className="text-xl font-semibold text-[var(--text-primary)]">{t("messages.inbox")}</h2>
+                    <p className="text-sm text-[var(--text-secondary)]">{messages.length} messages on this page</p>
                   </div>
                   <span className="blueprint-tag">{unreadCount} unread</span>
                 </div>
-                <div className="mt-4 grid grid-cols-2 rounded-full border border-[#e5e5e5] bg-white p-1">
+                <div className="mt-4 grid grid-cols-2 rounded-full border border-[var(--border-primary)] bg-[var(--bg-primary)] p-1">
                   {[
                     { id: "all", label: t("messages.all") },
                     { id: "unread", label: t("messages.unread") },
@@ -188,7 +188,9 @@ const Messages = () => {
                       type="button"
                       onClick={() => setActiveTab(tab.id)}
                       className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                        activeTab === tab.id ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2]"
+                        activeTab === tab.id
+                          ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                       }`}
                     >
                       {tab.label}
@@ -206,10 +208,10 @@ const Messages = () => {
                         key={message.id}
                         type="button"
                         onClick={() => openMessage(message)}
-                        className={`block w-full border-b border-[#e5e5e5] px-4 py-4 text-left transition ${
+                        className={`block w-full border-b border-[var(--border-primary)] px-4 py-4 text-left transition ${
                           isSelected
-                            ? "border-l-2 border-l-black bg-[#f2f2f2]"
-                            : "border-l-2 border-l-transparent hover:bg-[#f2f2f2]"
+                            ? "border-l-2 border-l-[var(--text-primary)] bg-[var(--bg-secondary)]"
+                            : "border-l-2 border-l-transparent hover:bg-[var(--bg-secondary)]"
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -224,22 +226,22 @@ const Messages = () => {
                             <div className="flex items-start justify-between gap-3">
                               <h3
                                 className={`truncate text-sm ${
-                                  message.isRead ? "font-medium text-[#0a0a0a]" : "font-semibold text-black"
+                                  message.isRead ? "font-medium text-[var(--text-primary)]" : "font-semibold text-[var(--text-primary)]"
                                 }`}
                               >
                                 {message.subject}
                               </h3>
-                              <span className="shrink-0 text-[11px] font-medium text-[#737373]">
+                              <span className="shrink-0 text-[11px] font-medium text-[var(--text-secondary)]">
                                 {formatMessageTime(message.createdAt)}
                               </span>
                             </div>
-                            <p className="mt-1 truncate text-xs font-medium text-[#737373]">
+                            <p className="mt-1 truncate text-xs font-medium text-[var(--text-secondary)]">
                               {message.senderName || "Unknown recruiter"}
                             </p>
-                            <p className="mt-2 truncate text-sm text-[#737373]">{message.content}</p>
+                            <p className="mt-2 truncate text-sm text-[var(--text-secondary)]">{message.content}</p>
                           </div>
                           {!message.isRead && (
-                            <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-black" aria-label="Unread" />
+                            <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--text-primary)]" aria-label="Unread" />
                           )}
                         </div>
                       </button>
@@ -247,29 +249,29 @@ const Messages = () => {
                   })
                 ) : (
                   <div className="px-6 py-12 text-center">
-                    <FaRegEnvelopeOpen className="mx-auto mb-3 text-2xl text-[#737373]" />
-                    <p className="font-semibold text-[#0a0a0a]">{t("messages.noUnreadTitle")}</p>
-                    <p className="mt-1 text-sm text-[#737373]">Everything on this page has been read.</p>
+                    <FaRegEnvelopeOpen className="mx-auto mb-3 text-2xl text-[var(--text-secondary)]" />
+                    <p className="font-semibold text-[var(--text-primary)]">{t("messages.noUnreadTitle")}</p>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">Everything on this page has been read.</p>
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-between border-t border-[#e5e5e5] bg-[#f2f2f2] px-4 py-3">
+              <div className="flex items-center justify-between border-t border-[var(--border-primary)] bg-[var(--bg-secondary)] px-4 py-3">
                 <button
                   type="button"
                   disabled={offset === 0}
                   onClick={() => setOffset((current) => Math.max(current - PAGE_SIZE, 0))}
-                  className="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-white disabled:opacity-40"
+                  className="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] disabled:opacity-40"
                 >
                   <FaChevronLeft className="text-xs" />
                   {t("common.previous")}
                 </button>
-                <span className="text-sm font-semibold text-[#737373]">{t("common.page")} {pageNumber}</span>
+                <span className="text-sm font-semibold text-[var(--text-secondary)]">{t("common.page")} {pageNumber}</span>
                 <button
                   type="button"
                   disabled={!hasNextPage}
                   onClick={() => setOffset((current) => current + PAGE_SIZE)}
-                  className="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-[#0a0a0a] hover:bg-white disabled:opacity-40"
+                  className="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] disabled:opacity-40"
                 >
                   {t("common.next")}
                   <FaChevronRight className="text-xs" />
@@ -277,34 +279,34 @@ const Messages = () => {
               </div>
             </aside>
 
-            <section className={`${showDetailOnMobile ? "block" : "hidden lg:block"} bg-white`}>
+            <section className={`${showDetailOnMobile ? "block" : "hidden lg:block"} bg-[var(--bg-elevated)]`}>
               {selectedMessage ? (
                 <div className="flex h-full flex-col">
-                  <div className="border-b border-[#e5e5e5] p-6">
+                  <div className="border-b border-[var(--border-primary)] p-6">
                     <button
                       type="button"
                       onClick={() => setShowDetailOnMobile(false)}
-                      className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] px-3 py-2 text-sm font-semibold text-[#0a0a0a] lg:hidden"
+                      className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border-primary)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] lg:hidden"
                     >
                       <FaArrowLeft size={12} />
                       {t("common.back")}
                     </button>
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-[#737373]">
+                        <p className="text-sm font-semibold text-[var(--text-secondary)]">
                           {t("messages.from")}: {selectedMessage.senderName || "Unknown recruiter"}
                         </p>
-                        <h2 className="mt-2 text-2xl font-semibold leading-tight text-[#0a0a0a]">
+                        <h2 className="mt-2 text-2xl font-semibold leading-tight text-[var(--text-primary)]">
                           {selectedMessage.subject}
                         </h2>
                       </div>
-                      <p className="text-sm font-medium text-[#737373]">
+                      <p className="text-sm font-medium text-[var(--text-secondary)]">
                         {formatFullDateTime(selectedMessage.createdAt)}
                       </p>
                     </div>
                     {(selectedMessage.jobTitle || selectedMessage.jobPostId) && (
                       <div className="mt-4 flex flex-wrap items-center gap-2">
-                        {selectedMessage.jobTitle && <span className="blueprint-tag">{selectedMessage.jobTitle}</span>}
+                          {selectedMessage.jobTitle && <span className="blueprint-tag">{selectedMessage.jobTitle}</span>}
                         {selectedMessage.jobPostId && <span className="blueprint-tag">Job #{selectedMessage.jobPostId}</span>}
                       </div>
                     )}

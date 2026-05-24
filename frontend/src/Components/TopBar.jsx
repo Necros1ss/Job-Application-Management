@@ -22,7 +22,7 @@ const TopBar = ({ userName, userEmail, roleOverride }) => {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#e5e5e5] bg-white dark:border-[#2a2a2a] dark:bg-[#0a0a0a]">
+    <header className="sticky top-0 z-50 border-b border-[var(--border-primary)] bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         
         <div className="flex items-center gap-10">

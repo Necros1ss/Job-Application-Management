@@ -399,7 +399,7 @@ const EmployeePortal = () => {
   );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <TopBarDashboard userName={userName} userEmail={userEmail} />
 
       <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
@@ -434,14 +434,16 @@ const EmployeePortal = () => {
           </>
         ) : (
           <>
-            <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-[#e5e5e5] bg-white p-1">
+            <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-[var(--border-primary)] bg-[var(--bg-elevated)] p-1">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    activeTab === tab.id ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2]"
+                    activeTab === tab.id
+                      ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                   }`}
                 >
                   {t(tab.labelKey)}

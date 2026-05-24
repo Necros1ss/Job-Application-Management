@@ -46,11 +46,11 @@ const LanguageSwitcher = ({ compact = false }) => {
   return (
     <div className="flex items-center gap-2">
           {!compact && (
-        <span className="hidden text-xs font-medium uppercase text-[#737373] sm:inline">
+        <span className="hidden text-xs font-medium uppercase text-[var(--text-secondary)] sm:inline">
           Language
         </span>
       )}
-      <div className="flex rounded-full border border-[#e5e5e5] bg-white p-1">
+      <div className="flex rounded-full border border-[var(--border-primary)] bg-[var(--bg-elevated)] p-1">
         {languages.map((item) => {
           const active = language === item.code;
 
@@ -60,7 +60,9 @@ const LanguageSwitcher = ({ compact = false }) => {
               type="button"
               onClick={() => setLanguageAndStore(item.code)}
               className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                active ? "bg-black text-white" : "text-[#737373] hover:bg-[#f2f2f2] hover:text-black"
+                active
+                  ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
               }`}
               aria-pressed={active}
             >

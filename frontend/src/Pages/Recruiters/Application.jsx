@@ -263,12 +263,12 @@ const Application = () => {
         {/* Toolbar (Filters & View Toggle) */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-4">
-            <div className="flex items-center gap-3 text-sm font-medium text-gray-600 bg-white border border-gray-200 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)]">
               <span>Active Job:</span>
               <select
                 value={selectedJobId}
                 onChange={(event) => setSelectedJobId(event.target.value)}
-                className="bg-transparent text-emerald-700 font-semibold outline-none cursor-pointer"
+                className="cursor-pointer bg-transparent font-semibold text-[var(--text-primary)] outline-none"
               >
                 <option value="all">All Jobs</option>
                 {jobOptions.map((job) => (
@@ -279,14 +279,16 @@ const Application = () => {
               </select>
             </div>
           </div>
-          <div className="flex items-center bg-white border border-gray-200 p-1 rounded-lg shadow-sm">
+          <div className="flex items-center rounded-lg border border-[var(--border-primary)] bg-[var(--bg-elevated)] p-1 shadow-sm">
             {["list", "pipeline"].map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => setViewMode(mode)}
                 className={`px-4 py-2 rounded-md text-sm font-semibold capitalize transition-colors ${
-                  viewMode === mode ? "bg-emerald-600 text-white" : "text-gray-600 hover:bg-gray-100"
+                  viewMode === mode
+                    ? "bg-[var(--text-primary)] text-[var(--bg-primary)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                 }`}
               >
                 {mode === "list" ? "List" : "Pipeline"}

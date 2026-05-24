@@ -78,7 +78,7 @@ const Highlight = ({ text = "", query = "" }) => {
   const parts = String(text).split(new RegExp(`(${escapeRegExp(normalizedQuery)})`, "gi"));
   return parts.map((part, index) =>
     part.toLowerCase() === normalizedQuery.toLowerCase() ? (
-      <mark key={`${part}-${index}`} className="rounded bg-yellow-100 px-0.5 text-[#0a0a0a]">
+      <mark key={`${part}-${index}`} className="rounded bg-[var(--bg-secondary)] px-0.5 text-[var(--text-primary)]">
         {part}
       </mark>
     ) : (
@@ -89,12 +89,12 @@ const Highlight = ({ text = "", query = "" }) => {
 
 const FilterSelect = ({ label, value, onChange, options }) => (
   <label className="block">
-    <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#737373]">{label}</span>
+    <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">{label}</span>
     <span className="relative block">
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full appearance-none rounded-[10px] border border-[#e5e5e5] bg-white px-3 pr-9 text-sm font-medium text-[#0a0a0a] outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+        className="h-11 w-full appearance-none rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] px-3 pr-9 text-sm font-medium text-[var(--text-primary)] outline-none transition focus:border-[var(--text-primary)] focus:ring-2 focus:ring-black/10"
       >
         {options.map((option) => (
           <option key={option.value || "all"} value={option.value}>
@@ -102,7 +102,7 @@ const FilterSelect = ({ label, value, onChange, options }) => (
           </option>
         ))}
       </select>
-      <FaChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#737373]" size={12} />
+      <FaChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={12} />
     </span>
   </label>
 );
@@ -119,21 +119,21 @@ const FilterPanel = ({
 }) => (
   <div className="space-y-5">
     <div>
-      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#737373]">Search</label>
+      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Search</label>
       <div className="relative">
-        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737373]" size={15} />
+        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={15} />
         <input
           type="text"
           value={searchDraft}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Title, company, keywords..."
-          className="h-11 w-full rounded-[10px] border border-[#e5e5e5] bg-white pl-9 pr-9 text-sm text-[#0a0a0a] outline-none transition placeholder:text-[#737373] focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+          className="h-11 w-full rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] pl-9 pr-9 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-secondary)] focus:border-[var(--text-primary)] focus:ring-2 focus:ring-black/10"
         />
         {searchDraft && (
           <button
             type="button"
             onClick={() => onSearchChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737373] hover:text-black"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             aria-label="Clear search"
           >
             <FaTimes size={13} />
@@ -143,21 +143,21 @@ const FilterPanel = ({
     </div>
 
     <div>
-      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#737373]">Location</label>
+      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Location</label>
       <div className="relative">
-        <FaMapMarker className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737373]" size={15} />
+        <FaMapMarker className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={15} />
         <input
           type="text"
           value={locationDraft}
           onChange={(event) => onLocationChange(event.target.value)}
           placeholder="City, remote, hybrid..."
-          className="h-11 w-full rounded-[10px] border border-[#e5e5e5] bg-white pl-9 pr-9 text-sm text-[#0a0a0a] outline-none transition placeholder:text-[#737373] focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+          className="h-11 w-full rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] pl-9 pr-9 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-secondary)] focus:border-[var(--text-primary)] focus:ring-2 focus:ring-black/10"
         />
         {locationDraft && (
           <button
             type="button"
             onClick={() => onLocationChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737373] hover:text-black"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             aria-label="Clear location"
           >
             <FaTimes size={13} />
@@ -181,7 +181,7 @@ const FilterPanel = ({
     />
 
     <div>
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#737373]">Salary</span>
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Salary</span>
       <div className="grid grid-cols-2 gap-2">
         <input
           type="number"
@@ -189,7 +189,7 @@ const FilterPanel = ({
           value={filters.salary_min}
           onChange={(event) => onFilterChange("salary_min", event.target.value)}
           placeholder="Min"
-          className="h-11 rounded-[10px] border border-[#e5e5e5] bg-white px-3 text-sm text-[#0a0a0a] outline-none transition placeholder:text-[#737373] focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+          className="h-11 rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] px-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-secondary)] focus:border-[var(--text-primary)] focus:ring-2 focus:ring-black/10"
         />
         <input
           type="number"
@@ -197,7 +197,7 @@ const FilterPanel = ({
           value={filters.salary_max}
           onChange={(event) => onFilterChange("salary_max", event.target.value)}
           placeholder="Max"
-          className="h-11 rounded-[10px] border border-[#e5e5e5] bg-white px-3 text-sm text-[#0a0a0a] outline-none transition placeholder:text-[#737373] focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+          className="h-11 rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] px-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-secondary)] focus:border-[var(--text-primary)] focus:ring-2 focus:ring-black/10"
         />
       </div>
     </div>
@@ -213,7 +213,7 @@ const FilterPanel = ({
       <button
         type="button"
         onClick={onClear}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-[#e5e5e5] bg-white text-sm font-semibold text-[#0a0a0a] transition hover:border-black"
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--text-primary)]"
       >
         <FaTimes size={13} />
         Clear All Filters
@@ -443,7 +443,7 @@ const Jobsearch = () => {
     : `Tìm thấy ${totalJobs} việc làm${filters.search ? ` cho "${filters.search}"` : ""}`;
 
   return (
-    <div className="min-h-screen bg-[#fbfcfa]">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <TopBarDashboard
         userName={userName}
         userEmail={userEmail}
@@ -453,19 +453,19 @@ const Jobsearch = () => {
       <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Job board</p>
-            <h1 className="mt-1 text-3xl font-bold text-[#0a0a0a]">Find roles that fit</h1>
-            <p className="mt-2 text-sm text-[#737373]">{resultLabel}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Job board</p>
+            <h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)]">Find roles that fit</h1>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">{resultLabel}</p>
           </div>
           <button
             type="button"
             onClick={() => setIsMobileFiltersOpen(true)}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-[#e5e5e5] bg-white px-4 text-sm font-semibold text-[#0a0a0a] shadow-sm lg:hidden"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] px-4 text-sm font-semibold text-[var(--text-primary)] shadow-sm lg:hidden"
           >
             <FaFilter size={14} />
             Filters
             {activeFilterCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-black px-1 text-[10px] text-white">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--text-primary)] px-1 text-[10px] text-[var(--bg-primary)]">
                 {activeFilterCount}
               </span>
             )}
@@ -479,11 +479,11 @@ const Jobsearch = () => {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-          <aside className="hidden h-fit rounded-[14px] border border-[#e5e5e5] bg-white p-5 shadow-sm lg:block">
+          <aside className="hidden h-fit rounded-[14px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] p-5 shadow-sm lg:block">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[#0a0a0a]">Filters</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Filters</h2>
               {activeFilterCount > 0 && (
-                <span className="rounded-full bg-[#f2f2f2] px-2 py-1 text-xs font-semibold text-[#737373]">
+                <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)]">
                   {activeFilterCount} active
                 </span>
               )}
@@ -501,8 +501,8 @@ const Jobsearch = () => {
           </aside>
 
           <main>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3">
-              <p className="text-sm font-medium text-[#0a0a0a]">{resultLabel}</p>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] px-4 py-3">
+              <p className="text-sm font-medium text-[var(--text-primary)]">{resultLabel}</p>
               <FilterSelect
                 label="Sort"
                 value={filters.sort}
@@ -518,7 +518,7 @@ const Jobsearch = () => {
                 ))}
               </div>
             ) : jobs.length === 0 ? (
-              <div className="rounded-[14px] border border-[#e5e5e5] bg-white">
+              <div className="rounded-[14px] border border-[var(--border-primary)] bg-[var(--bg-elevated)]">
                 <EmptyState
                   icon={FaBriefcase}
                   title="No jobs found"
@@ -537,16 +537,16 @@ const Jobsearch = () => {
                   return (
                     <article
                       key={job.id}
-                      className="group flex min-h-[320px] flex-col rounded-[14px] border border-[#e5e5e5] bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                      className="group flex min-h-[320px] flex-col rounded-[14px] border border-[var(--border-primary)] bg-[var(--bg-elevated)] p-5 shadow-sm transition hover:border-[var(--text-primary)] hover:shadow-md"
                     >
                       <div className="mb-4 flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border border-emerald-100 bg-emerald-50 text-lg font-bold text-emerald-700">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border border-[var(--border-primary)] bg-[var(--bg-secondary)] text-lg font-bold text-[var(--text-primary)]">
                             {(job.companyName || "J").charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[#0a0a0a]">{job.companyName || "Unknown Company"}</p>
-                            <p className="truncate text-xs text-[#737373]">{job.industry || "Recruiting team"}</p>
+                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{job.companyName || "Unknown Company"}</p>
+                            <p className="truncate text-xs text-[var(--text-secondary)]">{job.industry || "Recruiting team"}</p>
                           </div>
                         </div>
                         <button
@@ -554,7 +554,7 @@ const Jobsearch = () => {
                           onClick={() => handleSaveClick(normalizedJobId)}
                           disabled={isSaving}
                           className={`rounded-[10px] p-2 transition ${
-                            isSaved ? "text-emerald-600 hover:bg-emerald-50" : "text-[#737373] hover:bg-[#f2f2f2] hover:text-emerald-600"
+                            isSaved ? "text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]" : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                           } disabled:opacity-60`}
                           aria-label={isSaved ? "Unsave job" : "Save job"}
                         >
@@ -564,39 +564,39 @@ const Jobsearch = () => {
 
                       <button type="button" onClick={() => navigate(`/jobs/${job.id}`)} className="flex flex-1 flex-col text-left">
                         <div className="mb-3 flex items-start justify-between gap-3">
-                          <h3 className="line-clamp-2 text-lg font-bold leading-6 text-[#0a0a0a] transition group-hover:text-emerald-700">
+                          <h3 className="line-clamp-2 text-lg font-bold leading-6 text-[var(--text-primary)] transition group-hover:text-[var(--text-primary)]">
                             <Highlight text={job.title || "Untitled role"} query={filters.search} />
                           </h3>
                           {isNewJob(job.createdAt) && (
-                            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                            <span className="shrink-0 rounded-full bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-primary)]">
                               New
                             </span>
                           )}
                         </div>
 
-                        <p className="mb-4 line-clamp-3 text-sm leading-6 text-[#737373]">
+                        <p className="mb-4 line-clamp-3 text-sm leading-6 text-[var(--text-secondary)]">
                           <Highlight text={job.description || "No description provided yet."} query={filters.search} />
                         </p>
 
                         <div className="mt-auto space-y-2">
-                          <div className="flex items-center gap-2 text-sm text-[#737373]">
+                          <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                             <FaMapMarker className="shrink-0" size={13} />
                             <span className="truncate">{job.location || "Location not specified"}</span>
                           </div>
                           {job.salary && (
-                            <div className="flex items-center gap-2 text-sm text-[#737373]">
+                            <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                               <FaDollarSign className="shrink-0" size={13} />
                               <span className="truncate">{job.salary}</span>
                             </div>
                           )}
                           <div className="flex flex-wrap gap-2 pt-2">
                             {job.employmentType && (
-                              <span className="rounded-full bg-[#f2f2f2] px-2.5 py-1 text-xs font-semibold text-[#0a0a0a]">
+                              <span className="rounded-full bg-[var(--bg-secondary)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]">
                                 {job.employmentType}
                               </span>
                             )}
                             {job.experience && (
-                              <span className="rounded-full bg-[#f2f2f2] px-2.5 py-1 text-xs font-semibold text-[#0a0a0a]">
+                              <span className="rounded-full bg-[var(--bg-secondary)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]">
                                 {job.experience}
                               </span>
                             )}
@@ -604,8 +604,8 @@ const Jobsearch = () => {
                         </div>
                       </button>
 
-                      <div className="mt-5 flex items-center justify-between border-t border-[#e5e5e5] pt-4">
-                        <span className="text-xs text-[#737373]">
+                      <div className="mt-5 flex items-center justify-between border-t border-[var(--border-primary)] pt-4">
+                        <span className="text-xs text-[var(--text-secondary)]">
                           {job.deadline
                             ? `Deadline ${new Date(job.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
                             : job.createdAt
@@ -615,7 +615,7 @@ const Jobsearch = () => {
                         <button
                           type="button"
                           onClick={() => navigate(`/jobs/${job.id}`)}
-                          className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                          className="text-sm font-semibold text-[var(--text-primary)] hover:underline"
                         >
                           View Details
                         </button>
@@ -641,16 +641,16 @@ const Jobsearch = () => {
 
       {isMobileFiltersOpen && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/35 lg:hidden">
-          <div className="max-h-[88vh] w-full overflow-y-auto rounded-t-[18px] bg-white p-5 shadow-xl">
+          <div className="max-h-[88vh] w-full overflow-y-auto rounded-t-[18px] bg-[var(--bg-elevated)] p-5 shadow-xl">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Advanced search</p>
-                <h2 className="text-lg font-bold text-[#0a0a0a]">Filters</h2>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Advanced search</p>
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">Filters</h2>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileFiltersOpen(false)}
-                className="rounded-[10px] border border-[#e5e5e5] p-2 text-[#737373]"
+                className="rounded-[10px] border border-[var(--border-primary)] p-2 text-[var(--text-secondary)]"
                 aria-label="Close filters"
               >
                 <FaTimes size={16} />
@@ -669,7 +669,7 @@ const Jobsearch = () => {
             <button
               type="button"
               onClick={() => setIsMobileFiltersOpen(false)}
-              className="mt-5 h-11 w-full rounded-[10px] bg-black text-sm font-semibold text-white"
+              className="mt-5 h-11 w-full rounded-[10px] bg-[var(--text-primary)] text-sm font-semibold text-[var(--bg-primary)]"
             >
               Show Results
             </button>
