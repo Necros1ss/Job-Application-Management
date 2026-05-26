@@ -1,4 +1,4 @@
-import React from "react";
+import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { authApi, tokenStorage } from "../lib/api";
 
@@ -51,3 +51,7 @@ const LogoutModal = ({ setOpenLogoutModal }) => {
 };
 
 export default LogoutModal;
+
+LogoutModal.propTypes = {
+  setOpenLogoutModal: PropTypes.func.isRequired,
+};

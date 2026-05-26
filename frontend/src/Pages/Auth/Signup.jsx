@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FaBriefcase, FaCheck, FaEye, FaEyeSlash, FaUserTie } from "react-icons/fa";
+import { FaCheck, FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
+import { FaBriefcase } from "react-icons/fa6";
+import { FaUserTie } from "react-icons/fa6";
+import { FaUserShield } from "react-icons/fa6";
+import { FaUserPen } from "react-icons/fa6";
 import { authApi, tokenStorage } from "../../lib/api";
 import { showError } from "../../utils/toast";
 import { validateEmail } from "../../utils/validation";
 import LanguageSwitcher from "../../Components/LanguageSwitcher";
+import { useI18n } from "../../lib/i18n";
 
 const roleOptions = [
   {
@@ -19,11 +24,32 @@ const roleOptions = [
     description: "Post roles and manage candidates.",
     icon: FaBriefcase,
   },
+  {
+    role: "hr_manager",
+    title: "HR Manager",
+    description: "Approve jobs and monitor recruiter performance.",
+    icon: FaUserShield,
+  },
+  {
+    role: "interviewer",
+    title: "Interviewer",
+    description: "Evaluate candidates and submit feedback.",
+    icon: FaUserPen,
+  },
 ];
 
+const roleTitleMap = {
+  candidate: "Start applying with Job Tracker",
+  recruiter: "Start hiring with Job Tracker",
+  hr_manager: "Start managing with Job Tracker",
+  interviewer: "Start evaluating with Job Tracker",
+};
+
 const Signup = () => {
+  const { t } = useI18n();
   const location = useLocation();
-  const initialRole = location.state?.role === "recruiter" ? "recruiter" : "candidate";
+  const validRoles = ["candidate", "recruiter", "hr_manager", "interviewer"];
+  const initialRole = validRoles.includes(location.state?.role) ? location.state.role : "candidate";
   const [userRole, setUserRole] = useState(initialRole);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -78,7 +104,12 @@ const Signup = () => {
       const payload = await authApi.signup({ name, email, password, role: userRole });
       tokenStorage.setToken(payload.token);
       tokenStorage.setRole(payload.user?.role || userRole);
-      navigate(payload.user?.role === "recruiter" ? "/recruiter" : "/candidate");
+      navigate(
+        payload.user?.role === "recruiter" ? "/recruiter"
+          : payload.user?.role === "hr_manager" ? "/hr-manager"
+            : payload.user?.role === "interviewer" ? "/interviewer"
+              : "/candidate"
+      );
     } catch (error) {
       const message = error.message || "Failed to create account";
       setFormError(message);
@@ -91,38 +122,62 @@ const Signup = () => {
   return (
     <div className="min-h-screen blueprint-grid-bg px-4 py-8 text-[#0a0a0a]">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)] lg:grid-cols-[0.95fr_1.05fr]">
-        <aside className="blueprint-hero-panel hidden rounded-none border-0 border-r border-[#e5e5e5] p-10 lg:flex lg:flex-col lg:justify-between">
-          <Link to="/" className="inline-flex w-fit items-center rounded-full px-3 py-2 text-sm font-medium text-[#737373] hover:bg-white hover:text-black">
+        <aside className="blueprint-hero-panel hidden rounded-none border-0 border-r border-[#e5e5e5] p-10 text-[#0a0a0a] lg:flex lg:flex-col lg:justify-between">
+          <Link to="/" className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-[#737373] hover:bg-white hover:text-black">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Job Tracker
           </Link>
 
           <div className="relative z-10">
-            <p className="text-xs font-medium uppercase text-[#737373]">Create workspace</p>
-            <h1 className="mt-3 max-w-md text-[40px] font-semibold leading-none text-black">
+            <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-[10px] border border-[#e5e5e5] bg-white text-black">
+              <FaBriefcase />
+            </div>
+            <h1 className="max-w-md text-[40px] font-semibold leading-none text-black">
               Choose the account that matches your workflow.
             </h1>
 
             <div className="mt-10 rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+              <div className="mb-4 flex items-center justify-between border-b border-[#e5e5e5] pb-3">
+                <div>
+                  <p className="text-xs font-medium uppercase text-[#737373]">Active Roles</p>
+                  <p className="mt-1 text-sm font-medium text-black">Build your team</p>
+                </div>
+                <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-white">4</span>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 {roleOptions.map(({ role, title, icon: Icon }) => (
                   <div
                     key={role}
-                    className={`rounded-[10px] border p-4 ${
+                    className={`rounded-[10px] border p-3 ${
                       userRole === role
                         ? "border-black bg-black text-white"
                         : "border-[#e5e5e5] bg-[#f2f2f2] text-[#0a0a0a]"
                     }`}
                   >
-                    <Icon className="mb-5" />
-                    <p className="text-sm font-medium">{role === "candidate" ? "Candidate" : "Recruiter"}</p>
+                    <Icon className="mb-3" size={18} />
+                    <p className="text-xs font-medium">{title}</p>
                   </div>
                 ))}
               </div>
+
               <div className="mt-4 space-y-2 text-sm text-[#737373]">
-                <div className="h-2 w-32 rounded-full bg-[#0a0a0a]" />
-                <div className="h-2 w-full rounded-full bg-[#e5e5e5]" />
+                <div className="h-2 w-full rounded-full bg-[#0a0a0a]" />
                 <div className="h-2 w-4/5 rounded-full bg-[#e5e5e5]" />
               </div>
+            </div>
+
+            <div className="mt-8 grid gap-3">
+              {[
+                "Recruitment pipeline",
+                "Onboarding checklist",
+                "Employee and leave management",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-3 rounded-[10px] border border-[#e5e5e5] bg-white/80 px-3 py-2 text-sm font-medium text-[#0a0a0a]">
+                  <FaCheckCircle className="text-black" />
+                  {item}
+                </div>
+              ))}
             </div>
           </div>
         </aside>
@@ -130,12 +185,12 @@ const Signup = () => {
         <main className="flex items-center justify-center px-6 py-10 sm:px-10">
           <div className="w-full max-w-lg">
             <div className="mb-8">
-              <p className="text-xs font-medium uppercase text-[#737373]">Create account</p>
+              <p className="text-xs font-medium uppercase text-[#737373]">{t("auth.createAccount")}</p>
               <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">
-                {userRole === "candidate" ? "Start applying with Job Tracker" : "Start hiring with Job Tracker"}
+                {roleTitleMap[userRole] || t("auth.signupCandidateTitle")}
               </h2>
               <p className="mt-3 text-sm leading-6 text-[#737373]">
-                Select your account type, then create the workspace profile you need.
+                {t("auth.signupSubtitle")}
               </p>
             </div>
             <div className="mb-6">
@@ -167,9 +222,9 @@ const Signup = () => {
                         {isSelected && <FaCheck size={10} />}
                       </span>
                     </div>
-                    <p className="text-sm font-medium">{role === "candidate" ? t("auth.candidate") : t("auth.recruiter")}</p>
+                    <p className="text-sm font-medium">{title}</p>
                     <p className={`mt-1 text-xs leading-5 ${isSelected ? "text-white/70" : "text-[#737373]"}`}>
-                      {role === "candidate" ? "Search jobs, apply with a cover letter, read recruiter messages, and follow onboarding tasks." : "Publish roles, review candidates, schedule interviews, send offers, and start onboarding."}
+                      {description}
                     </p>
                   </button>
                 );
@@ -179,15 +234,15 @@ const Signup = () => {
           <form onSubmit={handleSignup} className="space-y-5">
             <div>
               <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                {userRole === "candidate" ? "Name" : "Company Name"}
+                {userRole === "recruiter" ? t("auth.companyName") : t("auth.name")}
               </label>
               <input
                 type="text"
                 id="name"
                 placeholder={
-                  userRole === "candidate"
-                    ? "Enter your name...."
-                    : "Enter your company name...."
+                  userRole === "recruiter"
+                    ? "Enter your company name...."
+                    : "Enter your name...."
                 }
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -197,7 +252,7 @@ const Signup = () => {
             </div>
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                Email
+                {t("auth.email")}
               </label>
               <input
                 type="email"
@@ -215,7 +270,7 @@ const Signup = () => {
             </div>
             <div>
               <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                Password
+                {t("auth.password")}
               </label>
               <div className="relative">
                 <input
@@ -251,12 +306,12 @@ const Signup = () => {
                 disabled={isSubmitting}
                 className="mb-2 flex w-full justify-center rounded-[10px] bg-black px-12 py-2.5 text-sm font-semibold text-white hover:bg-[#0a0a0a] disabled:opacity-60"
               >
-                {isSubmitting ? "Creating account..." : "Create Account"}
+                {isSubmitting ? t("auth.signingIn") : t("auth.createAccount")}
               </button>
               <p className="text-sm text-[#737373]">
-                Already have an account? {" "}
+                {t("auth.haveAccount")}{" "}
                 <Link to="/login" className="font-medium text-black underline hover:no-underline">
-                  Log in
+                  {t("auth.login")}
                 </Link>
               </p>
             </div>

@@ -10,12 +10,14 @@ import {
   ensureAdminUserColumns,
   ensureApplicationRejectionColumns,
   ensureApplicationStatusEnum,
+  ensureHrManagerInterviewerSchema,
   ensureJobModerationColumns,
   ensurePhaseSchema,
   testDbConnection,
 } from "./config/db.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
+import hrManagerRoutes from "./routes/hrManager.js";
 import userRoutes from "./routes/users.js";
 import applicationRoutes from "./routes/applications.js";
 import jobPostRoutes from "./routes/jobPosts.js";
@@ -48,22 +50,24 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: process.env.NODE_ENV === "production" ? 10 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     message: "Too many authentication attempts, please try again later",
   },
+  skip: () => process.env.NODE_ENV !== "production",
 });
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 5,
+  max: process.env.NODE_ENV === "production" ? 5 : 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     message: "Too many upload attempts, please try again later",
   },
+  skip: () => process.env.NODE_ENV !== "production",
 });
 
 const configuredOrigins = (process.env.CLIENT_ORIGIN || "")
@@ -102,6 +106,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/admin", adminRoutes);
+app.use("/api/hr-manager", hrManagerRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/applications/apply", uploadLimiter);
@@ -154,6 +159,7 @@ const startServer = async () => {
   await ensureApplicationStatusEnum();
   await ensureApplicationRejectionColumns();
   await ensurePhaseSchema();
+  await ensureHrManagerInterviewerSchema();
   app.listen(port, () => {
     console.log(`API server running on http://localhost:${port}`);
   });

@@ -1,3 +1,5 @@
+import PropTypes from "prop-types";
+
 const getVisiblePages = (currentPage, totalPages) => {
   const safeTotal = Math.max(Number(totalPages) || 1, 1);
   const safeCurrent = Math.min(Math.max(Number(currentPage) || 1, 1), safeTotal);
@@ -68,3 +70,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 };
 
 export default Pagination;
+
+Pagination.propTypes = {
+  currentPage: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  totalPages: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  onPageChange: PropTypes.func.isRequired,
+};

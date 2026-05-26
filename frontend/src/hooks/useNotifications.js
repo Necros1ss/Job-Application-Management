@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { initializeSession, tokenStorage } from "../lib/api";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 const MAX_NOTIFICATIONS = 50;
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
 const NOTIFICATION_EVENTS = [

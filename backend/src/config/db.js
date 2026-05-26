@@ -18,7 +18,7 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 30000,
 });
 
 pool.on("error", (err) => {
@@ -244,6 +244,7 @@ export const ensurePhaseSchema = async () => {
          id BIGSERIAL PRIMARY KEY,
          application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
          recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,
+         interviewer_id BIGINT,
          interviewer_name VARCHAR(255) NOT NULL,
          interview_datetime TIMESTAMPTZ NOT NULL,
          mode VARCHAR(30) NOT NULL DEFAULT 'online',
@@ -385,18 +386,35 @@ export const ensurePhaseSchema = async () => {
     );
 
     await client.query(
-      `CREATE TABLE IF NOT EXISTS interviews (
-         id BIGSERIAL PRIMARY KEY,
-         application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
-         recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,
-         interviewer_name VARCHAR(255) NOT NULL,
-         interview_datetime TIMESTAMPTZ NOT NULL,
-         mode VARCHAR(30) NOT NULL DEFAULT 'online',
-         meet_link VARCHAR(500),
-         location VARCHAR(255),
-         notes TEXT,
-         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-       )`
+      `DELETE FROM saved_jobs a USING saved_jobs b WHERE a.id < b.id AND a.candidate_id = b.candidate_id AND a.job_post_id = b.job_post_id;`
+    ).catch(() => {});
+
+    await client.query(
+      `ALTER TABLE saved_jobs ADD CONSTRAINT uq_candidate_job_saved UNIQUE (candidate_id, job_post_id);`
+    ).catch(() => {});
+
+    await client.query(
+      "DO \u0024\u0024\n" +
+      "       BEGIN\n" +
+      "         IF NOT EXISTS (\n" +
+      "           SELECT 1 FROM information_schema.tables\n" +
+      "           WHERE table_schema = 'public' AND table_name = 'interviews'\n" +
+      "         ) THEN\n" +
+      "           CREATE TABLE interviews (\n" +
+      "             id BIGSERIAL PRIMARY KEY,\n" +
+      "             application_id BIGINT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,\n" +
+      "             recruiter_id BIGINT NOT NULL REFERENCES recruiters(id) ON DELETE CASCADE,\n" +
+      "             interviewer_id BIGINT,\n" +
+      "             interviewer_name VARCHAR(255) NOT NULL,\n" +
+      "             interview_datetime TIMESTAMPTZ NOT NULL,\n" +
+      "             mode VARCHAR(30) NOT NULL DEFAULT 'online',\n" +
+      "             meet_link VARCHAR(500),\n" +
+      "             location VARCHAR(255),\n" +
+      "             notes TEXT,\n" +
+      "             created_at TIMESTAMPTZ NOT NULL DEFAULT now()\n" +
+      "           );\n" +
+      "         END IF;\n" +
+      "       END \u0024\u0024;"
     );
 
     await client.query(
@@ -423,6 +441,99 @@ export const ensurePhaseSchema = async () => {
       `CREATE INDEX IF NOT EXISTS idx_job_posts_search
        ON job_posts
        USING gin(to_tsvector('english', title || ' ' || coalesce(description, '')));`
+    );
+  } finally {
+    client.release();
+  }
+};
+
+export const ensureHrManagerInterviewerSchema = async () => {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS hr_managers (
+         id BIGINT PRIMARY KEY,
+         name VARCHAR(255) NOT NULL,
+         email VARCHAR(255) UNIQUE NOT NULL,
+         department VARCHAR(255),
+         phone VARCHAR(20),
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT fk_hr_manager_user
+           FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE
+       );
+
+       CREATE TABLE IF NOT EXISTS interviewers (
+         id BIGINT PRIMARY KEY,
+         name VARCHAR(255) NOT NULL,
+         email VARCHAR(255) UNIQUE NOT NULL,
+         specialization VARCHAR(255),
+         phone VARCHAR(20),
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT fk_interviewer_user
+           FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE
+       );
+
+       CREATE TABLE IF NOT EXISTS interview_evaluations (
+         id BIGSERIAL PRIMARY KEY,
+         interview_id BIGINT NOT NULL,
+         interviewer_id BIGINT NOT NULL,
+         rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+         strengths TEXT,
+         weaknesses TEXT,
+         notes TEXT,
+         recommendation VARCHAR(20),
+         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+         CONSTRAINT fk_evaluation_interview
+           FOREIGN KEY (interview_id) REFERENCES interviews(id) ON DELETE CASCADE,
+         CONSTRAINT fk_evaluation_interviewer
+           FOREIGN KEY (interviewer_id) REFERENCES interviewers(id) ON DELETE CASCADE
+       );
+
+       DO $$
+       BEGIN
+         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'interview_recommendation') THEN
+           CREATE TYPE interview_recommendation AS ENUM ('strong_hire', 'hire', 'no_hire', 'strong_no_hire');
+         END IF;
+
+         IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_interview_evaluations_interview_interviewer') THEN
+           ALTER TABLE interview_evaluations
+           ADD CONSTRAINT uq_interview_evaluations_interview_interviewer
+           UNIQUE (interview_id, interviewer_id);
+         END IF;
+
+         IF NOT EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name = 'interviews' AND column_name = 'interviewer_id'
+         ) THEN
+           ALTER TABLE interviews ADD COLUMN interviewer_id BIGINT;
+         END IF;
+
+         IF NOT EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name = 'interviews' AND column_name = 'updated_at'
+         ) THEN
+           ALTER TABLE interviews ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+         END IF;
+
+         IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_interviews_interviewer') THEN
+           ALTER TABLE interviews
+           ADD CONSTRAINT fk_interviews_interviewer
+             FOREIGN KEY (interviewer_id) REFERENCES interviewers(id) ON DELETE SET NULL;
+         END IF;
+       END $$;
+
+       ALTER TABLE interview_evaluations
+       ALTER COLUMN recommendation TYPE interview_recommendation
+       USING recommendation::interview_recommendation;
+
+       CREATE INDEX IF NOT EXISTS idx_hr_managers_email ON hr_managers(email);
+       CREATE INDEX IF NOT EXISTS idx_interviewers_email ON interviewers(email);
+       CREATE INDEX IF NOT EXISTS idx_interview_evaluations_interview_id ON interview_evaluations(interview_id);
+       CREATE INDEX IF NOT EXISTS idx_interview_evaluations_interviewer_id ON interview_evaluations(interviewer_id);
+       CREATE INDEX IF NOT EXISTS idx_interviews_interviewer_id ON interviews(interviewer_id);`
     );
   } finally {
     client.release();

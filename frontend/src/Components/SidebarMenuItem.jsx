@@ -1,7 +1,7 @@
 import { BsBriefcaseFill, BsPeople } from "react-icons/bs";
 import { AiFillFolderOpen } from "react-icons/ai";
 import { RiLayoutMasonryFill } from "react-icons/ri";
-import { FaCalendar, FaClipboardList, FaEnvelope, FaUserTie, FaUserShield } from "react-icons/fa";
+import { FaCalendar, FaClipboardList, FaEnvelope, FaUserTie, FaUserShield, FaChartBar, FaCheckCircle } from "react-icons/fa";
 
 const candidateMenu = [
   {
@@ -117,6 +117,58 @@ const adminMenu = [
   },
 ];
 
+const hrManagerMenu = [
+  {
+    id: 0,
+    label: "Dashboard",
+    labelKey: "menu.dashboard",
+    icon: <RiLayoutMasonryFill />,
+    path: "dashboard",
+  },
+  {
+    id: 1,
+    label: "Job Approvals",
+    labelKey: "menu.jobApprovals",
+    icon: <FaCheckCircle />,
+    path: "jobs",
+  },
+  {
+    id: 2,
+    label: "Recruiters",
+    labelKey: "menu.recruiters",
+    icon: <BsPeople />,
+    path: "recruiters",
+  },
+  {
+    id: 3,
+    label: "Reports",
+    labelKey: "menu.reports",
+    icon: <FaChartBar />,
+    path: "reports",
+  },
+];
+
+const interviewerMenu = [
+  {
+    id: 0,
+    label: "Dashboard",
+    labelKey: "menu.dashboard",
+    icon: <RiLayoutMasonryFill />,
+    path: "dashboard",
+  },
+  {
+    id: 1,
+    label: "My Interviews",
+    labelKey: "menu.myInterviews",
+    icon: <FaCalendar />,
+    path: "interviews",
+  },
+];
+
 export const SidebarMenuItem = (role = "candidate") =>
-  role === "recruiter" ? recruiterMenu : role === "admin" ? adminMenu : candidateMenu;
+  role === "recruiter" ? recruiterMenu
+    : role === "admin" ? adminMenu
+      : role === "hr_manager" ? hrManagerMenu
+        : role === "interviewer" ? interviewerMenu
+          : candidateMenu;
 

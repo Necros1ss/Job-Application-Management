@@ -118,7 +118,7 @@ const mapRow = (row) => ({
   applicantCount: Number(row.applicant_count || 0),
 });
 
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
   const filters = getJobPostFilters(req.query);
   const { whereSql, params } = buildJobPostWhere(filters);
@@ -233,7 +233,7 @@ router.get("/mine", requireAuth, async (req, res) => {
   }
 });
 
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   const postId = Number(req.params.id);
   if (!Number.isInteger(postId) || postId <= 0) {
     return res.status(400).json({ message: "Invalid job post id" });

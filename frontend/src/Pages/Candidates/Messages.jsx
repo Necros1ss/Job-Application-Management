@@ -12,7 +12,7 @@ import {
   FaPaperPlane,
 } from "react-icons/fa";
 import { SkeletonCard } from "../../Components/Skeleton";
-import { messagesApi, usersApi } from "../../lib/api";
+import { messagesApi } from "../../lib/api";
 import { formatMessageTime } from "../../utils/format";
 import { useI18n } from "../../lib/i18n";
 import { showError } from "../../utils/toast";
@@ -256,22 +256,17 @@ const Messages = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const listRef = useRef(null);
 
   const loadMessages = async (pageOffset = 0) => {
     try {
       setIsLoading(true);
-      const [profile, inbox, unread] = await Promise.all([
-        usersApi.me(),
+      const [inbox, unread] = await Promise.all([
         messagesApi.inbox({ limit: PAGE_SIZE, offset: pageOffset }),
         messagesApi.unreadCount(),
       ]);
 
       const normalizedMessages = Array.isArray(inbox) ? inbox : [];
-      setUserName(profile.name || "");
-      setUserEmail(profile.email || "");
       setMessages(normalizedMessages);
       setUnreadCount(Number(unread?.count ?? unread?.unreadCount ?? 0));
 

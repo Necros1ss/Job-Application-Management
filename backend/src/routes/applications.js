@@ -19,6 +19,8 @@ import {
   updateNote,
   updateRating,
   updateStatus,
+  acceptOffer,
+  declineOffer,
 } from "../controllers/applicationController.js";
 import { requireAuth } from "../middlewares/auth.js";
 import { validate } from "../middlewares/validate.js";
@@ -63,5 +65,7 @@ router.delete("/:id/notes/:noteId", requireAuth, deleteNote);
 
 router.post("/:id/reject", requireAuth, validate(rejectApplicationSchema), reject);
 router.post("/:id/offer", requireAuth, offer);
+router.post("/:id/accept-offer", requireAuth, acceptOffer);
+router.post("/:id/decline-offer", requireAuth, declineOffer);
 
 export default router;

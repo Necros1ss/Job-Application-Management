@@ -16,7 +16,6 @@ import {
 const Dashboard = () => {
   const { t } = useI18n();
   const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [jobs, setJobs] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +34,6 @@ const Dashboard = () => {
         setJobs(applications);
         setInterviews(myInterviews);
         setUserName(profile.name || "");
-        setUserEmail(profile.email || "");
         setErrorMessage("");
       } catch (error) {
         const message = error.message || "Failed to load dashboard data";

@@ -54,6 +54,30 @@ const mapLeaveRow = (row) => ({
   jobTitle: row.job_title,
 });
 
+const selectLeaveById = async (leaveId) => {
+  const result = await pool.query(
+    `SELECT lr.id,
+            lr.employee_id,
+            lr.leave_type,
+            lr.start_date,
+            lr.end_date,
+            lr.reason,
+            lr.status,
+            lr.reviewed_by,
+            lr.reviewed_at,
+            lr.created_at,
+            lr.updated_at,
+            e.full_name AS employee_name,
+            e.job_title
+     FROM leave_requests lr
+     INNER JOIN employees e ON e.id = lr.employee_id
+     WHERE lr.id = $1
+     LIMIT 1`,
+    [leaveId]
+  );
+  return result.rows[0] || null;
+};
+
 router.get("/accepted-applications", requireAuth, async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can access accepted applications" });
@@ -490,7 +514,7 @@ router.post("/leave-requests", requireAuth, async (req, res) => {
          AND status = 'active'
        ORDER BY created_at DESC
        LIMIT 1
-       RETURNING id, employee_id, leave_type, start_date, end_date, reason, status, reviewed_by, reviewed_at, created_at, updated_at`,
+       RETURNING id`,
       [req.user.id, leaveType || "annual", startDate, endDate, reason]
     );
 
@@ -498,7 +522,8 @@ router.post("/leave-requests", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "Active employee profile not found" });
     }
 
-    return res.status(201).json(mapLeaveRow(result.rows[0]));
+    const fullLeave = await selectLeaveById(result.rows[0].id);
+    return res.status(201).json(mapLeaveRow(fullLeave));
   } catch (error) {
     return res.status(500).json({ message: "Failed to submit leave request", detail: error.message });
   }

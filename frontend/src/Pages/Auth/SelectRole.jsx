@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaArrowRight, FaBriefcase, FaCheck, FaUserTie } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaBriefcase, FaCheck, FaUserTie, FaUserShield, FaUserEdit } from "react-icons/fa";
 import LanguageSwitcher from "../../Components/LanguageSwitcher";
 
 const SelectRole = () => {
@@ -22,6 +22,20 @@ const SelectRole = () => {
       headline: "Hire talent and manage the pipeline.",
       description: "Post roles, review candidates, schedule interviews, send offers, and start onboarding.",
       icon: FaBriefcase,
+    },
+    {
+      role: "hr_manager",
+      title: "HR Manager",
+      headline: "Oversee hiring and recruiter performance.",
+      description: "Approve job posts, monitor recruiter activity, generate reports, and manage the hiring pipeline.",
+      icon: FaUserShield,
+    },
+    {
+      role: "interviewer",
+      title: "Interviewer",
+      headline: "Evaluate candidates and provide feedback.",
+      description: "View assigned interviews, submit structured evaluations, and share hiring recommendations.",
+      icon: FaUserEdit,
     },
   ];
 
@@ -47,7 +61,7 @@ const SelectRole = () => {
           <div className="relative z-10">
             <p className="text-xs font-medium uppercase text-[#737373]">Workspace setup</p>
             <h1 className="mt-3 max-w-md text-[40px] font-semibold leading-none text-black">
-              One HR workspace, two focused starting points.
+              One HR workspace, four focused starting points.
             </h1>
 
             <div className="mt-10 rounded-[14px] border border-[#e5e5e5] bg-white p-4 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
@@ -100,10 +114,10 @@ const SelectRole = () => {
             <div className="mb-8">
               <p className="text-xs font-medium uppercase text-[#737373]">Create account</p>
               <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">
-                Join as a recruiter or candidate
+                Choose your role
               </h2>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[#737373]">
-                Choose the account type that matches what you want to do first. You can continue into the signup form with the role already selected.
+                Select the account type that matches what you want to do. You can continue into the signup form with the role already selected.
               </p>
             </div>
             <div className="mb-6">

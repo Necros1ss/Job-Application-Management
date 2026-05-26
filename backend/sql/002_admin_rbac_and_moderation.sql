@@ -5,8 +5,9 @@ BEGIN
     FROM pg_type
     WHERE typname = 'user_role'
   ) THEN
-    CREATE TYPE user_role AS ENUM ('candidate', 'recruiter', 'admin');
+    CREATE TYPE user_role AS ENUM ('candidate', 'recruiter', 'admin', 'hr_manager', 'interviewer');
   ELSE
+    -- Add missing enum values in order (PostgreSQL requires ADD VALUE after existing ones)
     IF NOT EXISTS (
       SELECT 1
       FROM pg_enum e
@@ -15,6 +16,26 @@ BEGIN
         AND e.enumlabel = 'admin'
     ) THEN
       ALTER TYPE user_role ADD VALUE 'admin';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_enum e
+      JOIN pg_type t ON t.oid = e.enumtypid
+      WHERE t.typname = 'user_role'
+        AND e.enumlabel = 'hr_manager'
+    ) THEN
+      ALTER TYPE user_role ADD VALUE 'hr_manager';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_enum e
+      JOIN pg_type t ON t.oid = e.enumtypid
+      WHERE t.typname = 'user_role'
+        AND e.enumlabel = 'interviewer'
+    ) THEN
+      ALTER TYPE user_role ADD VALUE 'interviewer';
     END IF;
   END IF;
 END $$;

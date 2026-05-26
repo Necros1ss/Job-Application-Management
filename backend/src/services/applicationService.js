@@ -14,8 +14,8 @@ const CV_UPLOAD_DIR = path.resolve(__dirname, "../../uploads/cv");
 const ALLOWED_CV_EXTENSIONS = new Set([".pdf", ".doc", ".docx"]);
 const VALID_STATUSES = new Set(["applied", "reviewed", "scheduled_interview", "accepted", "rejected"]);
 const VALID_TRANSITIONS = {
-  applied: new Set(["reviewed"]),
-  reviewed: new Set(["scheduled_interview"]),
+  applied: new Set(["reviewed", "rejected"]),
+  reviewed: new Set(["scheduled_interview", "rejected"]),
   scheduled_interview: new Set(["accepted", "rejected"]),
   rejected: new Set([]),
   accepted: new Set([]),
@@ -941,6 +941,132 @@ export const offer = async ({ user, applicationId, subject, content }) => {
       status: "accepted",
       messageId: result.message?.id,
       createdAt: result.message?.created_at,
+    };
+  });
+};
+
+export const acceptOffer = async ({ user, applicationId }) => {
+  assertRole(user, "candidate", "Only candidate accounts can accept offers");
+  const id = parsePositiveId(applicationId, "application id");
+
+  return applicationRepository.withTransaction(async (client) => {
+    const applicationResult = await client.query(
+      `SELECT a.id, a.candidate_id, a.status, jp.title AS job_title,
+              r.company_name, r.id AS recruiter_id
+       FROM applications a
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       INNER JOIN recruiters r ON r.id = jp.recruiter_id
+       WHERE a.id = $1 AND a.candidate_id = $2
+       FOR UPDATE OF a`,
+      [id, user.id]
+    );
+
+    const application = applicationResult.rows[0];
+    if (!application) {
+      throw createHttpError(404, "Application not found");
+    }
+
+    if (application.status !== "accepted") {
+      throw createHttpError(400, "This application does not have an active offer to accept");
+    }
+
+    const defaultTasks = [
+      { title: "Complete pre-employment documents", description: "Fill out and submit all required pre-employment paperwork." },
+      { title: "Submit identification documents", description: "Provide copies of ID, tax forms, and other required documents." },
+      { title: "Set up direct deposit", description: "Provide bank account information for payroll." },
+      { title: "Complete HR orientation", description: "Attend the HR onboarding session and review company policies." },
+      { title: "IT equipment setup", description: "Collect your laptop, access badge, and set up your work accounts." },
+    ];
+
+    for (const task of defaultTasks) {
+      await client.query(
+        `INSERT INTO onboarding_tasks (application_id, recruiter_id, title, description)
+         VALUES ($1, $2, $3, $4)`,
+        [id, application.recruiter_id, task.title, task.description]
+      );
+    }
+
+    await applicationRepository.createApplicationEvent(client, {
+      applicationId: id,
+      actorUserId: user.id,
+      eventType: "offer_accepted",
+      title: "Offer accepted",
+      description: "Candidate accepted the job offer",
+      metadata: { tasksCreated: defaultTasks.length },
+    });
+
+    broadcast(application.recruiter_id, "offer_accepted", {
+      id: `offer-accepted-${id}-${Date.now()}`,
+      title: "Offer accepted",
+      message: `Candidate accepted your offer for ${application.job_title}`,
+      applicationId: id,
+      candidateId: user.id,
+      candidateName: user.name || "A candidate",
+      url: "/recruiter/applications",
+    });
+
+    return {
+      id,
+      response: "accepted",
+      tasksCreated: defaultTasks.length,
+    };
+  });
+};
+
+export const declineOffer = async ({ user, applicationId, reason }) => {
+  assertRole(user, "candidate", "Only candidate accounts can decline offers");
+  const id = parsePositiveId(applicationId, "application id");
+  const normalizedReason = typeof reason === "string" ? reason.trim() : "";
+
+  return applicationRepository.withTransaction(async (client) => {
+    const applicationResult = await client.query(
+      `SELECT a.id, a.candidate_id, a.status, jp.title AS job_title,
+              r.id AS recruiter_id
+       FROM applications a
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       INNER JOIN recruiters r ON r.id = jp.recruiter_id
+       WHERE a.id = $1 AND a.candidate_id = $2
+       FOR UPDATE OF a`,
+      [id, user.id]
+    );
+
+    const application = applicationResult.rows[0];
+    if (!application) {
+      throw createHttpError(404, "Application not found");
+    }
+
+    if (application.status !== "accepted") {
+      throw createHttpError(400, "This application does not have an active offer to decline");
+    }
+
+    await client.query(
+      `UPDATE applications SET status = 'rejected', rejection_reason = $1 WHERE id = $2`,
+      [normalizedReason || "Offer declined by candidate", id]
+    );
+
+    await applicationRepository.createApplicationEvent(client, {
+      applicationId: id,
+      actorUserId: user.id,
+      eventType: "offer_declined",
+      title: "Offer declined",
+      description: normalizedReason || "Candidate declined the job offer",
+      metadata: { reason: normalizedReason },
+    });
+
+    broadcast(application.recruiter_id, "offer_declined", {
+      id: `offer-declined-${id}-${Date.now()}`,
+      title: "Offer declined",
+      message: `Candidate declined your offer for ${application.job_title}${normalizedReason ? `: ${normalizedReason}` : ""}`,
+      applicationId: id,
+      candidateId: user.id,
+      candidateName: user.name || "A candidate",
+      url: "/recruiter/applications",
+    });
+
+    return {
+      id,
+      response: "declined",
+      reason: normalizedReason,
     };
   });
 };

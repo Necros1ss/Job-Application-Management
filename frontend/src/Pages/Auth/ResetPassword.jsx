@@ -1,16 +1,28 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
+import { authApi } from "../../lib/api";
 
 const ResetPassword = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token") || "";
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setMessage("");
+    setError("");
+
+    if (!token) {
+      setError("Reset token is missing from the link.");
+      return;
+    }
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
@@ -22,8 +34,18 @@ const ResetPassword = () => {
       return;
     }
 
-    setError("");
-    setMessage("Your new password is ready to submit once the reset link is validated.");
+    setIsSubmitting(true);
+    try {
+      await authApi.resetPassword({ token, newPassword: password });
+      setMessage("Password has been reset successfully. Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (err) {
+      setError(err.message || "Failed to reset password. The link might be invalid or expired.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -88,9 +110,10 @@ const ResetPassword = () => {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
+              disabled={isSubmitting}
+              className="w-full py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Reset Password
+              {isSubmitting ? "Resetting..." : "Reset Password"}
             </button>
           </form>
         </div>

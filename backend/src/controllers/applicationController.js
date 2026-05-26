@@ -83,7 +83,9 @@ export const downloadCv = asyncHandler(async (req, res) => {
     if (file.size) {
       res.setHeader("Content-Length", String(file.size));
     }
-    res.setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`);
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type");
+    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
     return res.sendFile(file.path);
   } catch (error) {
     return sendError(res, error);
@@ -212,6 +214,31 @@ export const offer = asyncHandler(async (req, res) => {
       applicationId: req.params.id,
       subject: req.body.subject,
       content: req.body.content,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return sendError(res, error);
+  }
+});
+
+export const acceptOffer = asyncHandler(async (req, res) => {
+  try {
+    const result = await applicationService.acceptOffer({
+      user: req.user,
+      applicationId: req.params.id,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return sendError(res, error);
+  }
+});
+
+export const declineOffer = asyncHandler(async (req, res) => {
+  try {
+    const result = await applicationService.declineOffer({
+      user: req.user,
+      applicationId: req.params.id,
+      reason: req.body.reason,
     });
     return res.status(201).json(result);
   } catch (error) {

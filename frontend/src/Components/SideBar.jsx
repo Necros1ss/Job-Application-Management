@@ -27,7 +27,8 @@ const SideBar = ({ role = "candidate" }) => {
     const pathname = location.pathname;
     const segments = pathname.split("/").filter(Boolean);
     const baseSegment = segments[0] || "";
-    const isDashboardPath = baseSegment === "candidate" || baseSegment === "recruiter" || baseSegment === "admin" || baseSegment === "hr-manager" || baseSegment === "interviewer" || (segments.length === 1 && baseSegment === "dashboard");
+    const isRoleRoot = ["candidate", "recruiter", "admin", "hr-manager", "interviewer"].includes(baseSegment);
+    const isDashboardPath = (segments.length === 1 && isRoleRoot) || segments[1] === "dashboard" || (segments.length === 1 && baseSegment === "dashboard");
     if (itemPath === "dashboard") {
       return isDashboardPath;
     }

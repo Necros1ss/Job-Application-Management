@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { pool } from "../config/db.js";
 import { sendEmail } from "../utils/mailer.js";
 
-const ALLOWED_ROLES = new Set(["candidate", "recruiter"]);
+const ALLOWED_ROLES = new Set(["candidate", "recruiter", "hr_manager", "interviewer"]);
 const normalizeEmail = (email) => email?.trim().toLowerCase();
 const PASSWORD_RESET_MESSAGE = "If that email is registered, a reset link has been sent.";
 const ACCESS_TOKEN_EXPIRES_IN = "15m";
@@ -55,10 +55,16 @@ const getCookie = (req, name) => parseCookies(req.headers.cookie || "")[name];
 
 const getUserProfileById = async (userId) => {
   const result = await pool.query(
-    `SELECT u.id, u.role, u.login_name, c.name AS candidate_name, c.email AS candidate_email, r.company_name AS recruiter_name, r.email AS recruiter_email
+    `SELECT u.id, u.role, u.login_name,
+            c.name AS candidate_name, c.email AS candidate_email,
+            r.company_name AS recruiter_name, r.email AS recruiter_email,
+            hm.name AS hr_manager_name, hm.email AS hr_manager_email,
+            i.name AS interviewer_name, i.email AS interviewer_email
      FROM users u
      LEFT JOIN candidates c ON c.id = u.id
      LEFT JOIN recruiters r ON r.id = u.id
+     LEFT JOIN hr_managers hm ON hm.id = u.id
+     LEFT JOIN interviewers i ON i.id = u.id
      WHERE u.id = $1
      LIMIT 1`,
     [userId]
@@ -70,8 +76,22 @@ const getUserProfileById = async (userId) => {
 const mapUser = (row) => ({
   id: row.id,
   role: row.role,
-  name: row.role === "recruiter" ? row.recruiter_name || row.login_name : row.candidate_name || row.login_name,
-  email: row.role === "recruiter" ? row.recruiter_email || row.login_name : row.candidate_email || row.login_name,
+  name:
+    row.role === "recruiter"
+      ? row.recruiter_name || row.login_name
+      : row.role === "hr_manager"
+        ? row.hr_manager_name || row.login_name
+        : row.role === "interviewer"
+          ? row.interviewer_name || row.login_name
+          : row.candidate_name || row.login_name,
+  email:
+    row.role === "recruiter"
+      ? row.recruiter_email || row.login_name
+      : row.role === "hr_manager"
+        ? row.hr_manager_email || row.login_name
+        : row.role === "interviewer"
+          ? row.interviewer_email || row.login_name
+          : row.candidate_email || row.login_name,
 });
 
 export const signup = async (req, res) => {
@@ -103,8 +123,12 @@ export const signup = async (req, res) => {
 
     if (selectedRole === "candidate") {
       await client.query(`INSERT INTO candidates (id, name, email) VALUES ($1, $2, $3)`, [userId, displayName, normalizedEmail]);
-    } else {
+    } else if (selectedRole === "recruiter") {
       await client.query(`INSERT INTO recruiters (id, company_name, email) VALUES ($1, $2, $3)`, [userId, displayName, normalizedEmail]);
+    } else if (selectedRole === "hr_manager") {
+      await client.query(`INSERT INTO hr_managers (id, name, email) VALUES ($1, $2, $3)`, [userId, displayName, normalizedEmail]);
+    } else if (selectedRole === "interviewer") {
+      await client.query(`INSERT INTO interviewers (id, name, email) VALUES ($1, $2, $3)`, [userId, displayName, normalizedEmail]);
     }
 
     await client.query("COMMIT");
@@ -128,7 +152,18 @@ export const login = async (req, res) => {
   const loginName = normalizeEmail(email);
   try {
     const result = await pool.query(
-      `SELECT u.id, u.role, u.login_name, u.password_hash, c.name AS candidate_name, c.email AS candidate_email, r.company_name AS recruiter_name, r.email AS recruiter_email FROM users u LEFT JOIN candidates c ON c.id = u.id LEFT JOIN recruiters r ON r.id = u.id WHERE u.login_name = $1 LIMIT 1`,
+      `SELECT u.id, u.role, u.login_name, u.password_hash, u.is_locked, u.is_deleted,
+              c.name AS candidate_name, c.email AS candidate_email,
+              r.company_name AS recruiter_name, r.email AS recruiter_email,
+              hm.name AS hr_manager_name, hm.email AS hr_manager_email,
+              i.name AS interviewer_name, i.email AS interviewer_email
+       FROM users u
+       LEFT JOIN candidates c ON c.id = u.id
+       LEFT JOIN recruiters r ON r.id = u.id
+       LEFT JOIN hr_managers hm ON hm.id = u.id
+       LEFT JOIN interviewers i ON i.id = u.id
+       WHERE u.login_name = $1
+       LIMIT 1`,
       [loginName]
     );
 
@@ -138,11 +173,33 @@ export const login = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, row.password_hash);
     if (!isValidPassword) return res.status(401).json({ message: "Invalid email or password" });
 
+    if (row.is_deleted) {
+      return res.status(403).json({ message: "Account has been removed" });
+    }
+
+    if (row.is_locked) {
+      return res.status(403).json({ message: "Account is locked" });
+    }
+
     const user = {
       id: row.id,
       role: row.role,
-      name: row.role === "recruiter" ? row.recruiter_name || row.login_name : row.candidate_name || row.login_name,
-      email: row.role === "recruiter" ? row.recruiter_email || row.login_name : row.candidate_email || row.login_name,
+      name:
+        row.role === "recruiter"
+          ? row.recruiter_name || row.login_name
+          : row.role === "hr_manager"
+            ? row.hr_manager_name || row.login_name
+            : row.role === "interviewer"
+              ? row.interviewer_name || row.login_name
+              : row.candidate_name || row.login_name,
+      email:
+        row.role === "recruiter"
+          ? row.recruiter_email || row.login_name
+          : row.role === "hr_manager"
+            ? row.hr_manager_email || row.login_name
+            : row.role === "interviewer"
+              ? row.interviewer_email || row.login_name
+              : row.candidate_email || row.login_name,
     };
     setRefreshCookie(res, user);
     const token = createAccessToken(user);
@@ -190,10 +247,12 @@ export const forgotPassword = async (req, res) => {
     if (normalizedEmail) {
       const userResult = await pool.query(
         `SELECT u.id,
-                COALESCE(c.email, r.email) AS email
+                COALESCE(c.email, r.email, hm.email, i.email) AS email
          FROM users u
          LEFT JOIN candidates c ON c.id = u.id
          LEFT JOIN recruiters r ON r.id = u.id
+         LEFT JOIN hr_managers hm ON hm.id = u.id
+         LEFT JOIN interviewers i ON i.id = u.id
          WHERE u.login_name = $1
          LIMIT 1`,
         [normalizedEmail]

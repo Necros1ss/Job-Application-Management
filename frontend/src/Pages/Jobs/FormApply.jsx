@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { FaCheck, FaFileAlt, FaSpinner, FaTimes, FaUpload } from "react-icons/fa";
 import { applyFromJob } from "../../lib/api";
@@ -268,3 +269,15 @@ const FormApply = ({ isOpen, onClose, jobDetail, onSuccess }) => {
 };
 
 export default FormApply;
+
+FormApply.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  jobDetail: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    title: PropTypes.string,
+    companyName: PropTypes.string,
+    company_name: PropTypes.string,
+  }),
+  onSuccess: PropTypes.func,
+};

@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { adminApi } from "../../lib/api";
@@ -101,3 +102,9 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+StatCard.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  tone: PropTypes.string,
+};

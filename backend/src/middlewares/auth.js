@@ -69,3 +69,34 @@ export const requireRole = (...roles) => (req, res, next) => {
 export const requireAdmin = requireRole(USER_ROLES.ADMIN);
 export const requireRecruiter = requireRole(USER_ROLES.RECRUITER);
 export const requireCandidate = requireRole(USER_ROLES.CANDIDATE);
+export const requireHrManager = requireRole(USER_ROLES.HR_MANAGER);
+export const requireInterviewer = requireRole(USER_ROLES.INTERVIEWER);
+
+export const requireJobPostOwnerOrHrManager = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json(errorResponse("Unauthorized"));
+  }
+
+  if (req.user.role === USER_ROLES.HR_MANAGER) {
+    return next();
+  }
+
+  if (req.user.role === USER_ROLES.RECRUITER) {
+    const jobId = req.params.id || req.body.jobPostId || req.body.job_post_id;
+    if (jobId) {
+      try {
+        const result = await pool.query(
+          `SELECT recruiter_id FROM job_posts WHERE id = $1 LIMIT 1`,
+          [Number(jobId)]
+        );
+        if (result.rows.length > 0 && Number(result.rows[0].recruiter_id) === req.user.id) {
+          return next();
+        }
+      } catch {
+        return res.status(500).json({ message: "Failed to verify job ownership" });
+      }
+    }
+  }
+
+  return res.status(403).json(errorResponse("Forbidden"));
+};

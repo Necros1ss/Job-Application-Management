@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 const LEGACY_TOKEN_KEY = "token";
 const ROLE_KEY = "userRole";
@@ -162,7 +162,7 @@ export const initializeSession = async () => {
   return _initializeSessionPromise;
 };
 
-const request = async (path, options = {}) => {
+export const request = async (path, options = {}) => {
   const { tryRefresh = true, ...requestOptions } = options;
   const token = getToken();
 
@@ -176,11 +176,19 @@ const request = async (path, options = {}) => {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...requestOptions,
-    headers,
-    credentials: "include",
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...requestOptions,
+      headers,
+      credentials: "include",
+    });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the backend API at ${API_BASE_URL}. Make sure the backend server is running.`,
+      { cause: error },
+    );
+  }
 
   if (!response.ok) {
     let errorMessage = "Request failed";
@@ -229,6 +237,7 @@ const requestBlob = async (path, options = {}) => {
   const { tryRefresh = true, ...requestOptions } = options;
 
   const headers = {
+    Accept: "application/pdf,application/octet-stream,*/*",
     ...(requestOptions.headers || {}),
   };
 
@@ -236,11 +245,19 @@ const requestBlob = async (path, options = {}) => {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...requestOptions,
-    headers,
-    credentials: "include",
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...requestOptions,
+      headers,
+      credentials: "include",
+    });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the backend API at ${API_BASE_URL}. Make sure the backend server is running.`,
+      { cause: error },
+    );
+  }
 
   if (!response.ok) {
     let errorMessage = "Request failed";
@@ -412,6 +429,15 @@ export const applicationsApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  acceptOffer: (id) =>
+    request(`/applications/${id}/accept-offer`, {
+      method: "POST",
+    }),
+  declineOffer: (id, payload = {}) =>
+    request(`/applications/${id}/decline-offer`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   remove: (id) =>
     request(`/applications/${id}`, {
       method: "DELETE",
@@ -424,6 +450,7 @@ export const interviewsApi = {
     const query = upcoming ? "?upcoming=true" : "";
     return request(`/interviews/recruiter${query}`);
   },
+  listInterviewers: () => request("/interviews/interviewers"),
   create: (payload) =>
     request("/interviews", {
       method: "POST",

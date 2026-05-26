@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import {
   FaBell,
   FaCheck,
@@ -44,6 +45,12 @@ const Toggle = ({ checked, onChange, disabled = false }) => (
   </button>
 );
 
+Toggle.propTypes = {
+  checked: PropTypes.bool.isRequired,
+  onChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
+};
+
 const SettingsSkeleton = () => (
   <div className="animate-pulse space-y-6">
     <div className="blueprint-hero-panel p-6">
@@ -82,6 +89,15 @@ const PasswordField = ({ label, value, setValue, show, setShow, placeholder }) =
     </div>
   </div>
 );
+
+PasswordField.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  setValue: PropTypes.func.isRequired,
+  show: PropTypes.bool.isRequired,
+  setShow: PropTypes.func.isRequired,
+  placeholder: PropTypes.string,
+};
 
 const Settings = () => {
   const { t } = useI18n();

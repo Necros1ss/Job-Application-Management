@@ -17,6 +17,7 @@ const FILTERS = [
 
 const INITIAL_FORM = {
   applicationId: "",
+  interviewerId: "",
   interviewerName: "",
   interviewDateTime: "",
   mode: "online",
@@ -85,10 +86,13 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
   const isEdit = Boolean(interview);
   const [applications, setApplications] = useState([]);
   const [applicationSearch, setApplicationSearch] = useState("");
+  const [interviewers, setInterviewers] = useState([]);
+  const [isLoadingInterviewers, setIsLoadingInterviewers] = useState(true);
   const [form, setForm] = useState(() =>
     interview
       ? {
           applicationId: String(interview.application_id || ""),
+          interviewerId: interview.interviewer_id ? String(interview.interviewer_id) : "",
           interviewerName: interview.interviewer_name || "",
           interviewDateTime: toDateTimeInputValue(interview.interview_datetime),
           mode: interview.mode || "online",
@@ -107,13 +111,17 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
     const loadApplications = async () => {
       try {
         setIsLoadingApplications(true);
-        const rows = await applicationsApi.listForRecruiter();
-        const eligibleApplications = rows.filter((item) =>
+        const [appRows, interviewerRows] = await Promise.all([
+          applicationsApi.listForRecruiter(),
+          interviewsApi.listInterviewers(),
+        ]);
+        const eligibleApplications = appRows.filter((item) =>
           ["applied", "reviewed"].includes(String(item.status || "").toLowerCase())
         );
 
         if (isMounted) {
           setApplications(eligibleApplications);
+          setInterviewers(Array.isArray(interviewerRows) ? interviewerRows : []);
           if (!isEdit && eligibleApplications.length > 0) {
             setForm((current) => ({
               ...current,
@@ -124,11 +132,13 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
       } catch (error) {
         if (isMounted) {
           setApplications([]);
-          showError(error.message || "Failed to load applications");
+          setInterviewers([]);
+          showError(error.message || "Failed to load data");
         }
       } finally {
         if (isMounted) {
           setIsLoadingApplications(false);
+          setIsLoadingInterviewers(false);
         }
       }
     };
@@ -168,8 +178,13 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
       return;
     }
 
-    if (!form.interviewerName.trim() || !form.interviewDateTime) {
-      showError("Interviewer and interview time are required.");
+    if (!form.interviewerId && !form.interviewerName.trim()) {
+      showError("Please select an interviewer account or enter a manual interviewer name.");
+      return;
+    }
+
+    if (!form.interviewDateTime) {
+      showError("Interview time is required.");
       return;
     }
 
@@ -183,9 +198,12 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
       return;
     }
 
+    const selectedInterviewer = interviewers.find((item) => String(item.id) === String(form.interviewerId));
+
     const payload = {
       applicationId: Number(form.applicationId),
-      interviewerName: form.interviewerName.trim(),
+      interviewerId: form.interviewerId ? Number(form.interviewerId) : undefined,
+      interviewerName: selectedInterviewer?.name || form.interviewerName.trim(),
       interviewDateTime: form.interviewDateTime,
       mode: form.mode,
       meetLink: form.mode === "online" ? form.meetLink.trim() : "",
@@ -290,13 +308,33 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-[#0a0a0a]">{t("interviews.interviewer")}</label>
-                <input
-                  type="text"
-                  value={form.interviewerName}
-                  onChange={(event) => updateForm("interviewerName", event.target.value)}
-                  placeholder="Interviewer name"
+                <select
+                  value={form.interviewerId}
+                  onChange={(event) => {
+                    const nextId = event.target.value;
+                    const selected = interviewers.find((item) => String(item.id) === String(nextId));
+                    updateForm("interviewerId", nextId);
+                    updateForm("interviewerName", selected?.name || "");
+                  }}
                   className="blueprint-input w-full"
-                />
+                  disabled={isLoadingInterviewers}
+                >
+                  <option value="">Manual interviewer name</option>
+                  {interviewers.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({item.email})
+                    </option>
+                  ))}
+                </select>
+                {!form.interviewerId && (
+                  <input
+                    type="text"
+                    value={form.interviewerName}
+                    onChange={(event) => updateForm("interviewerName", event.target.value)}
+                    placeholder="Interviewer name"
+                    className="blueprint-input mt-2 w-full"
+                  />
+                )}
               </div>
 
               <div>
@@ -377,7 +415,7 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
           </button>
           <button
             type="submit"
-            disabled={isSaving || isLoadingApplications}
+            disabled={isSaving || isLoadingApplications || isLoadingInterviewers}
             className="blueprint-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? t("common.saving") : isEdit ? t("common.save") : t("interviews.schedule")}
@@ -386,6 +424,28 @@ const InterviewModal = ({ interview, onClose, onSaved }) => {
       </form>
     </div>
   );
+};
+
+const getStatusBadge = (interviewDatetime) => {
+  const now = new Date();
+  const interviewDate = new Date(interviewDatetime);
+
+  if (Number.isNaN(interviewDate.getTime())) {
+    return <span className="rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-2.5 py-1 text-xs font-semibold text-[#737373]">Unknown</span>;
+  }
+
+  if (interviewDate < now) {
+    return <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">Past</span>;
+  }
+
+  const diffHours = (interviewDate - now) / (1000 * 60 * 60);
+  if (diffHours <= 24) {
+    return <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-600">Today</span>;
+  }
+  if (diffHours <= 72) {
+    return <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600">Soon</span>;
+  }
+  return <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">Upcoming</span>;
 };
 
 const InterviewList = () => {
@@ -520,12 +580,12 @@ const InterviewList = () => {
         searchPlaceholder={t("interviews.searchPlaceholder")}
       />
 
-      <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
+      <div className="mx-auto max-w-7xl px-4 pb-12 pt-6 sm:px-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="blueprint-kicker">{t("interviews.kicker")}</p>
             <h1 className="mt-1 text-3xl font-semibold text-[#0a0a0a]">{t("interviews.title")}</h1>
-            <p className="mt-1 text-[#737373]">{t("interviews.subtitle")}</p>
+            <p className="mt-1 text-sm text-[#737373]">{t("interviews.subtitle")}</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-1 rounded-full border border-[#e5e5e5] bg-white p-1">
@@ -557,55 +617,57 @@ const InterviewList = () => {
           </div>
         )}
 
-        <div className="blueprint-card overflow-hidden p-0">
+        <div className="rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.05)]">
           {isLoading ? (
-            <div>
+            <div className="p-6">
               {[1, 2, 3, 4].map((item) => (
                 <SkeletonRow key={item} />
               ))}
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left">
-                <thead className="border-b border-[#e5e5e5] bg-white">
+              <table className="w-full min-w-[1000px] text-left">
+                <thead className="border-b border-[#e5e5e5] bg-[#fafafa]">
                   <tr className="text-xs font-semibold uppercase tracking-wide text-[#737373]">
-                    <th className="px-6 py-5">{t("interviews.candidateName")}</th>
-                    <th className="px-6 py-5">{t("interviews.jobTitle")}</th>
-                    <th className="px-6 py-5">{t("interviews.dateTime")}</th>
-                    <th className="px-6 py-5">{t("interviews.mode")}</th>
-                    <th className="px-6 py-5">{t("interviews.interviewer")}</th>
-                    <th className="px-6 py-5 text-right">{t("interviews.actions")}</th>
+                    <th className="px-4 py-4">{t("interviews.candidateName")}</th>
+                    <th className="px-4 py-4">{t("interviews.jobTitle")}</th>
+                    <th className="px-4 py-4">{t("interviews.dateTime")}</th>
+                    <th className="px-4 py-4">{t("interviews.mode")}</th>
+                    <th className="px-4 py-4">{t("interviews.interviewer")}</th>
+                    <th className="px-4 py-4">Status</th>
+                    <th className="px-4 py-4 text-right">{t("interviews.actions")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e5e5e5]">
+                <tbody className="divide-y divide-[#f0f0f0]">
                   {filteredInterviews.map((interview) => (
                     <tr
                       key={interview.id}
-                      className="cursor-pointer transition-colors hover:bg-[#f2f2f2]"
+                      className="cursor-pointer transition-colors hover:bg-[#fafafa]"
                       onClick={() => setSelectedApplication(toApplicationDetailCandidate(interview))}
                     >
-                      <td className="px-6 py-5">
-                        <div>
-                          <p className="font-semibold text-[#0a0a0a]">
-                            {interview.candidate_name || "Unknown Candidate"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-[#737373]">{interview.candidate_email || "No email"}</p>
-                        </div>
+                      <td className="px-4 py-4">
+                        <p className="font-semibold text-[#0a0a0a]">
+                          {interview.candidate_name || "Unknown Candidate"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[#737373]">{interview.candidate_email || "No email"}</p>
                       </td>
-                      <td className="px-6 py-5">
-                        <p className="font-semibold text-[#0a0a0a]">{interview.job_title || "Unknown Position"}</p>
-                        <p className="mt-0.5 text-sm text-[#737373]">{interview.company_name || "Unknown Company"}</p>
+                      <td className="px-4 py-4">
+                        <p className="max-w-[180px] truncate font-semibold text-[#0a0a0a]">{interview.job_title || "Unknown Position"}</p>
+                        <p className="mt-0.5 max-w-[160px] truncate text-xs text-[#737373]">{interview.company_name || "Unknown Company"}</p>
                       </td>
-                      <td className="px-6 py-5">
+                      <td className="px-4 py-4">
                         <p className="text-sm font-semibold text-[#0a0a0a]">
                           {formatInterviewDateTime(interview.interview_datetime)}
                         </p>
                       </td>
-                      <td className="px-6 py-5">{getModeBadge(interview.mode)}</td>
-                      <td className="px-6 py-5">
-                        <p className="text-sm font-semibold text-[#0a0a0a]">{interview.interviewer_name || "-"}</p>
+                      <td className="px-4 py-4">{getModeBadge(interview.mode)}</td>
+                      <td className="px-4 py-4">
+                        <p className="max-w-[140px] truncate text-sm font-semibold text-[#0a0a0a]">{interview.interviewer_name || "-"}</p>
                       </td>
-                      <td className="px-6 py-5 text-right">
+                      <td className="px-4 py-4">
+                        {getStatusBadge(interview.interview_datetime)}
+                      </td>
+                      <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
@@ -613,7 +675,7 @@ const InterviewList = () => {
                               event.stopPropagation();
                               openEditModal(interview);
                             }}
-                            className="rounded-[10px] border border-[#e5e5e5] p-2 text-[#0a0a0a] transition hover:bg-white"
+                            className="rounded-[10px] border border-[#e5e5e5] p-2 text-[#0a0a0a] transition hover:bg-[#f2f2f2]"
                             aria-label="Edit interview"
                           >
                             <FaPen size={13} />
@@ -624,7 +686,7 @@ const InterviewList = () => {
                               event.stopPropagation();
                               setSelectedApplication(toApplicationDetailCandidate(interview));
                             }}
-                            className="rounded-[10px] border border-[#e5e5e5] px-4 py-2 text-sm font-semibold text-[#0a0a0a] transition hover:bg-white"
+                            className="rounded-[10px] border border-[#e5e5e5] px-3 py-2 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#f2f2f2]"
                           >
                             {t("interviews.viewDetail")}
                           </button>
@@ -635,7 +697,7 @@ const InterviewList = () => {
 
                   {filteredInterviews.length === 0 && (
                     <tr>
-                      <td colSpan={6}>
+                      <td colSpan={7}>
                         <EmptyState
                           icon={FaPlus}
                           title={t("interviews.emptyTitle")}

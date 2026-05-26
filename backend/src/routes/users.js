@@ -338,6 +338,8 @@ router.patch("/me", requireAuth, async (req, res) => {
     jobType: camelJobType,
   } = req.body;
 
+  const normalizedAddress = address ?? location;
+
   try {
     const roleResult = await pool.query("SELECT role, login_name FROM users WHERE id = $1", [
       req.user.id,
@@ -350,7 +352,6 @@ router.patch("/me", requireAuth, async (req, res) => {
     const { role, login_name: loginName } = roleResult.rows[0];
 
     if (role === "recruiter") {
-      const normalizedAddress = address ?? location;
       const normalizedCompanyName = companyName ?? name;
 
       const recruiterUpdate = await pool.query(
@@ -420,7 +421,7 @@ router.patch("/me", requireAuth, async (req, res) => {
       [
         name,
         phone,
-        location,
+        normalizedAddress,
         dob,
         Array.isArray(skills) ? skills : null,
         experience,

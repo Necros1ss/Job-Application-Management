@@ -1,4 +1,4 @@
-CREATE TYPE user_role AS ENUM ('candidate', 'recruiter', 'admin');
+CREATE TYPE user_role AS ENUM ('candidate', 'recruiter', 'admin', 'hr_manager', 'interviewer');
 CREATE TYPE application_status AS ENUM ('applied', 'reviewed', 'scheduled_interview', 'accepted', 'rejected');
 CREATE TYPE job_post_status AS ENUM ('active', 'hidden', 'deleted');
 
@@ -136,7 +136,8 @@ CREATE TABLE saved_jobs (
     CONSTRAINT fk_savedjob_candidate
       FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
     CONSTRAINT fk_savedjob_job
-      FOREIGN KEY (job_post_id) REFERENCES job_posts(id) ON DELETE CASCADE
+      FOREIGN KEY (job_post_id) REFERENCES job_posts(id) ON DELETE CASCADE,
+    CONSTRAINT uq_candidate_job_saved UNIQUE (candidate_id, job_post_id)
 );
 
 CREATE TABLE messages (

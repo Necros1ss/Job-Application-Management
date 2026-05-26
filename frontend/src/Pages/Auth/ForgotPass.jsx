@@ -48,7 +48,7 @@ const ForgotPass = () => {
             we sent a password reset link. Please check your inbox and spam folder.
           </p>
           <p className="text-sm text-gray-400 mb-6">
-            Didn't receive the email?{" "}
+            Didn&apos;t receive the email?{" "}
             <button
               onClick={() => setSubmitted(false)}
               className="text-emerald-600 font-medium hover:underline"
@@ -88,7 +88,7 @@ const ForgotPass = () => {
 
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Forgot Password?</h2>
           <p className="text-gray-500 mb-6 leading-relaxed">
-            No worries, we'll send you reset instructions. Enter your email address and we'll send you a link to reset your password.
+            No worries, we&apos;ll send you reset instructions. Enter your email address and we&apos;ll send you a link to reset your password.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">

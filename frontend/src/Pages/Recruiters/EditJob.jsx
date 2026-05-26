@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import PropTypes from "prop-types";
 import { FaTimes } from "react-icons/fa";
 import { jobPostsApi } from "../../lib/api";
 import { showError, showSuccess } from "../../utils/toast";
@@ -193,3 +194,21 @@ const EditJob = ({ isOpen, job, onClose, onSuccess }) => {
 };
 
 export default EditJob;
+
+EditJob.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  job: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    title: PropTypes.string,
+    location: PropTypes.string,
+    salary: PropTypes.string,
+    employment_type: PropTypes.string,
+    experience: PropTypes.string,
+    formattedDeadline: PropTypes.string,
+    description: PropTypes.string,
+    responsibilities: PropTypes.string,
+    requirements: PropTypes.string,
+  }),
+  onClose: PropTypes.func.isRequired,
+  onSuccess: PropTypes.func,
+};

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { ArcElement, Chart as ChartJS, Legend, Tooltip } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 import {
@@ -56,6 +57,12 @@ const EmptyState = ({ icon: Icon, title, description }) => (
     <p className="text-sm text-[#737373]">{description}</p>
   </div>
 );
+
+EmptyState.propTypes = {
+  icon: PropTypes.elementType.isRequired,
+  title: PropTypes.string.isRequired,
+  description: PropTypes.string.isRequired,
+};
 
 const EmployeePortal = () => {
   const { t } = useI18n();

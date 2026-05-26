@@ -527,10 +527,21 @@ router.get("/interviewer", requireAuth, async (req, res) => {
        INNER JOIN candidates c ON c.id = a.candidate_id
        INNER JOIN job_posts jp ON jp.id = a.job_post_id
        INNER JOIN recruiters r ON r.id = jp.recruiter_id
+       LEFT JOIN interviewers current_interviewer ON current_interviewer.id = $1
        LEFT JOIN interview_evaluations ev ON ev.interview_id = i.id AND ev.interviewer_id = (
          SELECT id FROM interviewers WHERE id = $1
        )
-       WHERE i.interviewer_id = $1
+       WHERE (
+           i.interviewer_id = $1
+           OR (
+             i.interviewer_id IS NULL
+             AND current_interviewer.id IS NOT NULL
+             AND (
+               LOWER(i.interviewer_name) = LOWER(current_interviewer.name)
+               OR LOWER(i.interviewer_name) = LOWER(current_interviewer.email)
+             )
+           )
+         )
          AND ($2::boolean = false OR i.interview_datetime >= NOW())
        ORDER BY i.interview_datetime ASC`,
       [req.user.id, upcomingOnly]

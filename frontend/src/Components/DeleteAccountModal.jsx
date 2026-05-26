@@ -1,5 +1,5 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
+import PropTypes from "prop-types";
 import { accountApi, authApi, tokenStorage } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import { showError, showSuccess } from "../utils/toast";
@@ -53,3 +53,7 @@ const DeleteAccountModal = ({ setDeleteAccountModal }) => {
 };
 
 export default DeleteAccountModal;
+
+DeleteAccountModal.propTypes = {
+  setDeleteAccountModal: PropTypes.func.isRequired,
+};

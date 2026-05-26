@@ -173,7 +173,13 @@ export const useFormValidation = (initialValues, validationRules = {}) => {
     [initialValues, validationRules]
   );
 
-  const isValid = useMemo(() => Object.keys(validateValues(values, validationRules)).length === 0, [values, validationRules]);
+  const isValid = useMemo(() => {
+    return Object.entries(validationRules).every(([field, validators]) => {
+      if (!touched[field]) return true;
+      const error = runValidators(values[field], validators, values);
+      return !error;
+    });
+  }, [values, touched, validationRules]);
 
   return {
     values,

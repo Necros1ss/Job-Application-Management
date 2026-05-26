@@ -176,6 +176,14 @@ const Application = () => {
   }, [displayApplications]);
 
   const updateApplicationStatus = async (applicationId, status) => {
+    if (status === "scheduled_interview" || status === "accepted" || status === "rejected") {
+      const app = displayApplications.find((item) => item.id === applicationId);
+      if (app) {
+        setSelectedApplication(app);
+      }
+      return;
+    }
+
     try {
       setUpdatingApplicationId(applicationId);
       const updated = await applicationsApi.updateStatus(applicationId, status);

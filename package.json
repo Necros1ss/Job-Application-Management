@@ -1,7 +1,8 @@
 {
-  "name": "job-application-tracker-workspace",
+  "name": "hr-management-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Full-cycle HR Management and Job Application Tracker - React, Vite, Express.js, PostgreSQL",
   "type": "module",
   "scripts": {
     "dev": "concurrently -n BACKEND,FRONTEND -c cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
@@ -15,7 +16,9 @@
     "db:up": "docker compose -f docker-compose.yml up -d db",
     "db:down": "docker compose -f docker-compose.yml down",
     "db:reset": "docker compose -f docker-compose.yml down -v && docker compose -f docker-compose.yml up -d db",
-    "db:logs": "docker compose -f docker-compose.yml logs -f db"
+    "db:logs": "docker compose -f docker-compose.yml logs -f db",
+    "lint:frontend": "cd frontend && npx eslint src --ext .js,.jsx",
+    "smoke:backend": "node -e \"const http=require('http');http.get('http://localhost:5000/api/health',(r)=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{console.log('Status:',r.statusCode);console.log('Body:',d);process.exit(r.statusCode===200?0:1)})}).on('error',e=>{console.error('Backend not reachable:',e.message);process.exit(1)})\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

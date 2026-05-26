@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FaBuilding, FaMapMarkerAlt, FaGlobe, FaBriefcase, FaRegEnvelope, FaPhoneAlt } from "react-icons/fa";
 import TopBar from "../../Components/TopBar";
 import { jobPostsApi, usersApi } from "../../lib/api";
@@ -10,7 +10,6 @@ const defaultCompanyLogo = "https://api.dicebear.com/8.x/initials/svg?seed=Compa
 const Company = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const location = useLocation();
 
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");

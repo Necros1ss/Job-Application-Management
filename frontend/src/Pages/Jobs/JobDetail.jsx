@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import TopBar from "../../Components/TopBar";
 import { FaMapMarker, FaBuilding, FaArrowUp } from "react-icons/fa";
-import { 
-  FaCheckCircle, FaRegBookmark, FaBookmark, FaRegCalendarAlt, 
+import {
+  FaRegBookmark, FaBookmark, FaRegCalendarAlt,
   FaRegMoneyBillAlt, FaBriefcase, FaLink, FaTwitter, FaLinkedinIn,
   FaHome, FaHeartbeat, FaMoneyBillWave, FaDumbbell
 } from "react-icons/fa";
 
-import { applyFromJob, usersApi, jobPostsApi, savedJobsApi, applicationsApi, tokenStorage } from "../../lib/api";
+import { usersApi, jobPostsApi, savedJobsApi, applicationsApi, tokenStorage } from "../../lib/api";
 import FormApply from "./FormApply";
 import { formatMessageTime } from '../../utils/format';
 import { showError, showSuccess } from "../../utils/toast";
@@ -26,14 +26,11 @@ const JobDetail = () => {
   const [savingJobIds, setSavingJobIds] = useState(new Set());
   const [savedJobIds, setSavedJobIds] = useState(new Set());
   const [savedJobIdMap, setSavedJobIdMap] = useState(new Map());
-  const [isLoading, setIsLoading] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [recruiterStatus, setRecruiterStatus] = useState("open");
 
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [cvFile, setCvFile] = useState(null);
-  const [coverLetter, setCoverLetter] = useState("");
 
   const currentIndustry = (jobDetail?.industry || "").trim().toLowerCase();
   const similarJobs = jobs
@@ -356,11 +353,11 @@ const JobDetail = () => {
                   {isSaved ? "Saved" : "Save Job"}
                 </button>
                 <button 
-                  disabled={isClosed || isLoading || isApplied}
+                  disabled={isClosed || isApplied}
                   onClick={() => setShowApplyModal(true)}
                   className={applyButtonClass}
                 >
-                  {isLoading ? "Processing..." : buttonText}
+                  {buttonText}
                 </button>
               </>
             )}

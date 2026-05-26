@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import mammoth from "mammoth";
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PDFParse } from "pdf-parse";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,37 +14,24 @@ const recommendationValues = ["strong_yes", "yes", "maybe", "no"];
 
 const screeningSchema = {
   type: "object",
-  additionalProperties: false,
   properties: {
-    score: {
-      type: "integer",
-      minimum: 0,
-      maximum: 100,
-      description: "Overall fit score from 0 to 100.",
-    },
+    score: { type: "integer" },
     strengths: {
       type: "array",
-      minItems: 2,
-      maxItems: 6,
       items: { type: "string" },
     },
     weaknesses: {
       type: "array",
-      minItems: 1,
-      maxItems: 6,
       items: { type: "string" },
     },
     recommendation: {
       type: "string",
       enum: recommendationValues,
     },
-    summary: {
-      type: "string",
-      minLength: 40,
-      maxLength: 1200,
-    },
+    summary: { type: "string" },
   },
   required: ["score", "strengths", "weaknesses", "recommendation", "summary"],
+  propertyOrdering: ["score", "recommendation", "summary", "strengths", "weaknesses"],
 };
 
 const createHttpError = (status, message, detail) => {
@@ -56,16 +43,16 @@ const createHttpError = (status, message, detail) => {
   return error;
 };
 
-const getOpenAiClient = () => {
-  if (!process.env.OPENAI_API_KEY) {
+const getGeminiClient = () => {
+  if (!process.env.GEMINI_API_KEY) {
     throw createHttpError(
       503,
       "AI screening is not configured",
-      "Set OPENAI_API_KEY in backend/.env and restart the backend."
+      "Set GEMINI_API_KEY in backend/.env and restart the backend."
     );
   }
 
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 };
 
 const resolveCvPath = (fileName) => {
@@ -96,13 +83,9 @@ const extractCvText = async ({ fileName, mimeType }) => {
   const extension = path.extname(fileName).toLowerCase();
 
   if (extension === ".pdf" || mimeType === "application/pdf") {
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const parsed = await parser.getText();
-      return normalizeText(parsed.text).slice(0, MAX_CV_TEXT_CHARS);
-    } finally {
-      await parser.destroy();
-    }
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    const parsed = await parser.getText();
+    return normalizeText(parsed.text).slice(0, MAX_CV_TEXT_CHARS);
   }
 
   if (
@@ -151,7 +134,7 @@ ${cvText}
 };
 
 const parseScreeningResult = (response) => {
-  const outputText = response.output_text;
+  const outputText = response.choices?.[0]?.message?.content;
 
   if (!outputText) {
     throw createHttpError(502, "AI provider returned an empty response");
@@ -196,34 +179,27 @@ export const analyzeApplication = async (application) => {
     throw createHttpError(422, "Could not extract readable text from this CV");
   }
 
-  const client = getOpenAiClient();
-  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-  const response = await client.responses.create({
-    model,
-    temperature: 0,
-    input: [
-      {
-        role: "system",
-        content:
-          "You are a senior recruiter assistant. Return only structured JSON that follows the provided schema. Do not include protected-class assumptions.",
-      },
-      {
-        role: "user",
-        content: buildPrompt({ application, cvText }),
-      },
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "cv_screening_result",
-        schema: screeningSchema,
-        strict: true,
-      },
+  const genAI = getGeminiClient();
+  const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: {
+      temperature: 0,
+      responseMimeType: "application/json",
+      responseSchema: screeningSchema,
     },
   });
 
+  const result = await model.generateContent(buildPrompt({ application, cvText }));
+  const response = await result.response;
+  const outputText = response.text();
+
+  if (!outputText) {
+    throw createHttpError(502, "AI provider returned an empty response");
+  }
+
   return {
-    ...parseScreeningResult(response),
-    model,
+    ...parseScreeningResult({ choices: [{ message: { content: outputText } }] }),
+    model: modelName,
   };
 };

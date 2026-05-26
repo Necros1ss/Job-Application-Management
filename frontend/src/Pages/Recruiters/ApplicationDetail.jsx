@@ -70,6 +70,14 @@ const buildMeetLink = () => {
   return `https://meet.google.com/lookup/${token}`;
 };
 
+const getPreviewBlob = (fileBlob, fileName) => {
+  if (/\.pdf$/i.test(fileName || '') || fileBlob.type === 'application/pdf') {
+    return new Blob([fileBlob], { type: "application/pdf" });
+  }
+
+  return fileBlob;
+};
+
 const ApplicationDetail = ({ onBack, candidate }) => {
   const [detail, setDetail] = useState(null);
   const [, setLoading] = useState(true);
@@ -95,12 +103,15 @@ const ApplicationDetail = ({ onBack, candidate }) => {
   const [aiError, setAiError] = useState('');
   const [scheduleForm, setScheduleForm] = useState({
     interviewDateTime: '',
+    interviewerId: '',
     interviewerName: '',
     mode: 'online',
     meetLink: '',
     location: '',
     notes: '',
   });
+  const [interviewers, setInterviewers] = useState([]);
+  const [isLoadingInterviewers, setIsLoadingInterviewers] = useState(false);
   const [rejectForm, setRejectForm] = useState({
     reason: REJECTION_REASONS[0],
     emailBody: DEFAULT_REJECTION_TEMPLATES[REJECTION_REASONS[0]],
@@ -177,6 +188,35 @@ const ApplicationDetail = ({ onBack, candidate }) => {
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
+
+  useEffect(() => {
+    if (!showScheduleModal) return;
+
+    let isMounted = true;
+    const loadInterviewers = async () => {
+      try {
+        setIsLoadingInterviewers(true);
+        const rows = await interviewsApi.listInterviewers();
+        if (isMounted) {
+          setInterviewers(Array.isArray(rows) ? rows : []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setInterviewers([]);
+          showError(err.message || "Failed to load interviewers");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingInterviewers(false);
+        }
+      }
+    };
+
+    loadInterviewers();
+    return () => {
+      isMounted = false;
+    };
+  }, [showScheduleModal]);
 
   useEffect(() => {
     if (showRejectModal && rejectForm.reason) {
@@ -339,7 +379,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
       setPreviewLoading(true);
       setPreviewError('');
       const fileBlob = await applicationsApi.getRecruiterCvFile(source.id);
-      const nextPreviewUrl = URL.createObjectURL(fileBlob);
+      const nextPreviewUrl = URL.createObjectURL(getPreviewBlob(fileBlob, cvFileName));
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(nextPreviewUrl);
     } catch (loadError) {
@@ -430,15 +470,23 @@ const ApplicationDetail = ({ onBack, candidate }) => {
     event.preventDefault();
     if (!source?.id) return;
 
+    if (!scheduleForm.interviewerId && !scheduleForm.interviewerName.trim()) {
+      showError("Please select an interviewer account or enter a manual interviewer name.");
+      return;
+    }
+
     const meetLink = scheduleForm.mode === 'online'
       ? (scheduleForm.meetLink || buildMeetLink())
       : scheduleForm.meetLink;
 
+    const selectedInterviewer = interviewers.find((item) => String(item.id) === String(scheduleForm.interviewerId));
+
     await applyOptimisticStatus(
       () => interviewsApi.create({
         applicationId: source.id,
+        interviewerId: scheduleForm.interviewerId ? Number(scheduleForm.interviewerId) : undefined,
+        interviewerName: selectedInterviewer?.name || scheduleForm.interviewerName.trim(),
         interviewDateTime: scheduleForm.interviewDateTime,
-        interviewerName: scheduleForm.interviewerName,
         mode: scheduleForm.mode,
         meetLink,
         location: scheduleForm.location,
@@ -452,6 +500,7 @@ const ApplicationDetail = ({ onBack, candidate }) => {
     await refreshWorkflow();
     setScheduleForm({
       interviewDateTime: '',
+      interviewerId: '',
       interviewerName: '',
       mode: 'online',
       meetLink: '',
@@ -894,14 +943,36 @@ const ApplicationDetail = ({ onBack, candidate }) => {
                 </label>
                 <label className="block">
                   <span className="text-sm font-semibold text-gray-700">Interviewer</span>
-                  <input
-                    type="text"
-                    required
-                    value={scheduleForm.interviewerName}
-                    onChange={(e) => setScheduleForm((prev) => ({ ...prev, interviewerName: e.target.value }))}
+                  <select
+                    value={scheduleForm.interviewerId}
+                    disabled={isLoadingInterviewers}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      const selected = interviewers.find((item) => String(item.id) === String(nextId));
+                      setScheduleForm((prev) => ({
+                        ...prev,
+                        interviewerId: nextId,
+                        interviewerName: selected?.name || "",
+                      }));
+                    }}
                     className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
-                    placeholder="HR / Hiring Manager name"
-                  />
+                  >
+                    <option value="">Manual interviewer name</option>
+                    {interviewers.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({item.email})
+                      </option>
+                    ))}
+                  </select>
+                  {!scheduleForm.interviewerId && (
+                    <input
+                      type="text"
+                      value={scheduleForm.interviewerName}
+                      onChange={(e) => setScheduleForm((prev) => ({ ...prev, interviewerName: e.target.value }))}
+                      className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
+                      placeholder="HR / Hiring Manager name"
+                    />
+                  )}
                 </label>
               </div>
 

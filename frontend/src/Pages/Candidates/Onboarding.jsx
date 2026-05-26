@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaCheckCircle, FaClipboardList } from "react-icons/fa";
-import { onboardingApi, usersApi } from "../../lib/api";
+import { onboardingApi } from "../../lib/api";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
 import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
@@ -18,8 +18,6 @@ const statusStyles = {
 };
 
 const CandidateOnboarding = () => {
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,12 +27,7 @@ const CandidateOnboarding = () => {
       try {
         setIsLoading(true);
         setError("");
-        const [profile, taskData] = await Promise.all([
-          usersApi.me(),
-          onboardingApi.listForCandidate(),
-        ]);
-        setUserName(profile.name || "");
-        setUserEmail(profile.email || "");
+        const taskData = await onboardingApi.listForCandidate();
         setTasks(Array.isArray(taskData) ? taskData : []);
       } catch (err) {
         const message = err.message || "Failed to load onboarding tasks";

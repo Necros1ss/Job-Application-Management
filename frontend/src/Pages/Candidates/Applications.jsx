@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaPlus, FaList, FaThLarge, FaTrashAlt, FaCheck, FaTimes } from "react-icons/fa";
 import { FaSearch } from "react-icons/fa";
 import { useI18n } from "../../lib/i18n";
-import { applicationsApi, savedJobsApi, usersApi } from "../../lib/api";
+import { applicationsApi, savedJobsApi } from "../../lib/api";
 import { SkeletonCard, SkeletonRow } from "../../Components/Skeleton";
 import { showError, showSuccess } from "../../utils/toast";
 import { formatDate } from "../../utils/format";
@@ -27,8 +27,6 @@ const Applications = ({ initialTab = "all" }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [savedJobs, setSavedJobs] = useState([]);
   const [savedJobsLoading, setSavedJobsLoading] = useState(false);
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [selectedOfferJob, setSelectedOfferJob] = useState(null);
   const [declineReason, setDeclineReason] = useState("");
@@ -37,13 +35,8 @@ const Applications = ({ initialTab = "all" }) => {
   const loadJobs = async () => {
     try {
       setIsLoading(true);
-      const [profile, applications] = await Promise.all([
-        usersApi.me(),
-        applicationsApi.list(),
-      ]);
+      const applications = await applicationsApi.list();
       setJobs(applications);
-      setUserName(profile.name || "");
-      setUserEmail(profile.email || "");
       setErrorMessage("");
     } catch (error) {
       const message = error.message || "Failed to load applications";

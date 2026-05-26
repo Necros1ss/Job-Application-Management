@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { USER_ROLES } from "../constants/roles.js";
 
 const paginationQuery = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
   search: z.string().trim().optional().default(""),
-  role: z.enum(["candidate", "recruiter", "admin"]).optional(),
+  role: z.enum(Object.values(USER_ROLES)).optional(),
   status: z.enum(["active", "hidden", "deleted"]).optional(),
   locked: z
     .union([z.literal("true"), z.literal("false")])

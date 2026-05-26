@@ -18,6 +18,8 @@ const createInterviewBodySchema = z
   .object({
     applicationId: z.coerce.number().int().positive().optional(),
     application_id: z.coerce.number().int().positive().optional(),
+    interviewerId: z.coerce.number().int().positive().optional(),
+    interviewer_id: z.coerce.number().int().positive().optional(),
     interviewerName: z.string().trim().min(2).max(255).optional(),
     interviewer_name: z.string().trim().min(2).max(255).optional(),
     interviewDateTime: z.union([futureDateTime, localDateTime]).optional(),
@@ -32,9 +34,9 @@ const createInterviewBodySchema = z
     path: ["applicationId"],
     message: "applicationId is required",
   })
-  .refine((body) => body.interviewerName || body.interviewer_name, {
-    path: ["interviewer_name"],
-    message: "interviewer_name is required",
+  .refine((body) => body.interviewerName || body.interviewer_name || body.interviewerId || body.interviewer_id, {
+    path: ["interviewerId"],
+    message: "interviewerId or interviewerName is required",
   })
   .refine((body) => body.interviewDateTime || body.interview_datetime, {
     path: ["interview_datetime"],

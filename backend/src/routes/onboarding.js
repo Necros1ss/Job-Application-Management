@@ -23,6 +23,34 @@ const mapTaskRow = (row) => ({
   companyName: row.company_name,
 });
 
+const selectTaskById = async (client, taskId) => {
+  const result = await client.query(
+    `SELECT ot.id,
+            ot.application_id,
+            ot.recruiter_id,
+            ot.title,
+            ot.description,
+            ot.due_date,
+            ot.status,
+            ot.completed_at,
+            ot.created_at,
+            ot.updated_at,
+            c.name AS candidate_name,
+            c.email AS candidate_email,
+            jp.title AS job_title,
+            r.company_name
+     FROM onboarding_tasks ot
+     INNER JOIN applications a ON a.id = ot.application_id
+     INNER JOIN candidates c ON c.id = a.candidate_id
+     INNER JOIN job_posts jp ON jp.id = a.job_post_id
+     INNER JOIN recruiters r ON r.id = ot.recruiter_id
+     WHERE ot.id = $1
+     LIMIT 1`,
+    [taskId]
+  );
+  return result.rows[0] || null;
+};
+
 const createApplicationEvent = async (
   client,
   { applicationId, actorUserId, eventType, title, description = "", metadata = {} }
@@ -213,7 +241,7 @@ router.post("/tasks", requireAuth, async (req, res) => {
          description,
          due_date
        ) VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, application_id, recruiter_id, title, description, due_date, status, completed_at, created_at, updated_at`,
+       RETURNING id`,
       [applicationId, req.user.id, title, description, dueDate]
     );
 
@@ -226,9 +254,11 @@ router.post("/tasks", requireAuth, async (req, res) => {
       metadata: { taskId: result.rows[0].id, dueDate },
     });
 
+    const fullTask = await selectTaskById(client, result.rows[0].id);
+
     await client.query("COMMIT");
 
-    return res.status(201).json(mapTaskRow(result.rows[0]));
+    return res.status(201).json(mapTaskRow(fullTask));
   } catch (error) {
     await client.query("ROLLBACK");
     return res.status(500).json({ message: "Failed to create onboarding task", detail: error.message });
@@ -271,7 +301,7 @@ router.patch("/tasks/:id/status", requireAuth, async (req, res) => {
            ($3 = 'recruiter' AND jp.recruiter_id = $4)
            OR ($3 = 'candidate' AND a.candidate_id = $4 AND a.status = 'accepted')
          )
-       RETURNING ot.id, ot.application_id, ot.recruiter_id, ot.title, ot.description, ot.due_date, ot.status, ot.completed_at, ot.created_at, ot.updated_at`,
+       RETURNING ot.id, ot.application_id, ot.title`,
       [status, taskId, req.user.role, req.user.id]
     );
 
@@ -289,9 +319,11 @@ router.patch("/tasks/:id/status", requireAuth, async (req, res) => {
       metadata: { taskId, status },
     });
 
+    const fullTask = await selectTaskById(client, taskId);
+
     await client.query("COMMIT");
 
-    return res.json(mapTaskRow(result.rows[0]));
+    return res.json(mapTaskRow(fullTask));
   } catch (error) {
     await client.query("ROLLBACK");
     return res.status(500).json({ message: "Failed to update onboarding task", detail: error.message });

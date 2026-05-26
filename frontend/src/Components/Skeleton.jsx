@@ -1,6 +1,11 @@
+import PropTypes from "prop-types";
+
 const SkeletonLine = ({ className = "" }) => (
   <div className={`rounded-full bg-[#e5e5e5] ${className}`} />
 );
+SkeletonLine.propTypes = {
+  className: PropTypes.string,
+};
 
 export const SkeletonCard = () => (
   <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-5 shadow-[0_0_0_1px_rgba(10,10,10,0.08)] animate-pulse">
@@ -52,3 +57,7 @@ export const SkeletonDashboardCard = ({ dark = false }) => (
     <SkeletonLine className={`w-20 h-12 ${dark ? "bg-white/25" : "bg-[#e5e5e5]"}`} />
   </div>
 );
+
+SkeletonDashboardCard.propTypes = {
+  dark: PropTypes.bool,
+};

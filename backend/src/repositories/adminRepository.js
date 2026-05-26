@@ -6,7 +6,7 @@ const buildUserFilters = ({ search, role, locked, deleted }) => {
   let index = 1;
 
   if (search) {
-    where.push(`(u.login_name ILIKE $${index} OR COALESCE(c.name, '') ILIKE $${index} OR COALESCE(r.company_name, '') ILIKE $${index})`);
+    where.push(`(u.login_name ILIKE $${index} OR COALESCE(c.name, '') ILIKE $${index} OR COALESCE(r.company_name, '') ILIKE $${index} OR COALESCE(hm.name, '') ILIKE $${index} OR COALESCE(i.name, '') ILIKE $${index})`);
     params.push(`%${search}%`);
     index += 1;
   }
@@ -55,10 +55,16 @@ export const listUsers = async ({ page, limit, search, role, locked, deleted }) 
       c.name AS candidate_name,
       c.email AS candidate_email,
       r.company_name AS recruiter_name,
-      r.email AS recruiter_email
+      r.email AS recruiter_email,
+      hm.name AS hr_manager_name,
+      hm.email AS hr_manager_email,
+      i.name AS interviewer_name,
+      i.email AS interviewer_email
     FROM users u
     LEFT JOIN candidates c ON c.id = u.id
     LEFT JOIN recruiters r ON r.id = u.id
+    LEFT JOIN hr_managers hm ON hm.id = u.id
+    LEFT JOIN interviewers i ON i.id = u.id
     ${finalWhere}
     ORDER BY u.created_at DESC, u.id DESC
     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -70,6 +76,8 @@ export const listUsers = async ({ page, limit, search, role, locked, deleted }) 
      FROM users u
      LEFT JOIN candidates c ON c.id = u.id
      LEFT JOIN recruiters r ON r.id = u.id
+     LEFT JOIN hr_managers hm ON hm.id = u.id
+     LEFT JOIN interviewers i ON i.id = u.id
      ${finalWhere}`,
     params
   );
@@ -194,6 +202,8 @@ export const getStats = async () => {
        COUNT(*) FILTER (WHERE role = 'candidate')::int AS candidates,
        COUNT(*) FILTER (WHERE role = 'recruiter')::int AS recruiters,
        COUNT(*) FILTER (WHERE role = 'admin')::int AS admins,
+       COUNT(*) FILTER (WHERE role = 'hr_manager')::int AS hr_managers,
+       COUNT(*) FILTER (WHERE role = 'interviewer')::int AS interviewers,
        COUNT(*) FILTER (WHERE is_locked = true)::int AS locked_users,
        COUNT(*) FILTER (WHERE is_deleted = true)::int AS deleted_users
      FROM users`

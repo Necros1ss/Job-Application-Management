@@ -1,3 +1,5 @@
+import PropTypes from "prop-types";
+
 const Toast = ({ type = "info", message }) => {
   if (!message) {
     return null;
@@ -17,3 +19,8 @@ const Toast = ({ type = "info", message }) => {
 };
 
 export default Toast;
+
+Toast.propTypes = {
+  type: PropTypes.string,
+  message: PropTypes.string.isRequired,
+};
