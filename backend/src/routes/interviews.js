@@ -4,6 +4,7 @@ import { requireAuth } from "../middlewares/auth.js";
 import { validate } from "../middlewares/validate.js";
 import { broadcast } from "../utils/notificationBroadcast.js";
 import { createInterviewSchema } from "../validators/interviewValidators.js";
+import { routeErrorResponse } from "../utils/apiResponse.js";
 
 const router = express.Router();
 
@@ -41,13 +42,14 @@ const normalizeInterviewPayload = (body = {}) => {
     typeof (body.interviewerName ?? body.interviewer_name) === "string"
       ? (body.interviewerName ?? body.interviewer_name).trim()
       : "";
+  const interviewerId = Number(body.interviewerId ?? body.interviewer_id) || null;
   const mode = typeof body.mode === "string" ? body.mode.trim().toLowerCase() : "online";
   const meetLink =
     typeof (body.meetLink ?? body.meet_link) === "string" ? (body.meetLink ?? body.meet_link).trim() : "";
   const location = typeof body.location === "string" ? body.location.trim() : "";
   const notes = typeof body.notes === "string" ? body.notes.trim() : "";
 
-  return { applicationId, interviewDateTime, interviewerName, mode, meetLink, location, notes };
+  return { applicationId, interviewDateTime, interviewerName, interviewerId, mode, meetLink, location, notes };
 };
 
 const selectInterviewById = async (client, interviewId, recruiterId) =>
@@ -56,6 +58,7 @@ const selectInterviewById = async (client, interviewId, recruiterId) =>
             i.application_id,
             i.recruiter_id,
             i.interviewer_name,
+            i.interviewer_id,
             i.interview_datetime,
             i.mode,
             i.meet_link,
@@ -95,6 +98,7 @@ router.get("/recruiter", requireAuth, async (req, res) => {
               i.location,
               i.notes,
               i.interviewer_name,
+              i.interviewer_id,
               c.id AS candidate_id,
               c.name AS candidate_name,
               c.email AS candidate_email,
@@ -115,7 +119,7 @@ router.get("/recruiter", requireAuth, async (req, res) => {
 
     return res.json(result.rows);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to load recruiter interviews", detail: error.message });
+    return res.status(500).json(routeErrorResponse("Failed to load recruiter interviews", error));
   }
 });
 
@@ -149,7 +153,7 @@ router.get("/candidate", requireAuth, async (req, res) => {
 
     return res.json(result.rows);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to load interviews", detail: error.message });
+    return res.status(500).json(routeErrorResponse("Failed to load interviews", error));
   }
 });
 
@@ -162,6 +166,7 @@ router.post("/", requireAuth, validate(createInterviewSchema), async (req, res) 
     applicationId,
     interviewDateTime,
     interviewerName,
+    interviewerId,
     mode,
     meetLink,
     location,
@@ -172,8 +177,8 @@ router.post("/", requireAuth, validate(createInterviewSchema), async (req, res) 
     return res.status(400).json({ message: "Invalid application id" });
   }
 
-  if (!interviewDateTime || !interviewerName) {
-    return res.status(400).json({ message: "interviewDateTime and interviewerName are required" });
+  if (!interviewDateTime || (!interviewerName && !interviewerId)) {
+    return res.status(400).json({ message: "interviewDateTime and interviewerId or interviewerName are required" });
   }
 
   if (!["online", "offline"].includes(mode)) {
@@ -205,22 +210,40 @@ router.post("/", requireAuth, validate(createInterviewSchema), async (req, res) 
 
     const application = applicationResult.rows[0];
 
+    // Validate interviewer exists if interviewerId is provided
+    let selectedInterviewerName = interviewerName;
+    if (interviewerId) {
+      const interviewerResult = await client.query(
+        "SELECT id, name, email FROM interviewers WHERE id = $1 LIMIT 1",
+        [interviewerId]
+      );
+
+      if (interviewerResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Selected interviewer does not exist" });
+      }
+
+      selectedInterviewerName = interviewerResult.rows[0].name || interviewerName;
+    }
+
     const interviewResult = await client.query(
       `INSERT INTO interviews (
          application_id,
          recruiter_id,
          interviewer_name,
+         interviewer_id,
          interview_datetime,
          mode,
          meet_link,
          location,
          notes
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, application_id, recruiter_id, interviewer_name, interview_datetime, mode, meet_link, location, notes, created_at`,
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, application_id, recruiter_id, interviewer_name, interviewer_id, interview_datetime, mode, meet_link, location, notes, created_at`,
       [
         applicationId,
         req.user.id,
-        interviewerName,
+        selectedInterviewerName,
+        interviewerId,
         interviewDateTime,
         mode,
         meetLink,
@@ -289,7 +312,7 @@ router.post("/", requireAuth, validate(createInterviewSchema), async (req, res) 
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    return res.status(500).json({ message: "Failed to schedule interview", detail: error.message });
+    return res.status(500).json(routeErrorResponse("Failed to schedule interview", error));
   } finally {
     client.release();
   }
@@ -305,10 +328,10 @@ router.put("/:id", requireAuth, async (req, res) => {
     return res.status(400).json({ message: "Invalid interview id" });
   }
 
-  const { interviewDateTime, interviewerName, mode, meetLink, location, notes } = normalizeInterviewPayload(req.body);
+  const { interviewDateTime, interviewerName, interviewerId, mode, meetLink, location, notes } = normalizeInterviewPayload(req.body);
 
-  if (!interviewDateTime || !interviewerName) {
-    return res.status(400).json({ message: "interviewDateTime and interviewerName are required" });
+  if (!interviewDateTime || (!interviewerName && !interviewerId)) {
+    return res.status(400).json({ message: "interviewDateTime and interviewerId or interviewerName are required" });
   }
 
   if (!["online", "offline"].includes(mode)) {
@@ -326,16 +349,33 @@ router.put("/:id", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "Interview not found or you don't have permission to update it" });
     }
 
+    // Validate interviewer exists if interviewerId is provided
+    let selectedInterviewerName = interviewerName;
+    if (interviewerId) {
+      const interviewerResult = await client.query(
+        "SELECT id, name, email FROM interviewers WHERE id = $1 LIMIT 1",
+        [interviewerId]
+      );
+
+      if (interviewerResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Selected interviewer does not exist" });
+      }
+
+      selectedInterviewerName = interviewerResult.rows[0].name || interviewerName;
+    }
+
     await client.query(
       `UPDATE interviews
        SET interviewer_name = $1,
-           interview_datetime = $2,
-           mode = $3,
-           meet_link = $4,
-           location = $5,
-           notes = $6
-       WHERE id = $7 AND recruiter_id = $8`,
-      [interviewerName, interviewDateTime, mode, meetLink, location, notes, interviewId, req.user.id]
+           interviewer_id = $2,
+           interview_datetime = $3,
+           mode = $4,
+           meet_link = $5,
+           location = $6,
+           notes = $7
+       WHERE id = $8 AND recruiter_id = $9`,
+      [selectedInterviewerName, interviewerId, interviewDateTime, mode, meetLink, location, notes, interviewId, req.user.id]
     );
 
     await createApplicationEvent(client, {
@@ -357,7 +397,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     return res.json(updatedResult.rows[0]);
   } catch (error) {
     await client.query("ROLLBACK");
-    return res.status(500).json({ message: "Failed to update interview", detail: error.message });
+    return res.status(500).json(routeErrorResponse("Failed to update interview", error));
   } finally {
     client.release();
   }
@@ -421,10 +461,238 @@ router.delete("/:id", requireAuth, async (req, res) => {
     await client.query("COMMIT");
     return res.json({ id: interviewId, deleted: true });
   } catch (error) {
-    await client.query("ROLLBACK");
-    return res.status(500).json({ message: "Failed to delete interview", detail: error.message });
+    return res.status(500).json(routeErrorResponse("Failed to delete interview", error));
   } finally {
     client.release();
+  }
+});
+
+// GET /api/interviews/interviewers - list all interviewer accounts (for recruiter to assign)
+router.get("/interviewers", requireAuth, async (req, res) => {
+  if (req.user.role !== "recruiter") {
+    return res.status(403).json({ message: "Only recruiter accounts can view interviewers" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT iv.id, iv.name, iv.email, iv.specialization, iv.phone, u.login_name
+       FROM interviewers iv
+       INNER JOIN users u ON u.id = iv.id
+       ORDER BY iv.name ASC`
+    );
+
+    return res.json(result.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      specialization: row.specialization,
+      phone: row.phone,
+      loginName: row.login_name,
+    })));
+  } catch (error) {
+    return res.status(500).json(routeErrorResponse("Failed to load interviewers", error));
+  }
+});
+
+// GET /api/interviews/interviewer - interviews assigned to this interviewer
+router.get("/interviewer", requireAuth, async (req, res) => {
+  if (req.user.role !== "interviewer") {
+    return res.status(403).json({ message: "Only interviewer accounts can view their interviews" });
+  }
+
+  const upcomingOnly = String(req.query.upcoming || "").toLowerCase() === "true";
+
+  try {
+    const result = await pool.query(
+      `SELECT i.id,
+              i.application_id,
+              i.interview_datetime,
+              i.mode,
+              i.meet_link,
+              i.location,
+              i.notes,
+              i.interviewer_name,
+              i.interviewer_id,
+              c.id AS candidate_id,
+              c.name AS candidate_name,
+              c.email AS candidate_email,
+              c.phone AS candidate_phone,
+              jp.id AS job_post_id,
+              jp.title AS job_title,
+              r.company_name,
+              COALESCE(ev.rating, 0)::int AS evaluation_rating,
+              ev.recommendation AS evaluation_recommendation
+       FROM interviews i
+       INNER JOIN applications a ON a.id = i.application_id
+       INNER JOIN candidates c ON c.id = a.candidate_id
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       INNER JOIN recruiters r ON r.id = jp.recruiter_id
+       LEFT JOIN interview_evaluations ev ON ev.interview_id = i.id AND ev.interviewer_id = (
+         SELECT id FROM interviewers WHERE id = $1
+       )
+       WHERE i.interviewer_id = $1
+         AND ($2::boolean = false OR i.interview_datetime >= NOW())
+       ORDER BY i.interview_datetime ASC`,
+      [req.user.id, upcomingOnly]
+    );
+
+    return res.json(result.rows.map((row) => ({
+      id: row.id,
+      applicationId: row.application_id,
+      interviewDateTime: row.interview_datetime,
+      mode: row.mode,
+      meetLink: row.meet_link,
+      location: row.location,
+      notes: row.notes,
+      interviewerName: row.interviewer_name,
+      interviewerId: row.interviewer_id,
+      candidateId: row.candidate_id,
+      candidateName: row.candidate_name,
+      candidateEmail: row.candidate_email,
+      candidatePhone: row.candidate_phone,
+      jobPostId: row.job_post_id,
+      jobTitle: row.job_title,
+      companyName: row.company_name,
+      evaluationRating: row.evaluation_rating,
+      evaluationRecommendation: row.evaluation_recommendation,
+    })));
+  } catch (error) {
+    return res.status(500).json(routeErrorResponse("Failed to load interviewer interviews", error));
+  }
+});
+
+// POST /api/interviews/:id/evaluation - submit interview evaluation (interviewer only)
+router.post("/:id/evaluation", requireAuth, async (req, res) => {
+  if (req.user.role !== "interviewer") {
+    return res.status(403).json({ message: "Only interviewers can submit evaluations" });
+  }
+
+  const interviewId = Number(req.params.id);
+  if (!Number.isInteger(interviewId) || interviewId <= 0) {
+    return res.status(400).json({ message: "Invalid interview id" });
+  }
+
+  const { rating, strengths, weaknesses, notes, recommendation } = req.body;
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return res.status(400).json({ message: "Rating must be an integer between 1 and 5" });
+  }
+
+  const validRecommendations = ["strong_hire", "hire", "no_hire", "strong_no_hire"];
+  if (recommendation && !validRecommendations.includes(recommendation)) {
+    return res.status(400).json({ message: "Invalid recommendation value" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Verify the interview exists and belongs to this interviewer
+    const interviewResult = await client.query(
+      `SELECT i.id, i.interviewer_id, i.application_id
+       FROM interviews i
+       WHERE i.id = $1 AND i.interviewer_id = $2
+       LIMIT 1`,
+      [interviewId, req.user.id]
+    );
+
+    if (interviewResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Interview not found or you are not assigned as interviewer" });
+    }
+
+    const applicationId = interviewResult.rows[0].application_id;
+
+    // Upsert the evaluation
+    const evalResult = await client.query(
+      `INSERT INTO interview_evaluations (
+         interview_id, interviewer_id, rating, strengths, weaknesses, notes, recommendation
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (interview_id, interviewer_id)
+       DO UPDATE SET
+         rating = EXCLUDED.rating,
+         strengths = EXCLUDED.strengths,
+         weaknesses = EXCLUDED.weaknesses,
+         notes = EXCLUDED.notes,
+         recommendation = EXCLUDED.recommendation,
+         updated_at = now()
+       RETURNING id, interview_id, interviewer_id, rating, strengths, weaknesses, notes, recommendation, created_at, updated_at`,
+      [interviewId, req.user.id, rating, strengths || "", weaknesses || "", notes || "", recommendation || null]
+    );
+
+    await client.query(
+      `INSERT INTO application_events (
+         application_id, actor_user_id, event_type, title, description, metadata
+       ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+      [
+        applicationId,
+        req.user.id,
+        "evaluation_submitted",
+        "Interview evaluation submitted",
+        `Rating: ${rating}/5${recommendation ? `, Recommendation: ${recommendation}` : ""}`,
+        JSON.stringify({ interviewId, rating, recommendation }),
+      ]
+    );
+
+    await client.query("COMMIT");
+    return res.status(201).json(evalResult.rows[0]);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    return res.status(500).json(routeErrorResponse("Failed to submit evaluation", error));
+  } finally {
+    client.release();
+  }
+});
+
+// GET /api/interviews/:id/evaluation - get evaluation for an interview
+router.get("/:id/evaluation", requireAuth, async (req, res) => {
+  const interviewId = Number(req.params.id);
+  if (!Number.isInteger(interviewId) || interviewId <= 0) {
+    return res.status(400).json({ message: "Invalid interview id" });
+  }
+
+  try {
+    // Restrict access by role/ownership
+    const accessResult = await pool.query(
+      `SELECT i.id
+       FROM interviews i
+       INNER JOIN applications a ON a.id = i.application_id
+       INNER JOIN job_posts jp ON jp.id = a.job_post_id
+       WHERE i.id = $1
+         AND (
+           ($2 = 'interviewer' AND i.interviewer_id = $3)
+           OR ($2 = 'recruiter' AND jp.recruiter_id = $3)
+           OR ($2 IN ('hr_manager', 'admin'))
+         )
+       LIMIT 1`,
+      [interviewId, req.user.role, req.user.id]
+    );
+
+    if (accessResult.rows.length === 0) {
+      return res.status(404).json({ message: "Evaluation not found or you do not have permission to view it" });
+    }
+
+    const result = await pool.query(
+      `SELECT ev.id,
+              ev.interview_id,
+              ev.interviewer_id,
+              ev.rating,
+              ev.strengths,
+              ev.weaknesses,
+              ev.notes,
+              ev.recommendation,
+              ev.created_at,
+              ev.updated_at,
+              iv.name AS interviewer_name
+       FROM interview_evaluations ev
+       INNER JOIN interviewers iv ON iv.id = ev.interviewer_id
+       WHERE ev.interview_id = $1`,
+      [interviewId]
+    );
+
+    return res.json(result.rows);
+  } catch (error) {
+    return res.status(500).json(routeErrorResponse("Failed to load evaluation", error));
   }
 });
 
