@@ -11,7 +11,6 @@ import {
   FaInbox,
   FaPaperPlane,
 } from "react-icons/fa";
-import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { messagesApi, usersApi } from "../../lib/api";
 import { formatMessageTime } from "../../utils/format";
@@ -354,7 +353,6 @@ const Messages = () => {
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
-      <TopBarDashboard userName={userName} userEmail={userEmail} />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 pb-12 pt-6 lg:px-10">
         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaCheckCircle, FaClipboardList } from "react-icons/fa";
 import { onboardingApi, usersApi } from "../../lib/api";
-import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
 import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
@@ -69,7 +68,6 @@ const CandidateOnboarding = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBarDashboard userName={userName} userEmail={userEmail} />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">

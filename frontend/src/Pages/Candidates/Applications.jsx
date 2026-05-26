@@ -5,7 +5,6 @@ import { FaPlus, FaList, FaThLarge, FaTrashAlt, FaCheck, FaTimes } from "react-i
 import { FaSearch } from "react-icons/fa";
 import { useI18n } from "../../lib/i18n";
 import { applicationsApi, savedJobsApi, usersApi } from "../../lib/api";
-import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonRow } from "../../Components/Skeleton";
 import { showError, showSuccess } from "../../utils/toast";
 import { formatDate } from "../../utils/format";
@@ -196,7 +195,6 @@ const Applications = ({ initialTab = "all" }) => {
 
   return (
     <div className="min-h-screen bg-[#fbfcfa]">
-      <TopBarDashboard userName={userName} userEmail={userEmail} />
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
 
         {/* --- HEADER --- */}

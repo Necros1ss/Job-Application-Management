@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
-import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
 import { FaUserCircle, FaSearch, FaBookOpen, FaMapMarkerAlt, FaVideo } from "react-icons/fa";
-import { formatInterviewDateTime, formatMessageTime  } from '../../utils/format';
+import { formatInterviewDateTime, formatMessageTime } from '../../utils/format';
 import { showError } from "../../utils/toast";
+import { useI18n } from "../../lib/i18n";
 import {
   getApplicationDisplayStatus,
   getApplicationStatusLabel,
@@ -14,6 +14,7 @@ import {
 } from "../../utils/applicationStatus";
 
 const Dashboard = () => {
+  const { t } = useI18n();
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [jobs, setJobs] = useState([]);
@@ -48,21 +49,15 @@ const Dashboard = () => {
     loadDashboardData();
   }, []);
 
-
-  const jobStatusCount = jobs.reduce((acc, job) => {
-    acc[job.status] = (acc[job.status] || 0) + 1;
-    return acc;
-  }, {});
-
   const totalApplications = jobs.length;
   const totalInterviews = interviews.length;
   const totalOffers = jobs.filter((job) => isOfferStatus(job.status)).length;
 
   const getGreeting = () => {
     const currentHour = new Date().getHours();
-    if (currentHour < 12) return "Good Morning";
-    if (currentHour < 17) return "Good Afternoon";
-    return "Good Evening";
+    if (currentHour < 12) return t("greeting.morning");
+    if (currentHour < 17) return t("greeting.afternoon");
+    return t("greeting.evening");
   };
 
   const renderStatusBadge = (status) => {
@@ -101,24 +96,23 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen blueprint-grid-bg">
-      <TopBarDashboard userName={userName} userEmail={userEmail} />
+    <div className="blueprint-grid-bg">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         {/* --- HEADER --- */}
         <div className="blueprint-hero-panel mb-6 p-5">
           <div className="relative z-10 grid gap-5 lg:grid-cols-[1fr_360px]">
             <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-5">
-              <p className="blueprint-kicker">Candidate console</p>
+              <p className="blueprint-kicker">{t("candidate.console")}</p>
               <h1 className="mt-2 text-[34px] font-semibold leading-none text-black">
-                {getGreeting()}, {(userName || "").split(" ")[0] || "User"}
+                {getGreeting()}, {(userName || "").split(" ")[0] || t("common.user")}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#737373]">
-                Track applications, interview windows, and profile actions from one precise workspace.
+                {t("candidate.dashboardDesc")}
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 {["Applications", "Interviews", "Profile", "Messages"].map((item) => (
                   <span key={item} className="rounded-full border border-[#e5e5e5] bg-[#f2f2f2] px-3 py-1 text-xs font-medium text-[#0a0a0a]">
-                    {item}
+                    {t(item)}
                   </span>
                 ))}
               </div>
@@ -126,14 +120,14 @@ const Dashboard = () => {
 
             <div className="rounded-[10px] border border-[#e5e5e5] bg-white p-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-medium uppercase text-[#737373]">Progress scan</p>
+                <p className="text-xs font-medium uppercase text-[#737373]">{t("candidate.progressScan")}</p>
                 <span className="font-mono text-xs text-[#737373]">Live</span>
               </div>
               <div className="space-y-3">
                 {[
-                  ["Applied", totalApplications],
-                  ["Interviews", totalInterviews],
-                  ["Offers", totalOffers],
+                  [t("candidate.applied"), totalApplications],
+                  [t("candidate.interviews"), totalInterviews],
+                  [t("candidate.offers"), totalOffers],
                 ].map(([label, value], index) => (
                   <div key={label} className="grid grid-cols-[90px_1fr_36px] items-center gap-3">
                     <span className="text-xs font-medium text-[#737373]">{label}</span>
@@ -170,7 +164,7 @@ const Dashboard = () => {
         
         {/* Card 1: Applied */}
         <div className="blueprint-card p-5 flex flex-col justify-between">
-          <p className="text-xs font-medium text-[#737373] uppercase mb-2">Applied</p>
+          <p className="text-xs font-medium text-[#737373] uppercase mb-2">{t("candidate.applied")}</p>
           <div className="flex items-baseline gap-2">
             <span className="blueprint-metric text-5xl font-semibold text-black">{totalApplications || "0"}</span>
           </div>
@@ -179,7 +173,7 @@ const Dashboard = () => {
 
         {/* Card 2: Interviews */}
         <div className="blueprint-card p-5 flex flex-col justify-between">
-          <p className="text-xs font-medium text-[#737373] uppercase mb-2">Interviews</p>
+          <p className="text-xs font-medium text-[#737373] uppercase mb-2">{t("candidate.interviews")}</p>
           <div className="flex items-baseline gap-2">
             <span className="blueprint-metric text-5xl font-semibold text-black">{totalInterviews || '0'}</span>
           </div>
@@ -188,10 +182,10 @@ const Dashboard = () => {
 
         {/* Card 3: Offers (Dark Green) */}
         <div className="bg-black p-5 rounded-[14px] shadow-sm flex flex-col justify-between text-white">
-          <p className="text-xs font-medium text-white/60 uppercase mb-2">Offers</p>
+          <p className="text-xs font-medium text-white/60 uppercase mb-2">{t("candidate.offers")}</p>
           <div className="flex items-baseline gap-3">
             <span className="blueprint-metric text-5xl font-semibold">{totalOffers}</span>
-            {totalOffers > 0 && <span className="text-[10px] font-medium bg-white text-black px-2 py-0.5 rounded-full">NEW</span>}
+            {totalOffers > 0 && <span className="text-[10px] font-medium bg-white text-black px-2 py-0.5 rounded-full">{t("candidate.newBadge")}</span>}
           </div>
           <div className="mt-5 h-px bg-white/25" />
         </div>
@@ -206,8 +200,8 @@ const Dashboard = () => {
         {/* CỘT TRÁI: Recent Applications */}
         <div className="w-full lg:w-2/3">
           <div className="flex justify-between items-end mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Recent Applications</h2>
-            <Link to="/candidate/applications" className="text-sm font-bold text-[#188155] hover:underline">View All</Link>
+            <h2 className="text-xl font-bold text-gray-900">{t("candidate.recentApplications")}</h2>
+            <Link to="/candidate/applications" className="text-sm font-bold text-[#188155] hover:underline">{t("candidate.viewAll")}</Link>
           </div>
 
           <div className="space-y-4">
@@ -231,7 +225,7 @@ const Dashboard = () => {
 
                   <div className="flex items-center gap-8 lg:gap-12">
                     <div className="hidden sm:block text-right">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Applied On</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{t("candidate.appliedOn")}</p>
                       <p className="text-sm font-semibold text-gray-800">{formatMessageTime(job.applicationDate)}</p>
                     </div>
                     <div className="w-28 flex justify-end">
@@ -245,10 +239,10 @@ const Dashboard = () => {
                 <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
                   <FaSearch className="w-5 h-5" />
                 </div>
-                <h3 className="font-bold text-gray-900 mb-2">No recent applications yet</h3>
-                <p className="text-sm text-gray-500 mb-4">Your latest job applications will appear here once you start applying.</p>
+                <h3 className="font-bold text-gray-900 mb-2">{t("candidate.noRecentApplications")}</h3>
+                <p className="text-sm text-gray-500 mb-4">{t("candidate.noRecentApplicationsDesc")}</p>
                 <Link to="/candidate/job" className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#188155] text-white text-sm font-semibold hover:bg-[#116843] transition-colors">
-                  Explore jobs
+                  {t("candidate.exploreJobs")}
                 </Link>
               </div>
             )}
@@ -258,7 +252,7 @@ const Dashboard = () => {
         {/* CỘT PHẢI: Getting Started (Các Action Cards) */}
         <div className="w-full lg:w-1/3">
           <div className="flex justify-between items-end mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Upcoming Interviews</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t("candidate.upcomingInterviews")}</h2>
           </div>
 
           <div className="blueprint-card p-5 mb-8">
@@ -285,7 +279,7 @@ const Dashboard = () => {
                       </p>
                       <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
                         {isOnline ? <FaVideo className="text-emerald-600" /> : <FaMapMarkerAlt className="text-orange-600" />}
-                        {isOnline ? "Online meeting" : interview.location || "Offline interview"}
+                        {isOnline ? t("candidate.onlineMeeting") : (interview.location || t("candidate.offlineInterview"))}
                       </p>
                       {isOnline && interview.meet_link && (
                         <a
@@ -294,7 +288,7 @@ const Dashboard = () => {
                           rel="noreferrer"
                           className="inline-flex items-center justify-center mt-4 px-4 py-2 rounded-lg bg-[#188155] text-white text-sm font-semibold hover:bg-[#116843] transition-colors"
                         >
-                          Join Meeting
+                          {t("candidate.joinMeeting")}
                         </a>
                       )}
                     </div>
@@ -306,12 +300,12 @@ const Dashboard = () => {
                 <div className="w-12 h-12 mx-auto rounded-full bg-gray-50 text-gray-500 flex items-center justify-center mb-3">
                   <FaBookOpen className="w-5 h-5" />
                 </div>
-                <p className="text-sm font-semibold text-gray-800">No upcoming interviews</p>
+                <p className="text-sm font-semibold text-gray-800">{t("candidate.noUpcomingInterviews")}</p>
               </div>
             )}
           </div>
 
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Getting Started</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">{t("candidate.gettingStarted")}</h2>
           
           <div className="space-y-4">
             
@@ -320,10 +314,10 @@ const Dashboard = () => {
               <div className="w-8 h-8 text-[#188155] mb-3">
                 <FaUserCircle className="w-full h-full" />
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">Complete your profile</h3>
-              <p className="text-sm text-gray-500 mb-4 leading-relaxed">Your profile is 85% complete. Add your latest project to stand out.</p>
+              <h3 className="font-bold text-gray-900 mb-2">{t("candidate.completeProfile")}</h3>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">{t("candidate.profileCompleteDesc")}</p>
               <Link to="/candidate/profile" className="text-xs font-bold text-[#188155] uppercase tracking-wider hover:underline flex items-center gap-1">
-                UPDATE NOW <span>→</span>
+                {t("candidate.updateNow")} <span>→</span>
               </Link>
             </div>
 
@@ -332,10 +326,10 @@ const Dashboard = () => {
               <div className="w-8 h-8 text-[#188155] mb-3">
                 <FaSearch className="w-full h-full" />
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">Find new jobs</h3>
-              <p className="text-sm text-gray-500 mb-4 leading-relaxed">New roles matching your skillset were posted 2 hours ago.</p>
+              <h3 className="font-bold text-gray-900 mb-2">{t("candidate.findNewJobs")}</h3>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">{t("candidate.newRolesDesc")}</p>
               <Link to="/candidate/job" className="text-xs font-bold text-[#188155] uppercase tracking-wider hover:underline flex items-center gap-1">
-                EXPLORE <span>→</span>
+                {t("candidate.explore")} <span>→</span>
               </Link>
             </div>
 
@@ -344,10 +338,10 @@ const Dashboard = () => {
               <div className="w-8 h-8 text-gray-700 mb-3">
                 <FaBookOpen className="w-full h-full" />
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">Interview resources</h3>
-              <p className="text-sm text-gray-500 mb-4 leading-relaxed">Master the technical interview with our curated guide.</p>
+              <h3 className="font-bold text-gray-900 mb-2">{t("candidate.interviewResources")}</h3>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">{t("candidate.masterInterviewDesc")}</p>
               <a href="https://www.themuse.com/advice/interviewing" target="_blank" rel="noreferrer" className="text-xs font-bold text-gray-700 uppercase tracking-wider hover:underline flex items-center gap-1">
-                READ GUIDE <span>→</span>
+                {t("candidate.readGuide")} <span>→</span>
               </a>
             </div>
 

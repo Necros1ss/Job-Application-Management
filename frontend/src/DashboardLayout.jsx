@@ -1,8 +1,12 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
-import SideBar from "./Components/SideBar";
+import SideBar from "./Components/Sidebar";
+import AccountMenu from "./Components/AccountMenu";
+import LanguageSwitcher from "./Components/LanguageSwitcher";
+import NotificationBell from "./Components/NotificationBell";
+import ThemeToggle from "./Components/ThemeToggle";
 import { Navigate, Outlet } from "react-router-dom";
-import { initializeSession, tokenStorage } from "./lib/api";
+import { initializeSession, tokenStorage, usersApi } from "./lib/api";
 import PageLoader from "./Components/PageLoader";
 
 const DashboardLayout = ({ allowedRole }) => {
@@ -11,22 +15,31 @@ const DashboardLayout = ({ allowedRole }) => {
     token: tokenStorage.getToken(),
     role: tokenStorage.getRole(),
   });
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const allowedRoles = Array.isArray(allowedRole) ? allowedRole : allowedRole ? [allowedRole] : [];
 
   useEffect(() => {
     let isMounted = true;
 
     const restoreSession = async () => {
-      // initializeSession restores the in-memory access token from the httpOnly
-      // refresh cookie after reloads, then DashboardLayout stores a render-safe
-      // snapshot instead of reading sessionStorage directly during render.
       await initializeSession();
 
       if (isMounted) {
-        setSession({
-          token: tokenStorage.getToken(),
-          role: tokenStorage.getRole(),
-        });
+        const token = tokenStorage.getToken();
+        const role = tokenStorage.getRole();
+        setSession({ token, role });
+
+        if (token) {
+          try {
+            const profile = await usersApi.me();
+            setUserName(profile.name || "");
+            setUserEmail(profile.email || "");
+          } catch {
+            // use defaults
+          }
+        }
+
         setIsCheckingSession(false);
       }
     };
@@ -52,14 +65,45 @@ const DashboardLayout = ({ allowedRole }) => {
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(session.role)) {
-    const fallbackRoute = session.role === "recruiter" ? "/recruiter" : session.role === "admin" ? "/admin" : "/candidate";
+    const fallbackRoute =
+      session.role === "recruiter" ? "/recruiter"
+        : session.role === "admin" ? "/admin"
+          : session.role === "hr_manager" ? "/hr-manager"
+            : session.role === "interviewer" ? "/interviewer"
+              : "/candidate";
     return <Navigate to={fallbackRoute} replace />;
   }
 
+  const getRoleDisplayName = (role) => {
+    const names = {
+      candidate: "Candidate",
+      recruiter: "Recruiter",
+      admin: "Admin",
+      hr_manager: "HR Manager",
+      interviewer: "Interviewer",
+    };
+    return names[role] || role;
+  };
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
+      <header className="fixed left-0 right-0 top-0 z-40 border-b border-[var(--border-primary)] bg-[var(--bg-elevated)] lg:left-56">
+        <div className="flex h-20 items-center justify-end px-6 lg:px-10">
+          <div className="flex items-center gap-5 text-[var(--text-secondary)]">
+            <span className="hidden text-sm font-medium text-[var(--text-secondary)] md:block">
+              {getRoleDisplayName(session.role)}
+            </span>
+            <LanguageSwitcher compact />
+            <ThemeToggle />
+            <NotificationBell />
+            <div className="h-6 w-px bg-[var(--border-primary)]" />
+            <AccountMenu userName={userName} userEmail={userEmail} />
+          </div>
+        </div>
+      </header>
+
       <SideBar role={session.role} />
-      <div className="h-auto flex-grow px-6 pb-6 pt-16 lg:ml-56 lg:pt-4">
+      <div className="h-auto flex-grow px-6 pb-6 pt-24 lg:ml-56 lg:pt-24">
         <Outlet />
       </div>
     </div>
