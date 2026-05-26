@@ -4,8 +4,10 @@ import { authApi, tokenStorage } from "../../lib/api";
 import { FaArrowLeft, FaBriefcase, FaCheckCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { showError } from "../../utils/toast";
 import LanguageSwitcher from "../../Components/LanguageSwitcher";
+import { useI18n } from "../../lib/i18n";
 
 const Login = () => {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState("");
@@ -33,11 +35,11 @@ const Login = () => {
       tokenStorage.setRole(payload.user?.role || "candidate");
       setFormError("");
       navigate(
-        payload.user?.role === "recruiter"
-          ? "/recruiter"
-          : payload.user?.role === "admin"
-            ? "/admin"
-            : "/candidate"
+        payload.user?.role === "recruiter" ? "/recruiter"
+          : payload.user?.role === "admin" ? "/admin"
+            : payload.user?.role === "hr_manager" ? "/hr-manager"
+              : payload.user?.role === "interviewer" ? "/interviewer"
+                : "/candidate"
       );
     } catch (error) {
       const message = error.message || "Invalid email or password.";
@@ -116,9 +118,9 @@ const Login = () => {
               <FaArrowLeft /> Back to home
             </Link>
             <div className="mb-8">
-              <p className="text-xs font-medium uppercase text-[#737373]">Welcome back</p>
-              <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">Log in to Job Tracker</h2>
-              <p className="mt-3 text-sm leading-6 text-[#737373]">Access recruitment, onboarding, employee, attendance, and leave tools.</p>
+              <p className="text-xs font-medium uppercase text-[#737373]">{t("auth.welcomeBack")}</p>
+              <h2 className="mt-2 text-[40px] font-semibold leading-none text-black">{t("auth.loginTitle")}</h2>
+              <p className="mt-3 text-sm leading-6 text-[#737373]">{t("auth.loginSubtitle")}</p>
             </div>
             <div className="mb-6">
               <LanguageSwitcher />
@@ -127,7 +129,7 @@ const Login = () => {
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                Email
+                {t("auth.email")}
               </label>
               <input
                 type="text"
@@ -143,13 +145,13 @@ const Login = () => {
             <div>
               <span className="flex justify-between items-center">
                 <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                  Password
+                  {t("auth.password")}
                 </label>
                 <Link
                   to="/forgot-password"
                   className="text-sm font-medium text-[#737373] hover:text-black hover:underline"
                 >
-                  Forgot password?
+                  {t("auth.forgotPassword")}
                 </Link>
               </span>
               <div className="relative">
@@ -181,12 +183,12 @@ const Login = () => {
                 disabled={isSubmitting}
                 className="flex w-full justify-center rounded-[10px] bg-black px-12 py-2.5 text-sm font-semibold text-white hover:bg-[#0a0a0a] disabled:opacity-60"
               >
-                {isSubmitting ? "Signing in..." : "Sign in"}
+                {isSubmitting ? t("auth.signingIn") : t("auth.signIn")}
               </button>
               <p className="mt-4 text-sm text-[#737373]">
-                Don't have an account? {" "}
+                {t("auth.noAccount")}{" "}
                 <Link to="/signup" className="font-medium text-black hover:underline">
-                  Create one
+                  {t("auth.createOne")}
                 </Link>
               </p>
             </div>

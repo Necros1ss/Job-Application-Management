@@ -23,26 +23,39 @@ const SideBar = ({ role = "candidate" }) => {
     setOpenLogoutModal(!openLogoutModal);
   };
 
+  const isActive = (itemPath) => {
+    const pathname = location.pathname;
+    const segments = pathname.split("/").filter(Boolean);
+    const baseSegment = segments[0] || "";
+    const isDashboardPath = baseSegment === "candidate" || baseSegment === "recruiter" || baseSegment === "admin" || baseSegment === "hr-manager" || baseSegment === "interviewer" || (segments.length === 1 && baseSegment === "dashboard");
+    if (itemPath === "dashboard") {
+      return isDashboardPath;
+    }
+    return pathname.startsWith(`/${baseSegment}/${itemPath}`) || segments[1] === itemPath;
+  };
+
   const findPageTitle = () => {
-    const currentPath = location.pathname.split("/").filter(Boolean).pop() || "";
+    const pathname = location.pathname;
+    const segments = pathname.split("/").filter(Boolean);
+    const baseSegment = segments[0] || "";
+    const subSegment = segments[1] || "";
+
+    const isDashboardPath = (s, b) =>
+      s.length === 1 && (b === "candidate" || b === "recruiter" || b === "admin" || b === "hr-manager" || b === "interviewer" || b === "dashboard");
+
     const currentItem = menuItems.find((item) => {
-      return currentPath === item.path ||
-        currentPath.includes(item.path) ||
-        (item.path === "dashboard" && (currentPath === "" || currentPath === "candidate" || currentPath === "recruiter" || currentPath === "admin"));
+      if (item.path === "dashboard") {
+        return segments.length === 1 || isDashboardPath(segments, baseSegment);
+      }
+      return subSegment === item.path || pathname.startsWith(`/${baseSegment}/${item.path}`);
     });
+
     if (currentItem) {
       setPageTitle(t(currentItem.labelKey) || currentItem.label);
     } else {
-      setPageTitle(currentPath.charAt(0).toUpperCase() + currentPath.slice(1));
+      const display = subSegment || baseSegment;
+      setPageTitle(display.charAt(0).toUpperCase() + display.slice(1));
     }
-  };
-
-  const isActive = (itemPath) => {
-    const currentPath = location.pathname.split("/").filter(Boolean).pop() || "";
-    if (itemPath === "dashboard") {
-      return currentPath === "" || currentPath === "candidate" || currentPath === "recruiter" || currentPath === "admin" || currentPath === "dashboard";
-    }
-    return currentPath === itemPath;
   };
 
   useEffect(() => {

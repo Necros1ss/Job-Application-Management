@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import PropTypes from "prop-types";
 import { Link, useLocation } from "react-router-dom";
 import { FaChevronDown, FaCog, FaUserCircle } from "react-icons/fa";
 import { useI18n } from "../lib/i18n";
@@ -9,7 +10,13 @@ const AccountMenu = ({ userName, userEmail, avatarUrl }) => {
   const location = useLocation();
   const { t } = useI18n();
   const role = location.pathname.split("/").filter(Boolean)[0] || "candidate";
-  const basePath = role === "recruiter" ? "/recruiter" : "/candidate";
+  const basePath = role === "recruiter" ? "/recruiter"
+    : role === "admin" ? "/admin"
+      : role === "hr-manager" ? "/hr-manager"
+        : role === "interviewer" ? "/interviewer"
+          : "/candidate";
+
+  const hasProfilePage = role === "recruiter" || role === "candidate";
 
   const initials = typeof userName === "string" && userName.trim().length > 0
     ? userName
@@ -68,14 +75,16 @@ const AccountMenu = ({ userName, userEmail, avatarUrl }) => {
             <p className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">{userEmail || "email@example.com"}</p>
           </div>
 
-          <Link
-            to={`${basePath}/profile`}
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-          >
-            <FaUserCircle className="text-[var(--text-primary)]" />
-            {t("menu.profile")}
-          </Link>
+          {hasProfilePage && (
+            <Link
+              to={`${basePath}/profile`}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+            >
+              <FaUserCircle className="text-[var(--text-primary)]" />
+              {t("menu.profile")}
+            </Link>
+          )}
 
           <Link
             to={`${basePath}/settings`}
@@ -92,3 +101,9 @@ const AccountMenu = ({ userName, userEmail, avatarUrl }) => {
 };
 
 export default AccountMenu;
+
+AccountMenu.propTypes = {
+  userName: PropTypes.string,
+  userEmail: PropTypes.string,
+  avatarUrl: PropTypes.string,
+};
