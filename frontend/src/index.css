@@ -217,69 +217,6 @@
     );
   }
 
-  .bg-emerald-600,
-  .bg-emerald-500,
-  .bg-\[\#188155\] {
-    background-color: var(--color-deep-black) !important;
-  }
-
-  .hover\:bg-emerald-700:hover,
-  .hover\:bg-emerald-600:hover {
-    background-color: var(--color-rich-black) !important;
-  }
-
-  .bg-emerald-50,
-  .bg-emerald-100,
-  .bg-emerald-50\/40 {
-    background-color: var(--color-ghost-gray) !important;
-  }
-
-  .hover\:bg-emerald-50:hover,
-  .hover\:bg-emerald-50\/40:hover,
-  .hover\:bg-emerald-100:hover {
-    background-color: var(--color-ghost-gray) !important;
-  }
-
-  .text-emerald-800,
-  .text-emerald-700,
-  .text-emerald-600,
-  .text-\[\#188155\],
-  .hover\:text-emerald-800:hover,
-  .hover\:text-emerald-700:hover,
-  .hover\:text-emerald-600:hover {
-    color: var(--color-rich-black) !important;
-  }
-
-  .text-emerald-300,
-  .text-emerald-200,
-  .text-emerald-100 {
-    color: var(--color-midtone-gray) !important;
-  }
-
-  .border-emerald-400,
-  .border-emerald-300,
-  .border-emerald-200,
-  .border-emerald-100 {
-    border-color: var(--color-subtle-ash) !important;
-  }
-
-  .focus\:border-emerald-400:focus,
-  .focus\:border-emerald-300:focus {
-    border-color: var(--color-deep-black) !important;
-  }
-
-  .focus\:ring-emerald-500:focus,
-  .focus\:ring-emerald-200:focus,
-  .focus\:ring-emerald-100:focus {
-    --tw-ring-color: var(--color-deep-black) !important;
-  }
-
-  .shadow-emerald-900\/30,
-  .shadow-emerald-100 {
-    --tw-shadow-color: rgba(10, 10, 10, 0.12) !important;
-    --tw-shadow: var(--tw-shadow-colored) !important;
-  }
-
   .dark .bg-white,
   .dark .bg-white\/95 {
     background-color: var(--bg-elevated) !important;
