@@ -13,6 +13,7 @@ import {
   ensureHrManagerInterviewerSchema,
   ensureJobModerationColumns,
   ensurePhaseSchema,
+  ensureUserRoleEnum,
   testDbConnection,
 } from "./config/db.js";
 import authRoutes from "./routes/auth.js";
@@ -154,6 +155,7 @@ const startServer = async () => {
   }
 
   await testDbConnection();
+  await ensureUserRoleEnum();
   await ensureAdminUserColumns();
   await ensureJobModerationColumns();
   await ensureApplicationStatusEnum();
