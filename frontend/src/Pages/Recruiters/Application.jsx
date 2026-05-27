@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import ApplicationDetail from './ApplicationDetail';
 import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api';
-import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import { SkeletonRow } from "../../Components/Skeleton";
 import EmptyState from "../../Components/EmptyState";
 import Pagination from "../../Components/Pagination";
@@ -229,13 +228,6 @@ const Application = () => {
   // --- Render Màn hình Danh sách ---
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBarRecruiter 
-        userName={userName} 
-        userEmail={userEmail}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search jobs by title, company, location..."
-      />
       {/* Header */}
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         <div className="flex justify-between items-start mb-8">

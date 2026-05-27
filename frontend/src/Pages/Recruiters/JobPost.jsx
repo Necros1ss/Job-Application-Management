@@ -6,7 +6,6 @@ import {
   FaEye, FaFilter, FaArrowsAltV, FaTimes
 } from "react-icons/fa";
 import { jobPostsApi, usersApi } from "../../lib/api";
-import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import CreateJob from "./CreateJob";
 import EditJob from "./EditJob";
 import EmptyState from "../../Components/EmptyState";
@@ -178,14 +177,6 @@ const JobPost = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBarRecruiter 
-        userName={userName} 
-        userEmail={userEmail}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search jobs by title, company, location..."
-      />
-
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         {/* --- HEADER --- */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">

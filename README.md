@@ -72,7 +72,7 @@
 - **Recruiter dashboard** with analytics charts, application funnel, weekly application trends, and top jobs.
 - **Job post management**: create, edit, list, and delete job posts.
 - **Application pipeline**: review applications, update status, rate candidates, add notes, reject, offer, and download CVs.
-- **AI CV screening** using OpenAI-compatible integration without mock fallback.
+- **AI CV screening** using Gemini integration without mock fallback.
 - **Interview scheduling** with candidate notifications.
 - **Company profile** with logo upload, LinkedIn validation, company description preview, and completion checklist.
 - **Onboarding and employee management** for converting accepted candidates to employees.
@@ -289,7 +289,8 @@ SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-specific-password
 SMTP_FROM=Job Tracker <noreply@jobtracker.com>
-OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL=gemini-3.5-flash
 UPLOAD_DIR=./uploads/cv
 MAX_FILE_SIZE_MB=20
 ```

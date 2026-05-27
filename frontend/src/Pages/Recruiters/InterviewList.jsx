@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { FaPen, FaPlus, FaSearch, FaTimes } from "react-icons/fa";
 import ApplicationDetail from "./ApplicationDetail";
 import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
-import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import EmptyState from "../../Components/EmptyState";
 import { SkeletonRow } from "../../Components/Skeleton";
 import { useI18n } from "../../lib/i18n";
@@ -572,14 +571,6 @@ const InterviewList = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <TopBarRecruiter
-        userName={userName}
-        userEmail={userEmail}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder={t("interviews.searchPlaceholder")}
-      />
-
       <div className="mx-auto max-w-7xl px-4 pb-12 pt-6 sm:px-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>

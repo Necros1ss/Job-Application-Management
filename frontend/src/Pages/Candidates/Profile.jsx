@@ -17,7 +17,6 @@ import {
   MdPhone,
   MdWork,
 } from "react-icons/md";
-import ProfileTopBar from "../../Components/ProfileTopBar";
 import { usersApi } from "../../lib/api";
 import { calculateAge } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
@@ -415,8 +414,6 @@ const CandidateProfile = () => {
 
   return (
     <div className="min-h-screen bg-white px-4 pb-8 dark:bg-[#050505] sm:px-6 lg:px-8">
-      <ProfileTopBar userName={profile.name} userEmail={profile.email} />
-
       <main className="mx-auto max-w-6xl space-y-6">
         {profileError && (
           <div className="flex items-start gap-3 rounded-[14px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">

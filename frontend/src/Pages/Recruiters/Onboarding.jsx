@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaCheckCircle, FaClipboardList, FaPlus, FaTrashAlt } from "react-icons/fa";
 import { onboardingApi, usersApi } from "../../lib/api";
-import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
@@ -141,14 +140,6 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBarRecruiter
-        userName={userName}
-        userEmail={userEmail}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search onboarding by candidate, job, task..."
-      />
-
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
           <div>

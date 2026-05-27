@@ -13,7 +13,6 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { jobPostsApi, savedJobsApi, usersApi } from "../../lib/api";
-import TopBarDashboard from "../../Components/TopBarDashboard";
 import { SkeletonCard } from "../../Components/Skeleton";
 import Pagination from "../../Components/Pagination";
 import EmptyState from "../../Components/EmptyState";
@@ -444,12 +443,6 @@ const Jobsearch = () => {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <TopBarDashboard
-        userName={userName}
-        userEmail={userEmail}
-        showSearch={false}
-      />
-
       <div className="mx-auto max-w-7xl px-6 pb-12 pt-6 lg:px-10">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

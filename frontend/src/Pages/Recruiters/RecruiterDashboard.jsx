@@ -16,7 +16,6 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line, getElementsAtEvent } from "react-chartjs-2";
 import { jobPostsApi, applicationsApi, usersApi } from "../../lib/api";
-import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import { showError } from "../../utils/toast";
 import {
   getApplicationDisplayStatus,
@@ -115,7 +114,6 @@ const RecruiterDashboard = () => {
   const [analyticsRange, setAnalyticsRange] = useState("month");
   const [analytics, setAnalytics] = useState(EMPTY_ANALYTICS);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const loadData = async () => {
@@ -427,7 +425,6 @@ const RecruiterDashboard = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen blueprint-grid-bg">
-        <TopBarRecruiter userName="" userEmail="" />
         <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
           <div className="blueprint-hero-panel mb-6 p-5">
             <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
@@ -447,12 +444,6 @@ const RecruiterDashboard = () => {
 
   return (
     <div className="min-h-screen blueprint-grid-bg">
-      <TopBarRecruiter userName={userName} 
-                       userEmail={userEmail}
-                       searchValue={searchTerm}
-                      onSearchChange={setSearchTerm}
-                      searchPlaceholder="Search jobs by title, company, location..." />
-
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         {/* --- HEADER --- */}
         <div className="blueprint-hero-panel mb-6 p-5">

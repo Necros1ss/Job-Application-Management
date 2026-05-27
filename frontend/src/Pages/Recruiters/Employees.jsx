@@ -8,7 +8,6 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { employeesApi, usersApi } from "../../lib/api";
-import TopBarRecruiter from "../../Components/TopBarRecruiter";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
@@ -181,14 +180,6 @@ const Employees = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBarRecruiter
-        userName={userName}
-        userEmail={userEmail}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search employees by name, job, department..."
-      />
-
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-12">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
           <div>
