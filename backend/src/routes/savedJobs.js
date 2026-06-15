@@ -1,5 +1,5 @@
 import express from "express";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, authorize } from "../middlewares/auth.js";
 import { pool } from "../config/db.js";
 
 const router = express.Router();
@@ -17,7 +17,7 @@ const mapSavedJob = (row) => ({
   savedAt: row.saved_at,
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, authorize("candidate"), async (req, res) => {
     if (req.user.role !== "candidate") {
         return res.status(403).json({ message: "Only candidate accounts can save jobs" });
     }
@@ -76,7 +76,7 @@ router.post("/", requireAuth, async (req, res) => {
     }
 });
 
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", requireAuth, authorize("candidate"), async (req, res) => {
     try {
         const result = await pool.query(
             `SELECT 
@@ -102,7 +102,7 @@ router.get("/", requireAuth, async (req, res) => {
     }
 });
 
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", requireAuth, authorize("candidate"), async (req, res) => {
     if (req.user.role !== "candidate") {
         return res.status(403).json({ message: "Only candidate accounts can delete applications" });
     }

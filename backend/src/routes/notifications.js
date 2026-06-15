@@ -1,11 +1,12 @@
 import express from "express";
-import { requireAuth } from "../middlewares/auth.js";
+import { authorize, requireAuth } from "../middlewares/auth.js";
 import {
   addNotificationClient,
   removeNotificationClient,
 } from "../utils/notificationBroadcast.js";
 
 const router = express.Router();
+const anyAuthenticatedRole = authorize("admin", "hr_manager", "recruiter", "interviewer", "candidate");
 
 const hydrateAuthorizationFromQuery = (req, _res, next) => {
   const token = typeof req.query.token === "string" ? req.query.token.trim() : "";
@@ -17,7 +18,7 @@ const hydrateAuthorizationFromQuery = (req, _res, next) => {
   next();
 };
 
-router.get("/stream", hydrateAuthorizationFromQuery, requireAuth, (req, res) => {
+router.get("/stream", hydrateAuthorizationFromQuery, requireAuth, anyAuthenticatedRole, (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");

@@ -1,12 +1,13 @@
 import express from "express";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, authorize } from "../middlewares/auth.js";
 import { getInbox, getUnreadCount, markRead, sendMessage } from "../controllers/messageController.js";
 
 const router = express.Router();
+const anyAuthenticatedRole = authorize("admin", "hr_manager", "recruiter", "interviewer", "candidate");
 
-router.get("/inbox", requireAuth, getInbox);
-router.get("/unread-count", requireAuth, getUnreadCount);
-router.patch("/:id/read", requireAuth, markRead);
-router.post("/", requireAuth, sendMessage);
+router.get("/inbox", requireAuth, anyAuthenticatedRole, getInbox);
+router.get("/unread-count", requireAuth, anyAuthenticatedRole, getUnreadCount);
+router.patch("/:id/read", requireAuth, anyAuthenticatedRole, markRead);
+router.post("/", requireAuth, anyAuthenticatedRole, sendMessage);
 
 export default router;

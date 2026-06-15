@@ -1,5 +1,5 @@
 import express from "express";
-import { requireAuth } from "../middlewares/auth.js";
+import { authorize, requireAuth } from "../middlewares/auth.js";
 import { validate } from "../middlewares/validate.js";
 import { createInterviewSchema } from "../validators/interviewValidators.js";
 import {
@@ -16,14 +16,14 @@ import {
 
 const router = express.Router();
 
-router.get("/recruiter", requireAuth, getRecruiterInterviews);
-router.get("/candidate", requireAuth, getCandidateInterviews);
-router.post("/", requireAuth, validate(createInterviewSchema), scheduleInterview);
-router.put("/:id", requireAuth, updateInterview);
-router.delete("/:id", requireAuth, deleteInterview);
-router.get("/interviewers", requireAuth, listInterviewers);
-router.get("/interviewer", requireAuth, getInterviewerInterviews);
-router.post("/:id/evaluation", requireAuth, submitEvaluation);
-router.get("/:id/evaluation", requireAuth, getEvaluation);
+router.get("/recruiter", requireAuth, authorize("recruiter"), getRecruiterInterviews);
+router.get("/candidate", requireAuth, authorize("candidate"), getCandidateInterviews);
+router.post("/", requireAuth, authorize("recruiter"), validate(createInterviewSchema), scheduleInterview);
+router.put("/:id", requireAuth, authorize("recruiter"), updateInterview);
+router.delete("/:id", requireAuth, authorize("recruiter"), deleteInterview);
+router.get("/interviewers", requireAuth, authorize("recruiter"), listInterviewers);
+router.get("/interviewer", requireAuth, authorize("interviewer"), getInterviewerInterviews);
+router.post("/:id/evaluation", requireAuth, authorize("interviewer"), submitEvaluation);
+router.get("/:id/evaluation", requireAuth, authorize("recruiter", "interviewer"), getEvaluation);
 
 export default router;

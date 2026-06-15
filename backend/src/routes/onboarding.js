@@ -1,6 +1,6 @@
 import express from "express";
 import { pool } from "../config/db.js";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, authorize } from "../middlewares/auth.js";
 
 const router = express.Router();
 
@@ -194,7 +194,7 @@ router.get("/accepted-applications", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/tasks", requireAuth, async (req, res) => {
+router.post("/tasks", requireAuth, authorize("recruiter"), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can create onboarding tasks" });
   }
@@ -267,7 +267,7 @@ router.post("/tasks", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/tasks/:id/status", requireAuth, async (req, res) => {
+router.patch("/tasks/:id/status", requireAuth, authorize("recruiter", "candidate"), async (req, res) => {
   if (!["recruiter", "candidate"].includes(req.user.role)) {
     return res.status(403).json({ message: "Only candidate or recruiter accounts can update onboarding tasks" });
   }
@@ -332,7 +332,7 @@ router.patch("/tasks/:id/status", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/tasks/:id", requireAuth, async (req, res) => {
+router.delete("/tasks/:id", requireAuth, authorize("recruiter"), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can delete onboarding tasks" });
   }

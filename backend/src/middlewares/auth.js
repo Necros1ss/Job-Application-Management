@@ -59,12 +59,18 @@ export const requireRole = (...roles) => (req, res, next) => {
     return res.status(401).json(errorResponse("Unauthorized"));
   }
 
+  if (req.user.role === USER_ROLES.ADMIN) {
+    return next();
+  }
+
   if (!roles.includes(req.user.role)) {
     return res.status(403).json(errorResponse("Forbidden"));
   }
 
   return next();
 };
+
+export const authorize = requireRole;
 
 export const requireAdmin = requireRole(USER_ROLES.ADMIN);
 export const requireRecruiter = requireRole(USER_ROLES.RECRUITER);

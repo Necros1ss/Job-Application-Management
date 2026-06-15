@@ -1,6 +1,6 @@
 import express from "express";
 import { pool } from "../config/db.js";
-import { requireAuth } from "../middlewares/auth.js";
+import { authorize, requireAuth } from "../middlewares/auth.js";
 
 const router = express.Router();
 
@@ -78,7 +78,7 @@ const selectLeaveById = async (leaveId) => {
   return result.rows[0] || null;
 };
 
-router.get("/accepted-applications", requireAuth, async (req, res) => {
+router.get("/accepted-applications", requireAuth, authorize("recruiter"), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can access accepted applications" });
   }
@@ -120,7 +120,7 @@ router.get("/accepted-applications", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/recruiter", requireAuth, async (req, res) => {
+router.get("/recruiter", requireAuth, authorize("recruiter"), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can access employees" });
   }
@@ -156,7 +156,7 @@ router.get("/recruiter", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/me", requireAuth, async (req, res) => {
+router.get("/me", requireAuth, authorize("candidate"), async (req, res) => {
   if (req.user.role !== "candidate") {
     return res.status(403).json({ message: "Only candidate accounts can access their employee profile" });
   }
@@ -193,7 +193,7 @@ router.get("/me", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/convert", requireAuth, async (req, res) => {
+router.post("/convert", requireAuth, authorize("recruiter"), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can convert candidates" });
   }
@@ -312,7 +312,7 @@ router.post("/convert", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/:id", requireAuth, async (req, res) => {
+router.patch("/:id", requireAuth, authorize("recruiter"), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can update employees" });
   }
@@ -365,7 +365,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/attendance", requireAuth, async (req, res) => {
+router.get("/attendance", requireAuth, authorize("recruiter", "candidate"), async (req, res) => {
   if (!["recruiter", "candidate"].includes(req.user.role)) {
     return res.status(403).json({ message: "Only recruiter or candidate accounts can access attendance" });
   }
@@ -396,7 +396,7 @@ router.get("/attendance", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/attendance", requireAuth, async (req, res) => {
+router.post("/attendance", requireAuth, authorize("recruiter"), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can record attendance" });
   }
@@ -450,7 +450,7 @@ router.post("/attendance", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/leave-requests", requireAuth, async (req, res) => {
+router.get("/leave-requests", requireAuth, authorize("recruiter", "candidate"), async (req, res) => {
   if (!["recruiter", "candidate"].includes(req.user.role)) {
     return res.status(403).json({ message: "Only candidate or recruiter accounts can access leave requests" });
   }
@@ -485,7 +485,7 @@ router.get("/leave-requests", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/leave-requests", requireAuth, async (req, res) => {
+router.post("/leave-requests", requireAuth, authorize("candidate"), async (req, res) => {
   if (req.user.role !== "candidate") {
     return res.status(403).json({ message: "Only candidate employee accounts can request leave" });
   }
@@ -529,7 +529,7 @@ router.post("/leave-requests", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/leave-requests/:id", requireAuth, async (req, res) => {
+router.patch("/leave-requests/:id", requireAuth, authorize("recruiter"), async (req, res) => {
   if (req.user.role !== "recruiter") {
     return res.status(403).json({ message: "Only recruiter accounts can review leave requests" });
   }

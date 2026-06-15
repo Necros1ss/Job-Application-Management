@@ -48,6 +48,33 @@ export const applicationRepository = {
     return result.rows;
   },
 
+  getRecruiterActivity: async (recruiterId, limit = 20) => {
+    const result = await pool.query(
+      `SELECT ae.*, a.id AS application_id, c.name AS candidate_name, j.title AS job_title
+       FROM application_events ae
+       JOIN applications a ON ae.application_id = a.id
+       JOIN candidates c ON a.candidate_id = c.id
+       JOIN job_posts j ON a.job_post_id = j.id
+       WHERE j.recruiter_id = $1
+       ORDER BY ae.created_at DESC
+       LIMIT $2`,
+      [recruiterId, limit]
+    );
+    return result.rows;
+  },
+
+  getRecruiterAnalytics: async (recruiterId) => {
+    const result = await pool.query(
+      `SELECT status, COUNT(*)::int AS count
+       FROM applications a
+       JOIN job_posts j ON a.job_post_id = j.id
+       WHERE j.recruiter_id = $1
+       GROUP BY status`,
+      [recruiterId]
+    );
+    return result.rows;
+  },
+
   countForRecruiter: async (recruiterId, jobPostId) => {
     let query = `
       SELECT COUNT(*) 
@@ -78,6 +105,32 @@ export const applicationRepository = {
     return result.rows[0] || null;
   },
 
+  findByIdForRecruiter: async (id, recruiterId) => {
+    const result = await pool.query(
+      `SELECT
+          a.*,
+          c.name AS candidate_name,
+          c.email AS candidate_email,
+          c.phone AS candidate_phone,
+          c.skills AS candidate_skills,
+          c.experience AS candidate_experience,
+          j.title AS job_title,
+          j.description AS job_description,
+          j.responsibilities AS job_responsibilities,
+          j.requirements AS job_requirements,
+          j.experience AS job_experience,
+          j.employment_type,
+          r.company_name
+       FROM applications a
+       JOIN candidates c ON a.candidate_id = c.id
+       JOIN job_posts j ON a.job_post_id = j.id
+       JOIN recruiters r ON j.recruiter_id = r.id
+       WHERE a.id = $1 AND j.recruiter_id = $2`,
+      [id, recruiterId]
+    );
+    return result.rows[0] || null;
+  },
+
   create: async (candidateId, jobPostId, cvData, coverLetter) => {
     const result = await pool.query(
       `INSERT INTO applications (
@@ -92,12 +145,44 @@ export const applicationRepository = {
     return result.rows[0];
   },
 
+  update: async (id, candidateId, data) => {
+    const result = await pool.query(
+      `UPDATE applications
+       SET cover_letter = COALESCE($1, cover_letter)
+       WHERE id = $2 AND candidate_id = $3
+       RETURNING *`,
+      [data.coverLetter ?? data.cover_letter ?? null, id, candidateId]
+    );
+    return result.rows[0] || null;
+  },
+
+  delete: async (id, candidateId) => {
+    const result = await pool.query(
+      "DELETE FROM applications WHERE id = $1 AND candidate_id = $2 RETURNING id",
+      [id, candidateId]
+    );
+    return result.rowCount > 0;
+  },
+
   updateStatus: async (id, status) => {
     const result = await pool.query(
       "UPDATE applications SET status = $1 WHERE id = $2 RETURNING *",
       [status, id]
     );
     return result.rows[0];
+  },
+
+  reject: async (id, reason, emailBody) => {
+    const result = await pool.query(
+      `UPDATE applications
+       SET status = 'rejected',
+           rejection_reason = $1,
+           rejection_email_body = $2
+       WHERE id = $3
+       RETURNING *`,
+      [reason, emailBody, id]
+    );
+    return result.rows[0] || null;
   },
 
   updateRating: async (id, rating) => {
@@ -142,5 +227,13 @@ export const applicationRepository = {
 
   deleteNote: async (noteId) => {
     await pool.query("DELETE FROM application_notes WHERE id = $1", [noteId]);
+  },
+
+  getEvents: async (applicationId) => {
+    const result = await pool.query(
+      "SELECT * FROM application_events WHERE application_id = $1 ORDER BY created_at ASC",
+      [applicationId]
+    );
+    return result.rows;
   },
 };

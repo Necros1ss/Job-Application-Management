@@ -3,10 +3,11 @@ import fs from "fs";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
-import { requireAuth } from "../middlewares/auth.js";
+import { authorize, requireAuth } from "../middlewares/auth.js";
 import { getMe, getAvatar, updateAvatar, updateMe, updateNotificationPreferences, deleteMe } from "../controllers/userController.js";
 
 const router = express.Router();
+const anyAuthenticatedRole = authorize("admin", "hr_manager", "recruiter", "interviewer", "candidate");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROFILE_UPLOAD_DIR = path.resolve(__dirname, "../../uploads/profile");
@@ -48,11 +49,11 @@ const profileMediaUpload = multer({
   },
 });
 
-router.get("/me", requireAuth, getMe);
-router.get("/me/avatar", requireAuth, getAvatar);
-router.patch("/me/avatar", requireAuth, profileMediaUpload.single("avatar"), updateAvatar);
-router.patch("/me", requireAuth, updateMe);
-router.patch("/notification-preferences", requireAuth, updateNotificationPreferences);
-router.delete("/me", requireAuth, deleteMe);
+router.get("/me", requireAuth, anyAuthenticatedRole, getMe);
+router.get("/me/avatar", requireAuth, anyAuthenticatedRole, getAvatar);
+router.patch("/me/avatar", requireAuth, anyAuthenticatedRole, profileMediaUpload.single("avatar"), updateAvatar);
+router.patch("/me", requireAuth, anyAuthenticatedRole, updateMe);
+router.patch("/notification-preferences", requireAuth, anyAuthenticatedRole, updateNotificationPreferences);
+router.delete("/me", requireAuth, anyAuthenticatedRole, deleteMe);
 
 export default router;

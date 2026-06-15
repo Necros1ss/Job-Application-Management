@@ -1,7 +1,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import { pool } from "../config/db.js";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, authorize } from "../middlewares/auth.js";
 import { validate } from "../middlewares/validate.js";
 import { forgotPassword, login, logout, refresh, resetPassword, signup, changePassword } from "../controllers/authController.js";
 import {
@@ -20,6 +20,8 @@ router.post("/logout", logout);
 router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
 router.post("/reset-password", validate(resetPasswordSchema), resetPassword);
 
-router.post("/change-password", requireAuth, changePassword);
+const anyAuthenticatedRole = authorize("admin", "hr_manager", "recruiter", "interviewer", "candidate");
+
+router.post("/change-password", requireAuth, anyAuthenticatedRole, changePassword);
 
 export default router;
