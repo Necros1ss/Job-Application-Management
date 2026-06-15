@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { FaBriefcase, FaUsers, FaClipboardList, FaChartBar } from "react-icons/fa";
-import { hrManagerApi } from "../../lib/api/hrManagerApi";
+import { hrManagerApi } from "../../lib/api/index";
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
   <div className="rounded-[14px] border border-[#e5e5e5] bg-white p-6 shadow-[0_0_0_1px_rgba(10,10,10,0.05)]">

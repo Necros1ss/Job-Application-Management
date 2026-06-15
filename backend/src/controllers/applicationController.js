@@ -1,247 +1,68 @@
+import { applicationService } from "../services/applicationService.js";
+import { successResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import * as applicationService from "../services/applicationService.js";
 
-const sendError = (res, error) =>
-  res.status(error.status || 500).json({
-    message: error.message || "Unexpected error",
-    ...(process.env.NODE_ENV === "production" || !error.detail ? {} : { detail: error.detail }),
+export const getApplications = asyncHandler(async (req, res) => {
+  const applications = await applicationService.getApplications(req.user);
+  return res.json(successResponse(applications));
+});
+
+export const getRecruiterApplications = asyncHandler(async (req, res) => {
+  const options = {
+    page: parseInt(req.query.page) || 1,
+    limit: parseInt(req.query.limit) || 10,
+    jobPostId: req.query.jobPostId
+  };
+  const result = await applicationService.getRecruiterApplications(req.user.id, options);
+  return res.json(successResponse(result.applications, result.pagination));
+});
+
+export const getApplicationById = asyncHandler(async (req, res) => {
+  const application = await applicationService.getApplicationById(req.params.id).catch(error => {
+    if (error.message === "Application not found") error.status = 404;
+    throw error;
   });
-
-export const listForCandidate = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.listForCandidate({ user: req.user, query: req.query });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
+  return res.json(successResponse(application));
 });
 
-export const listForRecruiter = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.listForRecruiter({ user: req.user, query: req.query });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
+export const applyForJob = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    const error = new Error("CV file is required");
+    error.status = 400;
+    throw error;
   }
-});
-
-export const getActivity = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.getActivity({ user: req.user });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const getAnalytics = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.getAnalytics({ user: req.user, query: req.query });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const getAiScreening = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.getAiScreening({
-      user: req.user,
-      applicationId: req.params.id,
-    });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const analyzeAiScreening = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.analyzeAiScreening({
-      user: req.user,
-      applicationId: req.params.id,
-    });
-    return res.status(201).json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const getForRecruiter = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.getForRecruiter({ user: req.user, applicationId: req.params.id });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const downloadCv = asyncHandler(async (req, res) => {
-  try {
-    const file = await applicationService.downloadCv({ user: req.user, applicationId: req.params.id });
-    res.setHeader("Content-Type", file.mimeType);
-    if (file.size) {
-      res.setHeader("Content-Length", String(file.size));
-    }
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type");
-    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
-    return res.sendFile(file.path);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const update = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.update({
-      user: req.user,
-      applicationId: req.params.id,
-      payload: req.body,
-    });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const remove = asyncHandler(async (req, res) => {
-  try {
-    await applicationService.remove({ user: req.user, applicationId: req.params.id });
-    return res.status(204).send();
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const apply = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.apply({
-      user: req.user,
-      body: req.body,
-      file: req.file,
-    });
-    return res.status(201).json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
+  const application = await applicationService.applyForJob(req.user.id, req.body, req.file);
+  return res.status(201).json(successResponse(application, "Application submitted successfully"));
 });
 
 export const updateStatus = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.updateStatus({
-      user: req.user,
-      applicationId: req.params.id,
-      status: req.body.status,
-    });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
+  const { status } = req.body;
+  const application = await applicationService.updateStatus(req.params.id, status, req.user.id);
+  return res.json(successResponse(application, "Status updated successfully"));
 });
 
 export const updateRating = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.updateRating({
-      user: req.user,
-      applicationId: req.params.id,
-      rating: req.body.rating,
-    });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
+  const { rating } = req.body;
+  const application = await applicationService.updateRating(req.params.id, rating, req.user.id);
+  return res.json(successResponse(application, "Rating updated successfully"));
+});
+
+export const getNotes = asyncHandler(async (req, res) => {
+  const notes = await applicationService.getNotes(req.params.id);
+  return res.json(successResponse(notes));
 });
 
 export const addNote = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.addNote({
-      user: req.user,
-      applicationId: req.params.id,
-      note: req.body.note,
-    });
-    return res.status(201).json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
+  const note = await applicationService.addNote(req.params.id, req.user.id, req.body.note);
+  return res.status(201).json(successResponse(note, "Note added successfully"));
 });
 
 export const updateNote = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.updateNote({
-      user: req.user,
-      applicationId: req.params.id,
-      noteId: req.params.noteId,
-      note: req.body.note,
-    });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
+  const note = await applicationService.updateNote(req.params.noteId, req.body.note);
+  return res.json(successResponse(note, "Note updated successfully"));
 });
 
 export const deleteNote = asyncHandler(async (req, res) => {
-  try {
-    await applicationService.deleteNote({
-      user: req.user,
-      applicationId: req.params.id,
-      noteId: req.params.noteId,
-    });
-    return res.status(204).send();
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const reject = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.reject({
-      user: req.user,
-      applicationId: req.params.id,
-      reason: req.body.reason,
-      emailBody: req.body.emailBody,
-    });
-    return res.json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const offer = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.offer({
-      user: req.user,
-      applicationId: req.params.id,
-      subject: req.body.subject,
-      content: req.body.content,
-    });
-    return res.status(201).json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const acceptOffer = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.acceptOffer({
-      user: req.user,
-      applicationId: req.params.id,
-    });
-    return res.status(201).json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
-});
-
-export const declineOffer = asyncHandler(async (req, res) => {
-  try {
-    const result = await applicationService.declineOffer({
-      user: req.user,
-      applicationId: req.params.id,
-      reason: req.body.reason,
-    });
-    return res.status(201).json(result);
-  } catch (error) {
-    return sendError(res, error);
-  }
+  await applicationService.deleteNote(req.params.noteId);
+  return res.json(successResponse(null, "Note deleted successfully"));
 });

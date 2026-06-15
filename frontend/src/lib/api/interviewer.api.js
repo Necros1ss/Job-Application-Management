@@ -1,4 +1,4 @@
-import { request } from "../api";
+import { request } from "./client";
 
 export const interviewerApi = {
   getMyInterviews: () => request("/interviews/interviewer"),

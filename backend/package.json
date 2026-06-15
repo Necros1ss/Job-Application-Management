@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "create-admin": "node scripts/create-admin.js",
-    "seed-demo": "node scripts/seed-demo-users.js"
+    "seed-demo": "node scripts/seed-demo-users.js",
+    "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

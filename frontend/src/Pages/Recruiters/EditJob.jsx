@@ -1,7 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { FaTimes } from "react-icons/fa";
-import { jobPostsApi } from "../../lib/api";
+import { jobPostsApi } from "../../lib/api/index";
 import { showError, showSuccess } from "../../utils/toast";
 
 const EditJob = ({ isOpen, job, onClose, onSuccess }) => {

@@ -1,7 +1,7 @@
 import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { adminApi } from "../../lib/api";
+import { adminApi } from "../../lib/api/index";
 import Toast from "../../Components/Toast";
 
 const StatCard = ({ label, value, tone = "slate" }) => {

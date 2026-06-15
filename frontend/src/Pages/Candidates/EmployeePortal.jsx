@@ -9,7 +9,7 @@ import {
   FaClock,
   FaUmbrellaBeach,
 } from "react-icons/fa";
-import { employeesApi, usersApi } from "../../lib/api";
+import { employeesApi, usersApi } from "../../lib/api/index";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
 import { useI18n } from "../../lib/i18n";
 import { showError, showSuccess } from "../../utils/toast";

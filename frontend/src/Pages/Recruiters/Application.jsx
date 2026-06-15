@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import ApplicationDetail from './ApplicationDetail';
-import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api';
+import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api/index';
 import { SkeletonRow } from "../../Components/Skeleton";
 import EmptyState from "../../Components/EmptyState";
 import Pagination from "../../Components/Pagination";

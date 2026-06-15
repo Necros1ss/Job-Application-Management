@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FaEnvelope, FaCheck, FaArrowLeft } from "react-icons/fa";
-import { authApi } from "../../lib/api";
+import { authApi } from "../../lib/api/index";
 import { validateEmail } from "../../utils/validation";
 
 const ForgotPass = () => {

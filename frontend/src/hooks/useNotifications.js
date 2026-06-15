@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { initializeSession, tokenStorage } from "../lib/api";
+import { initializeSession, tokenStorage } from "../lib/api/index";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 const MAX_NOTIFICATIONS = 50;

@@ -8,7 +8,7 @@ import {
   FaHome, FaHeartbeat, FaMoneyBillWave, FaDumbbell
 } from "react-icons/fa";
 
-import { usersApi, jobPostsApi, savedJobsApi, applicationsApi, tokenStorage } from "../../lib/api";
+import { usersApi, jobPostsApi, savedJobsApi, applicationsApi, tokenStorage } from "../../lib/api/index";
 import FormApply from "./FormApply";
 import { formatMessageTime } from '../../utils/format';
 import { showError, showSuccess } from "../../utils/toast";

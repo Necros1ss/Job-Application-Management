@@ -1,9 +1,11 @@
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
-import { authApi, tokenStorage } from "../lib/api";
+import { authApi } from "../lib/api/index";
+import { useAuthStore } from "../store/authStore";
 
 const LogoutModal = ({ setOpenLogoutModal }) => {
   const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
 
   const closeLogoutModal = () => {
     setOpenLogoutModal(false);
@@ -16,7 +18,7 @@ const LogoutModal = ({ setOpenLogoutModal }) => {
       // Clear local state even if the server cookie is already gone.
     }
 
-    tokenStorage.clearSession();
+    logout();
     setOpenLogoutModal(false);
     navigate("/login");
   };

@@ -10,8 +10,9 @@ import {
   FaTrashAlt,
   FaUserCircle,
 } from "react-icons/fa";
+import { useAuthStore } from "../store/authStore";
 import DeleteAccountModal from "../Components/DeleteAccountModal";
-import { accountApi, tokenStorage, usersApi } from "../lib/api";
+import { accountApi, usersApi } from "../lib/api/index";
 import { useI18n } from "../lib/i18n";
 import { showError, showSuccess } from "../utils/toast";
 
@@ -101,9 +102,10 @@ PasswordField.propTypes = {
 
 const Settings = () => {
   const { t } = useI18n();
+  const { user, setUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState("security");
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(user);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -112,21 +114,22 @@ const Settings = () => {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
-  const [isLoading, setIsLoading] = useState(true);
+  const [preferences, setPreferences] = useState(user?.notificationPreferences || DEFAULT_PREFERENCES);
+  const [isLoading, setIsLoading] = useState(!user);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
-  const userRole = tokenStorage.getRole() || localStorage.getItem("userRole") || "";
+  const userRole = user?.role || "";
 
   useEffect(() => {
     let mounted = true;
 
     const loadSettings = async () => {
       try {
-        setIsLoading(true);
+        if (!user) setIsLoading(true);
         const nextProfile = await usersApi.me();
         if (!mounted) return;
         setProfile(nextProfile);
+        setUser(nextProfile);
         setPreferences({
           ...DEFAULT_PREFERENCES,
           ...(nextProfile.notificationPreferences || {}),
@@ -225,10 +228,13 @@ const Settings = () => {
     try {
       setIsSavingPreferences(true);
       const response = await usersApi.updateNotificationPreferences(preferences);
-      setPreferences({
+      const updatedPreferences = {
         ...DEFAULT_PREFERENCES,
         ...(response.notificationPreferences || preferences),
-      });
+      };
+      setPreferences(updatedPreferences);
+      // Update store with new preferences
+      setUser({ ...user, notificationPreferences: updatedPreferences });
       showSuccess("Notification preferences saved.");
     } catch (error) {
       showError(error.message || "Failed to save notification preferences");

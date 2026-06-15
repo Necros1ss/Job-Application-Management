@@ -12,7 +12,7 @@ import {
   FaSearch,
   FaTimes,
 } from "react-icons/fa";
-import { jobPostsApi, savedJobsApi, usersApi } from "../../lib/api";
+import { jobPostsApi, savedJobsApi, usersApi } from "../../lib/api/index";
 import { SkeletonCard } from "../../Components/Skeleton";
 import Pagination from "../../Components/Pagination";
 import EmptyState from "../../Components/EmptyState";

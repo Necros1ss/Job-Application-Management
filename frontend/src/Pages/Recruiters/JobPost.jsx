@@ -5,7 +5,7 @@ import {
   FaSearch, FaPlus, FaChevronDown, FaChevronUp, FaEdit, FaTrashAlt,
   FaEye, FaFilter, FaArrowsAltV, FaTimes
 } from "react-icons/fa";
-import { jobPostsApi, usersApi } from "../../lib/api";
+import { jobPostsApi, usersApi } from "../../lib/api/index";
 import CreateJob from "./CreateJob";
 import EditJob from "./EditJob";
 import EmptyState from "../../Components/EmptyState";

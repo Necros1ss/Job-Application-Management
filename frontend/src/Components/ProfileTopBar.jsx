@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FaBell } from "react-icons/fa";
-import { messagesApi } from '../lib/api';
+import { messagesApi } from '../lib/api/index';
 import { formatMessageTime } from '../utils/format';
 import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';

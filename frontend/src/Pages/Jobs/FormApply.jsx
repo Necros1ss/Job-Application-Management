@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { FaCheck, FaFileAlt, FaSpinner, FaTimes, FaUpload } from "react-icons/fa";
-import { applyFromJob } from "../../lib/api";
+import { applyFromJob } from "../../lib/api/index";
 import { showError, showSuccess } from "../../utils/toast";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;

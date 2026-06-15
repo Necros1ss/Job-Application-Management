@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
+import { applicationsApi, interviewsApi, usersApi } from "../../lib/api/index";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
 import { FaUserCircle, FaSearch, FaBookOpen, FaMapMarkerAlt, FaVideo } from "react-icons/fa";
 import { formatInterviewDateTime, formatMessageTime } from '../../utils/format';

@@ -1,4 +1,4 @@
-import { request } from "../api";
+import { request } from "./client";
 
 export const hrManagerApi = {
   getDashboard: () => request("/hr-manager/dashboard"),

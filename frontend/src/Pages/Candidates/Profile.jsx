@@ -17,7 +17,7 @@ import {
   MdPhone,
   MdWork,
 } from "react-icons/md";
-import { usersApi } from "../../lib/api";
+import { usersApi } from "../../lib/api/index";
 import { calculateAge } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
 

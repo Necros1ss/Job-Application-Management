@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { hrManagerApi } from "../../lib/api/hrManagerApi";
+import { hrManagerApi } from "../../lib/api/index";
 
 const HRManagerRecruiters = () => {
   const [recruiters, setRecruiters] = useState([]);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { adminApi } from "../../lib/api";
+import { adminApi } from "../../lib/api/index";
 import Toast from "../../Components/Toast";
 
 const defaultFilters = { search: "", role: "", locked: "", deleted: "" };

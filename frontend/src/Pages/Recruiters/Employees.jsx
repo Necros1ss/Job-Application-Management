@@ -7,7 +7,7 @@ import {
   FaUserTie,
   FaTimes,
 } from "react-icons/fa";
-import { employeesApi, usersApi } from "../../lib/api";
+import { employeesApi, usersApi } from "../../lib/api/index";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";

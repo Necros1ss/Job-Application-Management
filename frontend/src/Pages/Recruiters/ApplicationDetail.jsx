@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import { applicationsApi, interviewsApi, messagesApi } from '../../lib/api';
+import { applicationsApi, interviewsApi, messagesApi } from '../../lib/api/index';
 import { formatMessageTime } from '../../utils/format';
 import {
   FaArrowLeft,

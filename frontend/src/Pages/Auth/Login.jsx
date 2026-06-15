@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { authApi, tokenStorage } from "../../lib/api";
+import { authApi } from "../../lib/api/index";
 import { FaArrowLeft, FaBriefcase, FaCheckCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { showError } from "../../utils/toast";
 import LanguageSwitcher from "../../Components/LanguageSwitcher";
 import { useI18n } from "../../lib/i18n";
+import { useAuthStore } from "../../store/authStore";
 
 const Login = () => {
   const { t } = useI18n();
+  const setAuth = useAuthStore((state) => state.setAuth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState("");
@@ -31,8 +33,7 @@ const Login = () => {
     setIsSubmitting(true);
     try {
       const payload = await authApi.login({ email, password });
-      tokenStorage.setToken(payload.token);
-      tokenStorage.setRole(payload.user?.role || "candidate");
+      setAuth(payload.user, payload.token);
       setFormError("");
       navigate(
         payload.user?.role === "recruiter" ? "/recruiter"

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaPlus, FaList, FaThLarge, FaTrashAlt, FaCheck, FaTimes } from "react-icons/fa";
 import { FaSearch } from "react-icons/fa";
 import { useI18n } from "../../lib/i18n";
-import { applicationsApi, savedJobsApi } from "../../lib/api";
+import { applicationsApi, savedJobsApi } from "../../lib/api/index";
 import { SkeletonCard, SkeletonRow } from "../../Components/Skeleton";
 import { showError, showSuccess } from "../../utils/toast";
 import { formatDate } from "../../utils/format";

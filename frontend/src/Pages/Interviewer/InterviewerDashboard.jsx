@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FaCalendar, FaStar } from "react-icons/fa";
-import { interviewerApi } from "../../lib/api/interviewerApi";
+import { interviewerApi } from "../../lib/api/index";
 
 const recommendationLabels = {
   strong_hire: "Strong Hire",

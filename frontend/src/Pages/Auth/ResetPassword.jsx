@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
-import { authApi } from "../../lib/api";
+import { authApi } from "../../lib/api/index";
 
 const ResetPassword = () => {
   const navigate = useNavigate();

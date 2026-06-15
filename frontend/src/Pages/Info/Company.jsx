@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaBuilding, FaMapMarkerAlt, FaGlobe, FaBriefcase, FaRegEnvelope, FaPhoneAlt } from "react-icons/fa";
 import TopBar from "../../Components/TopBar";
-import { jobPostsApi, usersApi } from "../../lib/api";
+import { jobPostsApi, usersApi } from "../../lib/api/index";
 import { showError } from "../../utils/toast";
 
 const defaultCompanyLogo = "https://api.dicebear.com/8.x/initials/svg?seed=Company&backgroundColor=e0f2fe&textColor=0369a1";

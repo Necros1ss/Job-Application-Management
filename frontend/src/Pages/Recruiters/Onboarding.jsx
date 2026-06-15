@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaCheckCircle, FaClipboardList, FaPlus, FaTrashAlt } from "react-icons/fa";
-import { onboardingApi, usersApi } from "../../lib/api";
+import { onboardingApi, usersApi } from "../../lib/api/index";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";

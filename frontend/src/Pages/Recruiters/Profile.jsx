@@ -16,7 +16,7 @@ import {
   MdPhone,
   MdVpnKey,
 } from "react-icons/md";
-import { usersApi } from "../../lib/api";
+import { usersApi } from "../../lib/api/index";
 import { showError, showSuccess } from "../../utils/toast";
 
 const emptyProfile = {

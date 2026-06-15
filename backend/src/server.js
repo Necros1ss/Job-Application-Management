@@ -7,13 +7,6 @@ import helmet from "helmet";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
-  ensureAdminUserColumns,
-  ensureApplicationRejectionColumns,
-  ensureApplicationStatusEnum,
-  ensureHrManagerInterviewerSchema,
-  ensureJobModerationColumns,
-  ensurePhaseSchema,
-  ensureUserRoleEnum,
   testDbConnection,
 } from "./config/db.js";
 import authRoutes from "./routes/auth.js";
@@ -125,28 +118,34 @@ app.use((err, _req, res, _next) => {
     console.error("[Server Error]", err?.message || err, err?.stack || "");
   }
 
+  // Handle Multer errors
   if (err?.name === "MulterError") {
-    if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({ success: false, message: "Uploaded file is too large", detail: "Maximum allowed size depends on the upload type" });
-    }
-
-    if (err.code === "LIMIT_UNEXPECTED_FILE") {
-      return res.status(400).json({ success: false, message: "Invalid upload field", detail: "Check the expected multipart field name" });
-    }
-
-    return res.status(400).json({ success: false, message: "Invalid upload", detail: err.message });
+    const detail = err.code === "LIMIT_FILE_SIZE" ? "Maximum allowed size depends on the upload type" :
+                   err.code === "LIMIT_UNEXPECTED_FILE" ? "Check the expected multipart field name" :
+                   err.message;
+    return res.status(400).json({ 
+      success: false, 
+      message: err.code === "LIMIT_FILE_SIZE" ? "Uploaded file is too large" : 
+               err.code === "LIMIT_UNEXPECTED_FILE" ? "Invalid upload field" : "Invalid upload", 
+      detail 
+    });
   }
 
-  if (typeof err?.message === "string" && err.message.includes("Only PDF, DOC and DOCX")) {
+  // Handle known validation/file errors
+  if (typeof err?.message === "string" && (err.message.includes("Only PDF, DOC and DOCX") || err.message.includes("Only JPG, PNG, WEBP and GIF"))) {
     return res.status(400).json({ success: false, message: err.message });
   }
 
-  if (typeof err?.message === "string" && err.message.includes("Only JPG, PNG, WEBP and GIF")) {
-    return res.status(400).json({ success: false, message: err.message });
-  }
+  // Standardized error response
+  const status = err.status || 500;
+  const message = err.message || "Internal server error";
+  const detail = process.env.NODE_ENV === "production" ? (status === 500 ? "An unexpected error occurred" : undefined) : (err.detail || err.stack);
 
-  const detail = process.env.NODE_ENV === "production" ? "An unexpected error occurred" : err?.message || "Unknown error";
-  return res.status(500).json({ success: false, message: "Internal server error", detail });
+  return res.status(status).json({
+    success: false,
+    message,
+    ...(detail ? { detail } : {})
+  });
 });
 
 const startServer = async () => {
@@ -154,14 +153,15 @@ const startServer = async () => {
     throw new Error("JWT_SECRET is not set in environment variables");
   }
 
+  if (!process.env.JWT_REFRESH_SECRET) {
+    throw new Error("JWT_REFRESH_SECRET is not set in environment variables");
+  }
+
+  if (process.env.JWT_SECRET === process.env.JWT_REFRESH_SECRET) {
+    throw new Error("JWT_SECRET and JWT_REFRESH_SECRET must be different");
+  }
+
   await testDbConnection();
-  await ensureUserRoleEnum();
-  await ensureAdminUserColumns();
-  await ensureJobModerationColumns();
-  await ensureApplicationStatusEnum();
-  await ensureApplicationRejectionColumns();
-  await ensurePhaseSchema();
-  await ensureHrManagerInterviewerSchema();
   app.listen(port, () => {
     console.log(`API server running on http://localhost:${port}`);
   });

@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState } from "react";
 import { FaTimes, FaMapMarker, FaDollarSign, FaBriefcase, FaRegCalendarAlt, FaBookOpen, FaCheck } from "react-icons/fa";
-import { jobPostsApi } from "../../lib/api";
+import { jobPostsApi } from "../../lib/api/index";
 import { showError, showSuccess } from "../../utils/toast";
 import { useFormValidation, validators } from "../../hooks/useFormValidation";
 

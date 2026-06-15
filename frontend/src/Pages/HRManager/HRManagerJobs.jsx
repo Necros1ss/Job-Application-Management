@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FaCheck, FaTimes, FaSearch } from "react-icons/fa";
-import { hrManagerApi } from "../../lib/api/hrManagerApi";
+import { hrManagerApi } from "../../lib/api/index";
 import { showError, showSuccess } from "../../utils/toast";
 
 const statusColors = {

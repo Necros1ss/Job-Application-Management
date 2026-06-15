@@ -15,7 +15,7 @@ import {
   Tooltip,
 } from "chart.js";
 import { Bar, Doughnut, Line, getElementsAtEvent } from "react-chartjs-2";
-import { jobPostsApi, applicationsApi, usersApi } from "../../lib/api";
+import { jobPostsApi, applicationsApi, usersApi } from "../../lib/api/index";
 import { showError } from "../../utils/toast";
 import {
   getApplicationDisplayStatus,

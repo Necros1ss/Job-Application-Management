@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaPen, FaPlus, FaSearch, FaTimes } from "react-icons/fa";
 import ApplicationDetail from "./ApplicationDetail";
-import { applicationsApi, interviewsApi, usersApi } from "../../lib/api";
+import { applicationsApi, interviewsApi, usersApi } from "../../lib/api/index";
 import EmptyState from "../../Components/EmptyState";
 import { SkeletonRow } from "../../Components/Skeleton";
 import { useI18n } from "../../lib/i18n";

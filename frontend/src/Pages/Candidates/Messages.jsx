@@ -12,7 +12,7 @@ import {
   FaPaperPlane,
 } from "react-icons/fa";
 import { SkeletonCard } from "../../Components/Skeleton";
-import { messagesApi } from "../../lib/api";
+import { messagesApi } from "../../lib/api/index";
 import { formatMessageTime } from "../../utils/format";
 import { useI18n } from "../../lib/i18n";
 import { showError } from "../../utils/toast";

@@ -17,6 +17,8 @@
     "db:down": "docker compose -f docker-compose.yml down",
     "db:reset": "docker compose -f docker-compose.yml down -v && docker compose -f docker-compose.yml up -d db",
     "db:logs": "docker compose -f docker-compose.yml logs -f db",
+    "migrate": "npm run migrate --prefix backend",
+    "db:migrate": "npm run db:up && npm run migrate",
     "lint:frontend": "cd frontend && npx eslint src --ext .js,.jsx",
     "smoke:backend": "node -e \"const http=require('http');http.get('http://localhost:5000/api/health',(r)=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{console.log('Status:',r.statusCode);console.log('Body:',d);process.exit(r.statusCode===200?0:1)})}).on('error',e=>{console.error('Backend not reachable:',e.message);process.exit(1)})\""
   },

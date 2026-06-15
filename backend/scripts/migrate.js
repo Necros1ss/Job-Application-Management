@@ -17,19 +17,6 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-const MIGRATION_ORDER = [
-  { file: "001_create_password_reset_tokens.sql",   name: "Password Reset Tokens" },
-  { file: "002_admin_rbac_and_moderation.sql",       name: "Admin RBAC & Moderation" },
-  { file: "002_add_candidate_profile_and_cover_letter.sql", name: "Candidate Profile & Cover Letter" },
-  { file: "003_recruitment_phase_1.sql",            name: "Recruitment Phase 1" },
-  { file: "004_onboarding_phase_2.sql",              name: "Onboarding Phase 2" },
-  { file: "005_hr_phase_3.sql",                      name: "HR Phase 3" },
-  { file: "006_cv_filesystem_storage.sql",            name: "CV Filesystem Storage" },
-  { file: "007_job_posts_advanced_search.sql",        name: "Job Posts Advanced Search" },
-  { file: "009_profile_media.sql",                    name: "Profile Media" },
-  { file: "hr_manager_interviewer.sql",              name: "HR Managers & Interviewers" },
-];
-
 async function ensureMigrationsTable() {
   const client = await pool.connect();
   try {
@@ -67,18 +54,14 @@ async function markApplied(name) {
 async function runMigration(filePath, name) {
   const client = await pool.connect();
   try {
-    console.log(`  Running: ${name} (${filePath})`);
-    await client.query(fs.readFileSync(filePath, "utf8"));
+    console.log(`  Running: ${name}`);
+    const sql = fs.readFileSync(filePath, "utf8");
+    await client.query(sql);
     await markApplied(name);
     console.log(`  ✓ ${name}`);
   } catch (err) {
-    if (err.code === "42P07" || err.code === "42710" || err.code === "23505" ||
-        err.message.includes("already exists") || err.message.includes("duplicate key")) {
-      await markApplied(name);
-      console.log(`  ⊘ ${name} (already applied)`);
-    } else {
-      throw err;
-    }
+    console.error(`  ❌ Error in ${name}:`, err.message);
+    throw err;
   } finally {
     client.release();
   }
@@ -92,38 +75,40 @@ async function migrate() {
   }
 
   console.log("🔄 Starting migrations...\n");
-  console.log(`📦 Database: ${dbUrl.replace(/\/\/.*:.*@/, "//***:***@")}`);
 
   try {
     await pool.query("SELECT 1");
   } catch (err) {
     console.error(`\n❌ Cannot connect to database: ${err.message}`);
-    console.error("   Make sure the database is running: npm run db:up");
     process.exit(1);
   }
 
   await ensureMigrationsTable();
 
-  const sqlDir = path.resolve(__dirname, "../sql");
+  const migrationsDir = path.resolve(__dirname, "../migrations");
+  
+  if (!fs.existsSync(migrationsDir)) {
+    console.error("❌ Migrations directory not found");
+    process.exit(1);
+  }
+
+  const files = fs.readdirSync(migrationsDir)
+    .filter(f => f.endsWith(".sql"))
+    .sort();
+
   let applied = 0;
   let skipped = 0;
 
-  for (const { file, name } of MIGRATION_ORDER) {
-    const filePath = path.join(sqlDir, file);
+  for (const file of files) {
+    const filePath = path.join(migrationsDir, file);
 
-    if (!fs.existsSync(filePath)) {
-      console.warn(`  ⚠ ${name}: file not found (${file}), skipping`);
+    if (await isApplied(file)) {
+      console.log(`  ⊘ ${file} (already applied)`);
       skipped++;
       continue;
     }
 
-    if (await isApplied(name)) {
-      console.log(`  ⊘ ${name} (already recorded)`);
-      skipped++;
-      continue;
-    }
-
-    await runMigration(filePath, name);
+    await runMigration(filePath, file);
     applied++;
   }
 

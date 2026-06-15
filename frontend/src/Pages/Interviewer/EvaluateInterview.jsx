@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaStar, FaArrowLeft } from "react-icons/fa";
-import { interviewerApi } from "../../lib/api/interviewerApi";
+import { interviewerApi } from "../../lib/api/index";
 import { showError, showSuccess } from "../../utils/toast";
 
 const recommendations = [

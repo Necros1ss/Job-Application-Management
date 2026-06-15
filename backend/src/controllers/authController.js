@@ -1,42 +1,18 @@
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
-import jwt from "jsonwebtoken";
-import { pool } from "../config/db.js";
-import { sendEmail } from "../utils/mailer.js";
+import { authService } from "../services/authService.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
-const ALLOWED_ROLES = new Set(["candidate", "recruiter", "hr_manager", "interviewer"]);
-const normalizeEmail = (email) => email?.trim().toLowerCase();
-const PASSWORD_RESET_MESSAGE = "If that email is registered, a reset link has been sent.";
-const ACCESS_TOKEN_EXPIRES_IN = "15m";
-const REFRESH_TOKEN_EXPIRES_IN = "30d";
 const REFRESH_COOKIE_NAME = "refresh_token";
-
-const getRefreshSecret = () => process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-
-const createAccessToken = (user) =>
-  jwt.sign(
-    { id: user.id, role: user.role, email: user.email, name: user.name },
-    process.env.JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
-  );
-
-const createRefreshToken = (user) =>
-  jwt.sign(
-    { id: user.id, role: user.role },
-    getRefreshSecret(),
-    { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
-  );
 
 const refreshCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: "lax",
-  path: "/api/auth",
+  path: "/api/auth/refresh",
   maxAge: 30 * 24 * 60 * 60 * 1000,
 });
 
-const setRefreshCookie = (res, user) => {
-  res.cookie(REFRESH_COOKIE_NAME, createRefreshToken(user), refreshCookieOptions());
+const setRefreshCookie = (res, refreshToken) => {
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
 };
 
 const clearRefreshCookie = (res) => {
@@ -53,286 +29,81 @@ const parseCookies = (cookieHeader = "") =>
 
 const getCookie = (req, name) => parseCookies(req.headers.cookie || "")[name];
 
-const getUserProfileById = async (userId) => {
-  const result = await pool.query(
-    `SELECT u.id, u.role, u.login_name,
-            c.name AS candidate_name, c.email AS candidate_email,
-            r.company_name AS recruiter_name, r.email AS recruiter_email,
-            hm.name AS hr_manager_name, hm.email AS hr_manager_email,
-            i.name AS interviewer_name, i.email AS interviewer_email
-     FROM users u
-     LEFT JOIN candidates c ON c.id = u.id
-     LEFT JOIN recruiters r ON r.id = u.id
-     LEFT JOIN hr_managers hm ON hm.id = u.id
-     LEFT JOIN interviewers i ON i.id = u.id
-     WHERE u.id = $1
-     LIMIT 1`,
-    [userId]
-  );
-
-  return result.rows[0] || null;
-};
-
-const mapUser = (row) => ({
-  id: row.id,
-  role: row.role,
-  name:
-    row.role === "recruiter"
-      ? row.recruiter_name || row.login_name
-      : row.role === "hr_manager"
-        ? row.hr_manager_name || row.login_name
-        : row.role === "interviewer"
-          ? row.interviewer_name || row.login_name
-          : row.candidate_name || row.login_name,
-  email:
-    row.role === "recruiter"
-      ? row.recruiter_email || row.login_name
-      : row.role === "hr_manager"
-        ? row.hr_manager_email || row.login_name
-        : row.role === "interviewer"
-          ? row.interviewer_email || row.login_name
-          : row.candidate_email || row.login_name,
+export const signup = asyncHandler(async (req, res) => {
+  const { name, email, password, role } = req.body;
+  const result = await authService.signup({ name, email, password, role }).catch(error => {
+    if (error.message === "Email is already in use") error.status = 409;
+    throw error;
+  });
+  setRefreshCookie(res, result.refreshToken);
+  return res.status(201).json({ 
+    token: result.accessToken, 
+    accessToken: result.accessToken, 
+    user: result.user 
+  });
 });
 
-export const signup = async (req, res) => {
-  const { name, email, password, role } = req.body;
-  if (!name || !email || !password) return res.status(400).json({ message: "Name, email and password are required" });
-  if (password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters" });
-
-  const selectedRole = ALLOWED_ROLES.has(role) ? role : "candidate";
-  const normalizedEmail = normalizeEmail(email);
-  const displayName = name.trim();
-
-  if (!normalizedEmail) return res.status(400).json({ message: "Please enter a valid email" });
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const existing = await client.query("SELECT id FROM users WHERE login_name = $1", [normalizedEmail]);
-    if (existing.rows.length > 0) {
-      await client.query("ROLLBACK");
-      return res.status(409).json({ message: "Email is already in use" });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const userInsert = await client.query(
-      `INSERT INTO users (login_name, password_hash, role) VALUES ($1, $2, $3) RETURNING id, role`,
-      [normalizedEmail, passwordHash, selectedRole]
-    );
-    const userId = userInsert.rows[0].id;
-
-    if (selectedRole === "candidate") {
-      await client.query(`INSERT INTO candidates (id, name, email) VALUES ($1, $2, $3)`, [userId, displayName, normalizedEmail]);
-    } else if (selectedRole === "recruiter") {
-      await client.query(`INSERT INTO recruiters (id, company_name, email) VALUES ($1, $2, $3)`, [userId, displayName, normalizedEmail]);
-    } else if (selectedRole === "hr_manager") {
-      await client.query(`INSERT INTO hr_managers (id, name, email) VALUES ($1, $2, $3)`, [userId, displayName, normalizedEmail]);
-    } else if (selectedRole === "interviewer") {
-      await client.query(`INSERT INTO interviewers (id, name, email) VALUES ($1, $2, $3)`, [userId, displayName, normalizedEmail]);
-    }
-
-    await client.query("COMMIT");
-    const user = { id: userId, role: selectedRole, name: displayName, email: normalizedEmail };
-    setRefreshCookie(res, user);
-    const token = createAccessToken(user);
-    return res.status(201).json({ token, accessToken: token, user });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    if (error.code === "23505") return res.status(409).json({ message: "Email is already in use" });
-    return res.status(500).json({ message: "Failed to create account", detail: error.message });
-  } finally {
-    client.release();
-  }
-};
-
-export const login = async (req, res) => {
+export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
+  const result = await authService.login({ email, password }).catch(error => {
+    if (error.message === "Invalid email or password") error.status = 401;
+    else if (error.message === "Account has been removed" || error.message === "Account is locked") error.status = 403;
+    throw error;
+  });
+  setRefreshCookie(res, result.refreshToken);
+  return res.json({ 
+    token: result.accessToken, 
+    accessToken: result.accessToken, 
+    user: result.user 
+  });
+});
 
-  const loginName = normalizeEmail(email);
-  try {
-    const result = await pool.query(
-      `SELECT u.id, u.role, u.login_name, u.password_hash, u.is_locked, u.is_deleted,
-              c.name AS candidate_name, c.email AS candidate_email,
-              r.company_name AS recruiter_name, r.email AS recruiter_email,
-              hm.name AS hr_manager_name, hm.email AS hr_manager_email,
-              i.name AS interviewer_name, i.email AS interviewer_email
-       FROM users u
-       LEFT JOIN candidates c ON c.id = u.id
-       LEFT JOIN recruiters r ON r.id = u.id
-       LEFT JOIN hr_managers hm ON hm.id = u.id
-       LEFT JOIN interviewers i ON i.id = u.id
-       WHERE u.login_name = $1
-       LIMIT 1`,
-      [loginName]
-    );
-
-    if (result.rows.length === 0) return res.status(401).json({ message: "Invalid email or password" });
-
-    const row = result.rows[0];
-    const isValidPassword = await bcrypt.compare(password, row.password_hash);
-    if (!isValidPassword) return res.status(401).json({ message: "Invalid email or password" });
-
-    if (row.is_deleted) {
-      return res.status(403).json({ message: "Account has been removed" });
-    }
-
-    if (row.is_locked) {
-      return res.status(403).json({ message: "Account is locked" });
-    }
-
-    const user = {
-      id: row.id,
-      role: row.role,
-      name:
-        row.role === "recruiter"
-          ? row.recruiter_name || row.login_name
-          : row.role === "hr_manager"
-            ? row.hr_manager_name || row.login_name
-            : row.role === "interviewer"
-              ? row.interviewer_name || row.login_name
-              : row.candidate_name || row.login_name,
-      email:
-        row.role === "recruiter"
-          ? row.recruiter_email || row.login_name
-          : row.role === "hr_manager"
-            ? row.hr_manager_email || row.login_name
-            : row.role === "interviewer"
-              ? row.interviewer_email || row.login_name
-              : row.candidate_email || row.login_name,
-    };
-    setRefreshCookie(res, user);
-    const token = createAccessToken(user);
-    return res.json({ token, accessToken: token, user });
-  } catch (error) {
-    return res.status(500).json({ message: "Login failed", detail: error.message });
-  }
-};
-
-export const refresh = async (req, res) => {
+export const refresh = asyncHandler(async (req, res) => {
   const refreshToken = getCookie(req, REFRESH_COOKIE_NAME);
-
-  if (!refreshToken) {
-    return res.status(401).json({ message: "Session expired" });
-  }
-
   try {
-    const payload = jwt.verify(refreshToken, getRefreshSecret());
-    const profile = await getUserProfileById(payload.id);
-
-    if (!profile) {
-      clearRefreshCookie(res);
-      return res.status(401).json({ message: "Session expired" });
-    }
-
-    const user = mapUser(profile);
-    setRefreshCookie(res, user);
-    const token = createAccessToken(user);
-    return res.json({ token, accessToken: token, user });
-  } catch {
+    const result = await authService.refresh(refreshToken);
+    setRefreshCookie(res, result.refreshToken);
+    return res.json({ 
+      token: result.accessToken, 
+      accessToken: result.accessToken, 
+      user: result.user 
+    });
+  } catch (error) {
     clearRefreshCookie(res);
-    return res.status(401).json({ message: "Session expired" });
+    error.status = 401;
+    throw error;
   }
-};
+});
 
-export const logout = async (_req, res) => {
+export const logout = asyncHandler(async (_req, res) => {
   clearRefreshCookie(res);
   return res.status(200).json({ message: "Logged out" });
-};
+});
 
-export const forgotPassword = async (req, res) => {
-  const normalizedEmail = normalizeEmail(req.body.email);
-
+export const forgotPassword = asyncHandler(async (req, res) => {
   try {
-    if (normalizedEmail) {
-      const userResult = await pool.query(
-        `SELECT u.id,
-                COALESCE(c.email, r.email, hm.email, i.email) AS email
-         FROM users u
-         LEFT JOIN candidates c ON c.id = u.id
-         LEFT JOIN recruiters r ON r.id = u.id
-         LEFT JOIN hr_managers hm ON hm.id = u.id
-         LEFT JOIN interviewers i ON i.id = u.id
-         WHERE u.login_name = $1
-         LIMIT 1`,
-        [normalizedEmail]
-      );
-
-      const user = userResult.rows[0];
-      if (user) {
-        const token = crypto.randomBytes(32).toString("hex");
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-        await pool.query(
-          `INSERT INTO password_reset_tokens (user_id, token, expires_at)
-           VALUES ($1, $2, $3)`,
-          [user.id, token, expiresAt]
-        );
-
-        const clientUrl = process.env.CLIENT_URL || process.env.CLIENT_ORIGIN || "http://localhost:5173";
-        const resetLink = `${clientUrl.replace(/\/$/, "")}/reset-password?token=${token}`;
-
-        await sendEmail(
-          user.email,
-          "Reset your password",
-          `
-            <p>You requested a password reset for your Job Application Management account.</p>
-            <p>Click the link below to set a new password. This link expires in 1 hour.</p>
-            <p><a href="${resetLink}">${resetLink}</a></p>
-            <p>If you did not request this, you can safely ignore this email.</p>
-          `
-        );
-      }
-    }
+    await authService.forgotPassword(req.body.email);
   } catch (error) {
     console.error("Forgot password failed:", error.message);
   }
+  return res.status(200).json({ message: "If that email is registered, a reset link has been sent." });
+});
 
-  return res.status(200).json({ message: PASSWORD_RESET_MESSAGE });
-};
-
-export const resetPassword = async (req, res) => {
+export const resetPassword = asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
+  await authService.resetPassword(token, newPassword).catch(error => {
+    if (error.message === "Invalid or expired reset token") error.status = 400;
+    throw error;
+  });
+  return res.json({ message: "Password has been reset successfully" });
+});
 
-  if (!token || !newPassword) {
-    return res.status(400).json({ message: "Token and new password are required" });
-  }
-
-  if (newPassword.length < 8) {
-    return res.status(400).json({ message: "Password must be at least 8 characters" });
-  }
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    const tokenResult = await client.query(
-      `SELECT id, user_id
-       FROM password_reset_tokens
-       WHERE token = $1
-         AND used = false
-         AND expires_at > now()
-       LIMIT 1
-       FOR UPDATE`,
-      [token]
-    );
-
-    const resetToken = tokenResult.rows[0];
-    if (!resetToken) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ message: "Invalid or expired reset token" });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    await client.query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, resetToken.user_id]);
-    await client.query("UPDATE password_reset_tokens SET used = true WHERE id = $1", [resetToken.id]);
-
-    await client.query("COMMIT");
-    return res.json({ message: "Password has been reset successfully" });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    return res.status(500).json({ message: "Failed to reset password", detail: error.message });
-  } finally {
-    client.release();
-  }
-};
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  await authService.changePassword(req.user.id, currentPassword, newPassword).catch(error => {
+    if (error.message === "User not found") error.status = 404;
+    else if (error.message === "Current password is incorrect") error.status = 400;
+    throw error;
+  });
+  return res.json({ message: "Password changed successfully" });
+});

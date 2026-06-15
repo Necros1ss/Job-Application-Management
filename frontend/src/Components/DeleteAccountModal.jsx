@@ -1,18 +1,20 @@
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
-import { accountApi, authApi, tokenStorage } from "../lib/api";
+import { accountApi, authApi } from "../lib/api/index";
 import { useI18n } from "../lib/i18n";
 import { showError, showSuccess } from "../utils/toast";
+import { useAuthStore } from "../store/authStore";
 
 const DeleteAccountModal = ({ setDeleteAccountModal }) => {
   const navigate = useNavigate();
   const { t } = useI18n();
+  const logout = useAuthStore((state) => state.logout);
 
   const handleDelete = async () => {
     try {
       await accountApi.deleteMe();
       await authApi.logout().catch(() => undefined);
-      tokenStorage.clearSession();
+      logout();
       setDeleteAccountModal(false);
       showSuccess(t("settings.accountDeleted"));
       navigate("/login");

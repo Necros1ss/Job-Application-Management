@@ -5,11 +5,12 @@ import { FaBriefcase } from "react-icons/fa6";
 import { FaUserTie } from "react-icons/fa6";
 import { FaUserShield } from "react-icons/fa6";
 import { FaUserPen } from "react-icons/fa6";
-import { authApi, tokenStorage } from "../../lib/api";
+import { authApi } from "../../lib/api/index";
 import { showError } from "../../utils/toast";
 import { validateEmail } from "../../utils/validation";
 import LanguageSwitcher from "../../Components/LanguageSwitcher";
 import { useI18n } from "../../lib/i18n";
+import { useAuthStore } from "../../store/authStore";
 
 const roleOptions = [
   {
@@ -47,6 +48,7 @@ const roleTitleMap = {
 
 const Signup = () => {
   const { t } = useI18n();
+  const setAuth = useAuthStore((state) => state.setAuth);
   const location = useLocation();
   const validRoles = ["candidate", "recruiter", "hr_manager", "interviewer"];
   const initialRole = validRoles.includes(location.state?.role) ? location.state.role : "candidate";
@@ -102,8 +104,7 @@ const Signup = () => {
 
     try {
       const payload = await authApi.signup({ name, email, password, role: userRole });
-      tokenStorage.setToken(payload.token);
-      tokenStorage.setRole(payload.user?.role || userRole);
+      setAuth(payload.user, payload.token);
       navigate(
         payload.user?.role === "recruiter" ? "/recruiter"
           : payload.user?.role === "hr_manager" ? "/hr-manager"
