@@ -67,8 +67,7 @@ async function createUser(client, user) {
     `INSERT INTO users (login_name, password_hash, role)
      VALUES ($1, $2, $3)
      ON CONFLICT (login_name) DO UPDATE
-       SET role = EXCLUDED.role,
-           updated_at = now()
+       SET role = EXCLUDED.role
      RETURNING id`,
     [user.email, passwordHash, user.role]
   );
@@ -92,15 +91,14 @@ async function createCandidateProfile(client, userId, user) {
 
 async function createRecruiterProfile(client, userId, user) {
   await client.query(
-    `INSERT INTO recruiters (id, company_name, email, description, industry, company_size, tax_code, location, phone)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO recruiters (id, company_name, email, description, industry, company_size, tax_code, phone)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (id) DO UPDATE
        SET company_name = COALESCE(EXCLUDED.company_name, recruiters.company_name),
            description = COALESCE(EXCLUDED.description, recruiters.description),
            industry = COALESCE(EXCLUDED.industry, recruiters.industry),
            company_size = COALESCE(EXCLUDED.company_size, recruiters.company_size),
            tax_code = COALESCE(EXCLUDED.tax_code, recruiters.tax_code),
-           location = COALESCE(EXCLUDED.location, recruiters.location),
            phone = COALESCE(EXCLUDED.phone, recruiters.phone)`,
     [
       userId,
@@ -110,7 +108,6 @@ async function createRecruiterProfile(client, userId, user) {
       user.industry || null,
       user.companySize || null,
       user.taxCode || null,
-      user.location || null,
       user.phone || null,
     ]
   );

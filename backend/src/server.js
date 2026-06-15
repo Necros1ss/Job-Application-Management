@@ -6,9 +6,10 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  testDbConnection,
-} from "./config/db.js";
+import { testDbConnection } from "./config/db.js";
+import { logger } from "./utils/logger.js";
+import { setupSwagger } from "./utils/swagger.js";
+
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
 import hrManagerRoutes from "./routes/hrManager.js";
@@ -88,11 +89,15 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan("dev"));
+
+// Setup Swagger UI
+setupSwagger(app);
+
 // Apply general API rate limiter only in production to avoid blocking local development
 if (process.env.NODE_ENV === "production") {
   app.use("/api", generalLimiter);
 } else {
-  console.log("[Server] Rate limiter disabled for non-production environment");
+  logger.info("[Server] Rate limiter disabled for non-production environment");
 }
 
 app.get("/api/health", (_req, res) => {
@@ -115,7 +120,7 @@ app.use("/api/employees", employeeRoutes);
 
 app.use((err, _req, res, _next) => {
   if (process.env.NODE_ENV !== "test") {
-    console.error("[Server Error]", err?.message || err, err?.stack || "");
+    logger.error(`[Server Error] ${err?.message || err} ${err?.stack || ""}`);
   }
 
   // Handle Multer errors
@@ -163,11 +168,11 @@ const startServer = async () => {
 
   await testDbConnection();
   app.listen(port, () => {
-    console.log(`API server running on http://localhost:${port}`);
+    logger.info(`API server running on http://localhost:${port}`);
   });
 };
 
 startServer().catch((error) => {
-  console.error("Failed to start API server:", error.message);
+  logger.error(`Failed to start API server: ${error.message}`);
   process.exit(1);
 });
