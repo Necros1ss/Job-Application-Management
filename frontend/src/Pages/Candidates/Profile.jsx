@@ -118,7 +118,7 @@ const CompletionChecklist = ({ items, nextSuggestion }) => (
       <div key={item.label} className="flex items-center gap-2 text-xs text-[#525252] dark:text-neutral-300">
         <span
           className={`flex h-5 w-5 items-center justify-center rounded-full ${
-            item.complete ? "bg-black text-white dark:bg-white dark:text-black" : "bg-[#f2f2f2] text-[#a3a3a3] dark:bg-neutral-800"
+            item.complete ? "bg-black text-white dark:bg-white dark:text-black" : "bg-[#e5e5e5] text-[#737373] dark:bg-neutral-800"
           }`}
         >
           {item.complete ? <MdCheck size={14} /> : "?"}
