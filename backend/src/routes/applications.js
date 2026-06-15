@@ -43,32 +43,37 @@ const aiScreeningLimiter = rateLimit({
   message: { message: "AI screening limit reached. Please try again later." },
 });
 
-// API CANDIDATE
+// RECRUITER ROUTES (Must be before /:id to avoid conflicts)
+router.get("/recruiter", requireAuth, authorize("recruiter"), listForRecruiter);
+router.get("/recruiter/activity", requireAuth, authorize("recruiter"), getActivity);
+router.get("/recruiter/analytics", requireAuth, authorize("recruiter"), getAnalytics);
+router.get("/recruiter/:id/ai-screen", requireAuth, authorize("recruiter"), getAiScreening);
+router.post("/recruiter/:id/ai-screen", requireAuth, authorize("recruiter"), aiScreeningLimiter, analyzeAiScreening);
+router.get("/recruiter/:id", requireAuth, authorize("recruiter"), getForRecruiter);
+router.get("/recruiter/:id/cv", requireAuth, authorize("recruiter"), downloadCv);
+
+// CANDIDATE ROUTES
+router.get("/", requireAuth, authorize("candidate"), listForCandidate);
 router.get("/my", requireAuth, authorize("candidate"), listForCandidate);
 router.post("/apply", requireAuth, authorize("candidate"), uploadCv.single("cvFile"), validate(createApplicationSchema), apply);
 router.post("/:id/accept", requireAuth, authorize("candidate"), acceptOffer);
 router.post("/:id/decline", requireAuth, authorize("candidate"), declineOffer);
-router.put("/:id", requireAuth, authorize("candidate", "admin"), update);
-router.delete("/:id", requireAuth, authorize("candidate", "admin"), remove);
+router.post("/:id/accept-offer", requireAuth, authorize("candidate"), acceptOffer);
+router.post("/:id/decline-offer", requireAuth, authorize("candidate"), declineOffer);
 
-// API RECRUITER (and Admin via requireRole bypass)
-router.get("/", requireAuth, authorize("recruiter"), listForRecruiter);
-router.get("/activity", requireAuth, authorize("recruiter"), getActivity);
-router.get("/analytics", requireAuth, authorize("recruiter"), getAnalytics);
-router.get("/:id", requireAuth, authorize("recruiter"), getForRecruiter);
-router.get("/:id/ai-screen", requireAuth, authorize("recruiter"), getAiScreening);
-router.post("/:id/ai-screen", requireAuth, authorize("recruiter"), aiScreeningLimiter, analyzeAiScreening);
-router.get("/:id/cv", requireAuth, authorize("recruiter"), downloadCv);
-
+// SHARED/ACTION ROUTES
 router.patch("/:id/status", requireAuth, authorize("recruiter"), validate(updateStatusSchema), updateStatus);
 router.patch("/:id/rating", requireAuth, authorize("recruiter"), updateRating);
 
-// The prompt specifies PATCH /applications/:id/notes but we also have addNote/deleteNote
 router.post("/:id/notes", requireAuth, authorize("recruiter"), validate(addNoteSchema), addNote);
 router.patch("/:id/notes/:noteId", requireAuth, authorize("recruiter"), updateNote);
+router.put("/:id/notes/:noteId", requireAuth, authorize("recruiter"), updateNote);
 router.delete("/:id/notes/:noteId", requireAuth, authorize("recruiter"), deleteNote);
 
 router.post("/:id/reject", requireAuth, authorize("recruiter"), validate(rejectApplicationSchema), reject);
 router.post("/:id/offer", requireAuth, authorize("recruiter"), offer);
+
+router.put("/:id", requireAuth, authorize("candidate", "admin"), update);
+router.delete("/:id", requireAuth, authorize("candidate", "admin"), remove);
 
 export default router;
