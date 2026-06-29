@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center"><b>SE104 - Job Application Tracker</b></h1>
+<h1 align="center"><b>SE104 - Job Application Management</b></h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
@@ -16,9 +16,9 @@
 
 ---
 
-# **Course Project: Full-cycle Job Application Tracker**
+# **Course Project: Full-cycle Job Application Management**
 
-> This repository contains a full-stack **Job Application Tracker** developed for coursework at the **University of Information Technology (UIT - VNU-HCM)**.
+> This repository contains a full-stack **Job Application Management** developed for coursework at the **University of Information Technology (UIT - VNU-HCM)**.
 >
 > The system supports the full recruitment flow: candidates can search jobs and apply with CVs, recruiters can manage job posts, screen applications, schedule interviews, send messages and onboarding tasks, while admins can moderate users and job listings. The project is built with **React 18 + Vite**, **Express.js**, **PostgreSQL**, **JWT authentication**, and a Docker-based development/deployment setup.
 
@@ -28,7 +28,7 @@
 
 | Field | Description |
 |:--|:--|
-| Project | Job Application Tracker |
+| Project | Job Application Management |
 | Main stack | React 18, Vite, TailwindCSS, Express.js, PostgreSQL |
 | Authentication | JWT access token + refresh token with httpOnly cookie |
 | Roles | Candidate, Recruiter, Admin |
@@ -276,7 +276,7 @@ Open:
 Create `backend/.env` from `backend/.env.example`.
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres123@localhost:5433/job_tracker
+DATABASE_URL=postgresql://postgres:postgres123@localhost:5433/job_Management
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
 PORT=5000
@@ -288,7 +288,7 @@ MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USER=your-email@gmail.com
 MAIL_PASS=your-app-specific-password
-MAIL_FROM=Job Tracker <noreply@jobtracker.com>
+MAIL_FROM=Job Management <noreply@jobManagement.com>
 GEMINI_API_KEY=your-gemini-api-key-here
 GEMINI_MODEL=gemini-3.5-flash
 UPLOAD_DIR=./uploads/cv
