@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
-import SideBar from "./Components/Sidebar";
+import SideBar from "./Components/SideBar.jsx";
 import AccountMenu from "./Components/AccountMenu";
 import LanguageSwitcher from "./Components/LanguageSwitcher";
 import NotificationBell from "./Components/NotificationBell";
