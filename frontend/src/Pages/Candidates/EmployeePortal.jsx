@@ -9,7 +9,7 @@ import {
   FaClock,
   FaUmbrellaBeach,
 } from "react-icons/fa";
-import { employeesApi, usersApi } from "../../lib/api/index";
+import { employeesApi } from "../../lib/api/index";
 import { SkeletonCard, SkeletonDashboardCard } from "../../Components/Skeleton";
 import { useI18n } from "../../lib/i18n";
 import { showError, showSuccess } from "../../utils/toast";
@@ -66,8 +66,6 @@ EmptyState.propTypes = {
 const EmployeePortal = () => {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState("overview");
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [employee, setEmployee] = useState(null);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -85,14 +83,11 @@ const EmployeePortal = () => {
     try {
       setIsLoading(true);
       setError("");
-      const [profile, employeeData, leaveData, attendanceData] = await Promise.all([
-        usersApi.me(),
+      const [employeeData, leaveData, attendanceData] = await Promise.all([
         employeesApi.getMine(),
         employeesApi.listLeaveRequests(),
         employeesApi.listAttendance(),
       ]);
-      setUserName(profile.name || "");
-      setUserEmail(profile.email || "");
       setEmployee(employeeData || null);
       setLeaveRequests(Array.isArray(leaveData) ? leaveData : []);
       setAttendanceRecords(Array.isArray(attendanceData) ? attendanceData : []);

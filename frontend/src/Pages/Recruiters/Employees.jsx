@@ -7,7 +7,7 @@ import {
   FaUserTie,
   FaTimes,
 } from "react-icons/fa";
-import { employeesApi, usersApi } from "../../lib/api/index";
+import { employeesApi } from "../../lib/api/index";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
@@ -24,13 +24,10 @@ const leaveStatusStyles = {
 };
 
 const Employees = () => {
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [employees, setEmployees] = useState([]);
   const [acceptedApplications, setAcceptedApplications] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("employees");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,15 +51,12 @@ const Employees = () => {
     try {
       setIsLoading(true);
       setError("");
-      const [profile, employeeData, acceptedData, attendanceData, leaveData] = await Promise.all([
-        usersApi.me(),
+      const [employeeData, acceptedData, attendanceData, leaveData] = await Promise.all([
         employeesApi.listForRecruiter(),
         employeesApi.listAcceptedApplications(),
         employeesApi.listAttendance(),
         employeesApi.listLeaveRequests(),
       ]);
-      setUserName(profile.name || "");
-      setUserEmail(profile.email || "");
       setEmployees(Array.isArray(employeeData) ? employeeData : []);
       setAcceptedApplications(Array.isArray(acceptedData) ? acceptedData : []);
       setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
@@ -93,22 +87,7 @@ const Employees = () => {
     };
   }, [employees, leaveRequests]);
 
-  const filteredEmployees = useMemo(() => {
-    const search = searchTerm.trim().toLowerCase();
-    if (!search) return employees;
-
-    return employees.filter((employee) =>
-      [
-        employee.fullName,
-        employee.email,
-        employee.employeeCode,
-        employee.jobTitle,
-        employee.department,
-      ]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(search))
-    );
-  }, [employees, searchTerm]);
+  const filteredEmployees = employees;
 
   const handleConvert = async (event) => {
     event.preventDefault();

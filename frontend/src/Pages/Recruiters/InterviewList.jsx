@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaPen, FaPlus, FaSearch, FaTimes } from "react-icons/fa";
 import ApplicationDetail from "./ApplicationDetail";
-import { applicationsApi, interviewsApi, usersApi } from "../../lib/api/index";
+import { applicationsApi, interviewsApi } from "../../lib/api/index";
 import EmptyState from "../../Components/EmptyState";
 import { SkeletonRow } from "../../Components/Skeleton";
 import { useI18n } from "../../lib/i18n";
@@ -454,27 +454,13 @@ const InterviewList = () => {
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [editingInterview, setEditingInterview] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadInterviews = async ({ includeProfile = false } = {}) => {
+  const loadInterviews = async () => {
     try {
       setIsLoading(true);
       setError("");
-
-      if (includeProfile) {
-        const [profile, interviewData] = await Promise.all([
-          usersApi.me(),
-          interviewsApi.listForRecruiter(),
-        ]);
-        setUserName(profile.name || "");
-        setUserEmail(profile.email || "");
-        setInterviews(Array.isArray(interviewData) ? interviewData : []);
-        return;
-      }
 
       const interviewData = await interviewsApi.listForRecruiter();
       setInterviews(Array.isArray(interviewData) ? interviewData : []);
@@ -495,14 +481,9 @@ const InterviewList = () => {
         setIsLoading(true);
         setError("");
 
-        const [profile, interviewData] = await Promise.all([
-          usersApi.me(),
-          interviewsApi.listForRecruiter(),
-        ]);
+        const interviewData = await interviewsApi.listForRecruiter();
 
         if (isMounted) {
-          setUserName(profile.name || "");
-          setUserEmail(profile.email || "");
           setInterviews(Array.isArray(interviewData) ? interviewData : []);
         }
       } catch (loadError) {
@@ -527,7 +508,6 @@ const InterviewList = () => {
 
   const filteredInterviews = useMemo(() => {
     const now = new Date();
-    const normalizedSearch = searchTerm.trim().toLowerCase();
 
     return interviews
       .filter((interview) => {
@@ -537,19 +517,10 @@ const InterviewList = () => {
         if (activeFilter === "upcoming" && isPast) return false;
         if (activeFilter === "past" && !isPast) return false;
 
-        if (!normalizedSearch) return true;
-
-        return [
-          interview.candidate_name,
-          interview.job_title,
-          interview.company_name,
-          interview.interviewer_name,
-        ]
-          .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(normalizedSearch));
+        return true;
       })
       .sort((a, b) => new Date(a.interview_datetime) - new Date(b.interview_datetime));
-  }, [activeFilter, interviews, searchTerm]);
+  }, [activeFilter, interviews]);
 
   const openCreateModal = () => {
     setEditingInterview(null);

@@ -103,7 +103,6 @@ const RecruiterDashboard = () => {
   const navigate = useNavigate();
   const topJobsChartRef = useRef(null);
   const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [showAppStats, setShowAppStats] = useState(false);
 
   const [jobs, setJobs] = useState([]);
@@ -127,7 +126,6 @@ const RecruiterDashboard = () => {
           applicationsApi.listRecruiterActivity(),
         ]);
         setUserName(profile.name || "");
-        setUserEmail(profile.email || "");
         setJobs(Array.isArray(jobsData) ? jobsData : []);
         setApplications(Array.isArray(appsData) ? appsData : []);
         setActivity(Array.isArray(activityData) ? activityData : []);

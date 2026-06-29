@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaCheckCircle, FaClipboardList, FaPlus, FaTrashAlt } from "react-icons/fa";
-import { onboardingApi, usersApi } from "../../lib/api/index";
+import { onboardingApi } from "../../lib/api/index";
 import { SkeletonCard } from "../../Components/Skeleton";
 import { formatDate } from "../../utils/format";
 import { showError, showSuccess } from "../../utils/toast";
@@ -18,14 +18,11 @@ const statusStyles = {
 };
 
 const Onboarding = () => {
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [tasks, setTasks] = useState([]);
   const [acceptedApplications, setAcceptedApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
   const [form, setForm] = useState({
     applicationId: "",
     title: "",
@@ -37,13 +34,10 @@ const Onboarding = () => {
     try {
       setIsLoading(true);
       setError("");
-      const [profile, taskData, applicationData] = await Promise.all([
-        usersApi.me(),
+      const [taskData, applicationData] = await Promise.all([
         onboardingApi.listForRecruiter(),
         onboardingApi.listAcceptedApplications(),
       ]);
-      setUserName(profile.name || "");
-      setUserEmail(profile.email || "");
       setTasks(Array.isArray(taskData) ? taskData : []);
       setAcceptedApplications(Array.isArray(applicationData) ? applicationData : []);
       setForm((current) => ({
@@ -73,23 +67,7 @@ const Onboarding = () => {
     return { total, completed, inProgress, pending, completionRate };
   }, [tasks]);
 
-  const filteredTasks = useMemo(() => {
-    const search = searchTerm.trim().toLowerCase();
-    if (!search) return tasks;
-
-    return tasks.filter((task) =>
-      [
-        task.title,
-        task.description,
-        task.candidateName,
-        task.candidateEmail,
-        task.jobTitle,
-        task.companyName,
-      ]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(search))
-    );
-  }, [searchTerm, tasks]);
+  const filteredTasks = tasks;
 
   const handleCreateTask = async (event) => {
     event.preventDefault();

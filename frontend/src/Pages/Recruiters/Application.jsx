@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import ApplicationDetail from './ApplicationDetail';
-import { applicationsApi, jobPostsApi, usersApi } from '../../lib/api/index';
+import { applicationsApi, jobPostsApi } from '../../lib/api/index';
 import { SkeletonRow } from "../../Components/Skeleton";
 import EmptyState from "../../Components/EmptyState";
 import Pagination from "../../Components/Pagination";
@@ -80,9 +80,6 @@ const Application = () => {
   const [selectedJobId, setSelectedJobId] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("list");
   const [updatingApplicationId, setUpdatingApplicationId] = useState(null);
 
@@ -102,9 +99,7 @@ const Application = () => {
           jobPostsApi.listMine(),
         ]);
 
-        const profile = await usersApi.me();
-        setUserName(profile.name || "");
-        setUserEmail(profile.email || "");
+
 
         if (isMounted) {
           const applicationItems = Array.isArray(applicationsResult)

@@ -5,7 +5,7 @@ import {
   FaSearch, FaPlus, FaChevronDown, FaChevronUp, FaEdit, FaTrashAlt,
   FaEye, FaFilter, FaArrowsAltV, FaTimes
 } from "react-icons/fa";
-import { jobPostsApi, usersApi } from "../../lib/api/index";
+import { jobPostsApi } from "../../lib/api/index";
 import CreateJob from "./CreateJob";
 import EditJob from "./EditJob";
 import EmptyState from "../../Components/EmptyState";
@@ -45,14 +45,10 @@ const getStatusStyle = (deadline) => {
 
 const JobPost = () => {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortField, setSortField] = useState("createdAt");
   const [sortDir, setSortDir] = useState("desc");
@@ -62,18 +58,7 @@ const JobPost = () => {
   const [editingJob, setEditingJob] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const profile = await usersApi.me();
-        setUserName(profile.name || "");
-        setUserEmail(profile.email || "");
-      } catch (err) {
-        setError(err.message || "Failed to load dashboard data");
-      }
-    };
-    loadData();
-  }, []);
+
 
   const loadJobs = async () => {
     setIsLoading(true);
@@ -111,16 +96,6 @@ const JobPost = () => {
   const filteredAndSorted = useMemo(() => {
     let result = [...jobs];
 
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(
-        (j) =>
-          (j.title || "").toLowerCase().includes(term) ||
-          (j.companyName || "").toLowerCase().includes(term) ||
-          (j.location || "").toLowerCase().includes(term)
-      );
-    }
-
     if (statusFilter !== "all") {
       result = result.filter((j) => j.status === statusFilter);
     }
@@ -139,7 +114,7 @@ const JobPost = () => {
     });
 
     return result;
-  }, [jobs, searchTerm, statusFilter, sortField, sortDir]);
+  }, [jobs, statusFilter, sortField, sortDir]);
 
   const handleCreateSuccess = () => {
     setIsCreateOpen(false);
@@ -263,14 +238,14 @@ const JobPost = () => {
           ) : filteredAndSorted.length === 0 ? (
             <EmptyState
               icon={FaSearch}
-              title={searchTerm || statusFilter !== "all" ? "No matching jobs" : "No jobs yet"}
+              title={statusFilter !== "all" ? "No matching jobs" : "No jobs yet"}
               description={
-                searchTerm || statusFilter !== "all"
+                statusFilter !== "all"
                   ? "Try adjusting your search or filters."
                   : "Create your first job posting to start collecting candidates."
               }
-              actionLabel={!searchTerm && statusFilter === "all" ? "Create Job" : undefined}
-              onAction={!searchTerm && statusFilter === "all" ? () => setIsCreateOpen(true) : undefined}
+              actionLabel={statusFilter === "all" ? "Create Job" : undefined}
+              onAction={statusFilter === "all" ? () => setIsCreateOpen(true) : undefined}
             />
           ) : (
             <>

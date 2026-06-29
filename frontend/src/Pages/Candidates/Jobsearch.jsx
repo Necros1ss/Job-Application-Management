@@ -12,7 +12,7 @@ import {
   FaSearch,
   FaTimes,
 } from "react-icons/fa";
-import { jobPostsApi, savedJobsApi, usersApi } from "../../lib/api/index";
+import { jobPostsApi, savedJobsApi } from "../../lib/api/index";
 import { SkeletonCard } from "../../Components/Skeleton";
 import Pagination from "../../Components/Pagination";
 import EmptyState from "../../Components/EmptyState";
@@ -225,8 +225,6 @@ const Jobsearch = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => getFiltersFromParams(searchParams), [searchParams]);
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [searchDraft, setSearchDraft] = useState(filters.search);
   const [locationDraft, setLocationDraft] = useState(filters.location);
   const [jobs, setJobs] = useState([]);
@@ -291,19 +289,7 @@ const Jobsearch = () => {
     }
   }, [debouncedLocation, filters.location, updateFilters]);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const profile = await usersApi.me();
-        setUserName(profile.name || "");
-        setUserEmail(profile.email || "");
-      } catch (error) {
-        showError(error.message || "Failed to load profile");
-      }
-    };
 
-    loadProfile();
-  }, []);
 
   useEffect(() => {
     let mounted = true;
