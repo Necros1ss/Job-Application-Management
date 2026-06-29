@@ -2,6 +2,7 @@ import colors from "tailwindcss/colors";
 
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: {
     relative: true,
     files: ["./frontend/index.html", "./frontend/src/**/*.{js,ts,jsx,tsx}"],
