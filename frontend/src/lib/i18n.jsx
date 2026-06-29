@@ -161,7 +161,7 @@ const dictionaries = {
     "landing.fullCycleWorkspace": "Full-cycle recruitment workspace",
     "landing.hireSmarter": "Hire smarter. Onboard faster.",
     "landing.hireSmarterDesc": "Manage jobs, applications, interviews, offers, onboarding tasks, and employee handoff in one focused recruiting dashboard.",
-    "landing.startHiringFree": "Start Hiring Free",
+    "landing.startHiringFree": "Hiring Free",
     "landing.findJobs": "Find Jobs",
     "landing.recruiters": "Recruiters",
     "landing.applicationsStat": "Applications",

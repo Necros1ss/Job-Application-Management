@@ -50,7 +50,7 @@ const SelectRole = () => {
   return (
     <div className="min-h-screen blueprint-grid-bg px-4 py-8 text-[#0a0a0a]">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[14px] border border-[#e5e5e5] bg-white shadow-[0_0_0_1px_rgba(10,10,10,0.1)] lg:grid-cols-[0.95fr_1.05fr]">
-        <aside className="blueprint-hero-panel hidden rounded-none border-0 border-r border-[#e5e5e5] p-10 lg:flex lg:flex-col lg:justify-between">
+        <aside className="blueprint-hero-panel hidden rounded-none border-0 border-r border-[#e5e5e5] p-10 lg:flex lg:flex-col lg:justify-start lg:gap-10">
           <Link to="/" className="w-fit rounded-full px-3 py-2 text-sm font-medium text-[#737373] hover:bg-white hover:text-black">
             <span className="inline-flex items-center gap-2">
               <FaArrowLeft size={12} />

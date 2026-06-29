@@ -187,7 +187,7 @@ const Landing = () => {
                   to="/signup?role=recruiter"
                   className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-black px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#0a0a0a] dark:bg-white dark:text-black dark:hover:bg-[#f5f5f5]"
                 >
-                  Start {t("landing.startHiringFree")} <FaArrowRight size={14} />
+                  {t("landing.startHiringFree")} <FaArrowRight size={14} />
                 </Link>
                 <Link
                   to="/signup?role=candidate"
