@@ -65,11 +65,11 @@ export const applicationRepository = {
 
   getRecruiterAnalytics: async (recruiterId) => {
     const result = await pool.query(
-      `SELECT status, COUNT(*)::int AS count
+      `SELECT a.status, COUNT(*)::int AS count
        FROM applications a
        JOIN job_posts j ON a.job_post_id = j.id
        WHERE j.recruiter_id = $1
-       GROUP BY status`,
+       GROUP BY a.status`,
       [recruiterId]
     );
     return result.rows;
