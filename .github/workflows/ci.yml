@@ -52,3 +52,6 @@ jobs:
           npm run start:backend &
           sleep 5
           npm run smoke:backend
+        env:
+          DATABASE_URL=postgresql://postgres:postgres123@localhost:5433/job_tracker
+
